@@ -9,6 +9,9 @@ const router = express.Router();
 router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const { title, description, department_id, steps } = req.body;
+    
+    console.log('CREATE process request:', title);
+    console.log('Steps received:', JSON.stringify(steps));
 
     if (!title || !department_id) {
       return res.status(400).json({ error: 'Título e departamento são obrigatórios' });
@@ -112,6 +115,7 @@ router.get('/processes/:id', verifyToken, async (req, res) => {
     );
 
     process.steps = steps;
+    console.log(`Returning process ${process.id} with ${steps.length} steps`);
 
     res.json(process);
   } catch (error) {
@@ -124,6 +128,9 @@ router.put('/processes/:id', verifyToken, checkRole(['admin', 'manager']), async
   try {
     const { title, description, status, steps } = req.body;
     const processId = req.params.id;
+
+    console.log('Update request for process:', processId);
+    console.log('Body steps:', JSON.stringify(steps));
 
     // Obter dados antigos para auditoria
     const [oldProcess] = await pool.execute(
@@ -138,7 +145,7 @@ router.put('/processes/:id', verifyToken, checkRole(['admin', 'manager']), async
     // Atualizar processo
     await pool.execute(
       `UPDATE processes 
-       SET title = ?, description = ?, status = ?, updated_by = ?, updated_at = NOW()
+       SET title = ?, description = ?, status = ?, updated_by = ?, version = version + 1, updated_at = NOW()
        WHERE id = ?`,
       [title || oldProcess[0].title, description !== undefined ? description : oldProcess[0].description, 
        status || oldProcess[0].status, req.userId, processId]

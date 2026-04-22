@@ -27,7 +27,17 @@ const Branding = () => {
     try {
       setLoading(true);
       const data = await brandingAPI.get();
-      setFormData(data);
+      if (data) {
+        setFormData({
+          company_name: data.company_name || '',
+          logo_url: data.logo_url || '',
+          primary_color: data.primary_color || '#0ba52b',
+          secondary_color: data.secondary_color || '#bbf804',
+          accent_color: data.accent_color || '#274518',
+          background_color: data.background_color || '#ffffff',
+          favicon_url: data.favicon_url || ''
+        });
+      }
     } catch (err) {
       setError('Erro ao carregar branding');
     } finally {
