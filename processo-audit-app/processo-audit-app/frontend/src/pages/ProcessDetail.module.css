@@ -505,3 +505,12 @@
     margin-top: 0.5rem;
   }
 }
+
+.instructionPhoto {
+  margin-top: 1rem;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  display: block;
+}
