@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
-import { FiArrowLeft, FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX } from 'react-icons/fi';
 import styles from './ProcessEdit.module.css';
 
 const ProcessEdit = () => {
@@ -19,6 +19,8 @@ const ProcessEdit = () => {
     steps: []
   });
   const [newStep, setNewStep] = useState({ title: '', description: '' });
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editStepData, setEditStepData] = useState({ title: '', description: '' });
 
   useEffect(() => {
     loadData();
@@ -61,6 +63,26 @@ const ProcessEdit = () => {
       ...formData,
       steps: formData.steps.filter((_, i) => i !== index)
     });
+    if (editingIndex === index) setEditingIndex(null);
+  };
+
+  const startEditing = (index) => {
+    setEditingIndex(index);
+    setEditStepData({
+      title: formData.steps[index].title,
+      description: formData.steps[index].description || ''
+    });
+  };
+
+  const saveStepEdit = (index) => {
+    const updatedSteps = [...formData.steps];
+    updatedSteps[index] = {
+      ...updatedSteps[index],
+      title: editStepData.title,
+      description: editStepData.description
+    };
+    setFormData({ ...formData, steps: updatedSteps });
+    setEditingIndex(null);
   };
 
   const handleSubmit = async (e) => {
@@ -159,18 +181,68 @@ const ProcessEdit = () => {
           
           <div className={styles.stepsList}>
             {formData.steps.map((step, idx) => (
-              <div key={idx} className={styles.stepItem}>
-                <div className={styles.stepInfo}>
-                  <h4>{idx + 1}. {step.title}</h4>
-                  {step.description && <p>{step.description}</p>}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveStep(idx)}
-                  className="btn btn-danger btn-small"
-                >
-                  <FiTrash2 />
-                </button>
+              <div key={idx} className={`${styles.stepItem} ${editingIndex === idx ? styles.editing : ''}`}>
+                {editingIndex === idx ? (
+                  <div className={styles.stepEditForm}>
+                    <input
+                      type="text"
+                      value={editStepData.title}
+                      onChange={(e) => setEditStepData({ ...editStepData, title: e.target.value })}
+                      placeholder="Título do passo"
+                      className={styles.editInput}
+                    />
+                    <input
+                      type="text"
+                      value={editStepData.description}
+                      onChange={(e) => setEditStepData({ ...editStepData, description: e.target.value })}
+                      placeholder="Descrição (opcional)"
+                      className={styles.editInput}
+                    />
+                    <div className={styles.editActions}>
+                      <button
+                        type="button"
+                        onClick={() => saveStepEdit(idx)}
+                        className="btn btn-primary btn-small"
+                        title="Salvar Passo"
+                      >
+                        <FiCheck />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingIndex(null)}
+                        className="btn btn-outline btn-small"
+                        title="Cancelar"
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.stepInfo}>
+                      <h4>{idx + 1}. {step.title}</h4>
+                      {step.description && <p>{step.description}</p>}
+                    </div>
+                    <div className={styles.stepActions}>
+                      <button
+                        type="button"
+                        onClick={() => startEditing(idx)}
+                        className="btn btn-outline btn-small"
+                        title="Editar Passo"
+                      >
+                        <FiEdit2 />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveStep(idx)}
+                        className="btn btn-danger btn-small"
+                        title="Remover Passo"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
