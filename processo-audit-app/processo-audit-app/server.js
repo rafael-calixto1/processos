@@ -13,6 +13,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Request logger
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (['POST', 'PUT'].includes(req.method)) {
+    console.log('Body:', JSON.stringify(req.body));
+  }
+  next();
+});
+
 // Middlewares
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -46,7 +55,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Servidor rodando na porta ${PORT}`);
   console.log(`📝 API disponível em http://localhost:${PORT}/api`);
   console.log(`🏥 Health check em http://localhost:${PORT}/api/health\n`);
