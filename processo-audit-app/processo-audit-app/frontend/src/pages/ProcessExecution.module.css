@@ -1,0 +1,485 @@
+.container {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.backBtn {
+  background-color: white;
+  border: 2px solid var(--border-color);
+  color: var(--text-dark);
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.backBtn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: rgba(11, 165, 43, 0.05);
+}
+
+.title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title h1 {
+  margin: 0;
+}
+
+.alert {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-left: 4px solid var(--error);
+  color: var(--error);
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+/* Progress Card */
+.progressCard {
+  background: linear-gradient(135deg, var(--primary-color) 0%, rgba(11, 165, 43, 0.8) 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.progressHeader h3 {
+  margin: 0;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.counter {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.progressBar {
+  width: 100%;
+  height: 12px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--secondary-color);
+  transition: width 0.5s ease;
+  border-radius: 6px;
+}
+
+.progressPercent {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Description */
+.description {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--secondary-color);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--secondary-color);
+}
+
+.description p {
+  margin: 0;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+/* Checklist */
+.checklistContainer {
+  margin-bottom: 2rem;
+}
+
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stepItem {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s;
+  background-color: white;
+}
+
+.stepItem:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow);
+}
+
+.stepItem.completed {
+  background-color: rgba(76, 175, 80, 0.02);
+  border-color: var(--success);
+}
+
+.stepHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  cursor: pointer;
+  background-color: #fafafa;
+  transition: background-color 0.3s;
+}
+
+.stepHeader:hover {
+  background-color: rgba(11, 165, 43, 0.05);
+}
+
+.stepNumber {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.number {
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.stepInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepInfo h3 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-dark);
+  font-size: 1.1rem;
+}
+
+.stepInfo h3.completedText {
+  color: var(--text-light);
+  text-decoration: line-through;
+}
+
+.stepDesc {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.completedInfo {
+  margin: 0.5rem 0 0 0;
+  color: var(--success);
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expandIcon {
+  color: var(--text-light);
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: transform 0.3s;
+}
+
+/* Step Content */
+.stepContent {
+  padding: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  background-color: #fafafa;
+}
+
+.documentation {
+  margin-bottom: 1.5rem;
+}
+
+.documentation h4 {
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.markdown {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown p {
+  line-height: 1.6;
+  color: var(--text-dark);
+  margin-bottom: 0.75rem;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: var(--primary-color);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown code {
+  background-color: #e8e8e8;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  color: var(--accent-color);
+}
+
+.markdown pre {
+  background-color: #e8e8e8;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  border-left: 4px solid var(--primary-color);
+  font-size: 0.85rem;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.75rem 0;
+  padding-left: 2rem;
+}
+
+.markdown li {
+  margin-bottom: 0.5rem;
+}
+
+.markdown blockquote {
+  border-left: 4px solid var(--primary-color);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: var(--text-light);
+}
+
+/* Notes Section */
+.notesSection {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notesSection label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.notesSection textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.notesSection textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
+}
+
+.notesSection .btn {
+  align-self: flex-start;
+}
+
+/* Notes Display */
+.notesDisplay {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 6px;
+  border-left: 4px solid var(--success);
+}
+
+.notesDisplay h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--success);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.notesDisplay p {
+  margin: 0;
+  color: var(--text-dark);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Empty */
+.empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.actions .btn {
+  flex: 1;
+  min-width: 150px;
+}
+
+/* Info */
+.info {
+  background-color: rgba(11, 165, 43, 0.05);
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.infoText {
+  margin: 0.5rem 0;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.error {
+  background-color: rgba(244, 67, 54, 0.1);
+  border: 2px solid var(--error);
+  color: var(--error);
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  gap: 1.5rem;
+  color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .backBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .title {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progressCard {
+    padding: 1.5rem;
+  }
+
+  .progressHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .counter {
+    width: 100%;
+    text-align: center;
+  }
+
+  .stepHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .expandIcon {
+    align-self: flex-start;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions .btn {
+    flex: none;
+    width: 100%;
+  }
+
+  .notesSection {
+    padding: 1rem;
+  }
+
+  .markdown pre,
+  .markdown code {
+    font-size: 0.75rem;
+  }
+}
