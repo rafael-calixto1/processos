@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { executionAPI, processAPI } from '../api/index';
-import { FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiCheckCircle, FiCamera, FiImage } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './ProcessExecution.module.css';
@@ -16,6 +16,7 @@ const ProcessExecution = () => {
   const [error, setError] = useState('');
   const [expandedStep, setExpandedStep] = useState(null);
   const [stepNotes, setStepNotes] = useState({});
+  const [stepPhotos, setStepPhotos] = useState({});
 
   useEffect(() => {
     loadData();
@@ -49,21 +50,51 @@ const ProcessExecution = () => {
     try {
       setSaving(true);
       const notes = stepNotes[stepExecutionId] || '';
-      await executionAPI.completeStep(stepExecutionId, notes);
+      const photo = stepPhotos[stepExecutionId];
+
+      const formData = new FormData();
+      formData.append('notes', notes);
+      if (photo) {
+        formData.append('photo', photo);
+      }
+
+      await executionAPI.completeStep(stepExecutionId, formData);
       
       // Atualizar dados
       await loadData();
-      // Limpar apenas a nota do passo que foi completado
+      // Limpar estado do passo que foi completado
       setStepNotes(prev => {
         const newNotes = { ...prev };
         delete newNotes[stepExecutionId];
         return newNotes;
+      });
+      setStepPhotos(prev => {
+        const newPhotos = { ...prev };
+        delete newPhotos[stepExecutionId];
+        return newPhotos;
       });
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePhotoChange = (stepExecutionId, file) => {
+    if (file) {
+      setStepPhotos({
+        ...stepPhotos,
+        [stepExecutionId]: file
+      });
+    }
+  };
+
+  const getFullUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5001
+    const host = window.location.hostname;
+    return `http://${host}:5001${url}`;
   };
 
   const handleFinalize = async () => {
@@ -207,18 +238,27 @@ const ProcessExecution = () => {
                   {expandedStep === stepExec.id && (
                     <div className={styles.stepContent}>
                       {/* Documentation */}
-                      {stepExec.documentation_markdown && (
+                      {(stepExec.documentation_markdown || stepExec.photo_url) && (
                         <div className={styles.documentation}>
                           <h4>Instruções</h4>
-                          <div className={styles.markdown}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {stepExec.documentation_markdown}
-                            </ReactMarkdown>
-                          </div>
+                          {stepExec.documentation_markdown && (
+                            <div className={styles.markdown}>
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {stepExec.documentation_markdown}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                          {stepExec.photo_url && (
+                            <img 
+                              src={getFullUrl(stepExec.photo_url)} 
+                              alt="Instrução visual" 
+                              className={styles.instructionPhoto}
+                            />
+                          )}
                         </div>
                       )}
 
-                      {/* Notes */}
+                      {/* Notes and Photo Upload */}
                       {!isCompleted && (
                         <div className={styles.notesSection}>
                           <label htmlFor={`notes-${stepExec.id}`}>
@@ -236,6 +276,38 @@ const ProcessExecution = () => {
                             placeholder="Adicione anotações sobre este passo..."
                             rows={3}
                           />
+
+                          {/* Photo Upload */}
+                          <div className={styles.photoSection}>
+                            <label>
+                              <FiCamera /> Evidência Fotográfica
+                            </label>
+                            
+                            <label htmlFor={`photo-${stepExec.id}`} className={styles.photoButton}>
+                              {stepPhotos[stepExec.id] ? '📸 Alterar Foto' : '➕ Adicionar Foto'}
+                            </label>
+                            
+                            <input
+                              type="file"
+                              id={`photo-${stepExec.id}`}
+                              accept="image/*"
+                              className={styles.photoInput}
+                              onChange={(e) => handlePhotoChange(stepExec.id, e.target.files[0])}
+                            />
+                            
+                            {stepPhotos[stepExec.id] && (
+                              <div className={styles.photoPreview}>
+                                <img 
+                                  src={URL.createObjectURL(stepPhotos[stepExec.id])} 
+                                  alt="Preview" 
+                                />
+                                <p style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '0.5rem' }}>
+                                  ✓ Foto selecionada: {stepPhotos[stepExec.id].name}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
                           <button
                             onClick={() => handleCompleteStep(stepExec.id)}
                             disabled={saving}
@@ -246,11 +318,27 @@ const ProcessExecution = () => {
                         </div>
                       )}
 
-                      {isCompleted && stepExec.notes && (
-                        <div className={styles.notesDisplay}>
-                          <h4>Anotações</h4>
-                          <p>{stepExec.notes}</p>
-                        </div>
+                      {isCompleted && (
+                        <>
+                          {stepExec.notes && (
+                            <div className={styles.notesDisplay}>
+                              <h4>Anotações</h4>
+                              <p>{stepExec.notes}</p>
+                            </div>
+                          )}
+                          
+                          {stepExec.photo_url && (
+                            <div className={styles.photoDisplay}>
+                              <h4><FiImage /> Evidência</h4>
+                              <img 
+                                src={getFullUrl(stepExec.photo_url)} 
+                                alt="Evidência do passo" 
+                                className={styles.photoImg}
+                                onClick={() => window.open(getFullUrl(stepExec.photo_url), '_blank')}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

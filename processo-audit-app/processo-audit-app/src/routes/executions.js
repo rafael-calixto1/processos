@@ -1,8 +1,36 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken } from '../middlewares/auth.js';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
+
+// Configuração do Multer para upload de fotos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/steps/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'step-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Apenas imagens (jpeg, jpg, png, webp) são permitidas!'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
 
 // Iniciar execução de um processo
 router.post('/executions/start/:processId', verifyToken, async (req, res) => {
@@ -86,9 +114,10 @@ router.get('/executions/:executionId', verifyToken, async (req, res) => {
 });
 
 // Marcar passo como completo
-router.put('/step-executions/:stepExecutionId/complete', verifyToken, async (req, res) => {
+router.put('/step-executions/:stepExecutionId/complete', verifyToken, upload.single('photo'), async (req, res) => {
   try {
     const { notes } = req.body;
+    const photoUrl = req.file ? `/uploads/steps/${req.file.filename}` : null;
 
     const [stepExec] = await pool.execute(
       'SELECT * FROM step_executions WHERE id = ?',
@@ -101,12 +130,15 @@ router.put('/step-executions/:stepExecutionId/complete', verifyToken, async (req
 
     await pool.execute(
       `UPDATE step_executions 
-       SET completed_at = NOW(), notes = ?, completed_by = ?
+       SET completed_at = NOW(), notes = ?, photo_url = ?, completed_by = ?
        WHERE id = ?`,
-      [notes || '', req.userId, req.params.stepExecutionId]
+      [notes || '', photoUrl, req.userId, req.params.stepExecutionId]
     );
 
-    res.json({ message: 'Passo marcado como completo' });
+    res.json({ 
+      message: 'Passo marcado como completo',
+      photo_url: photoUrl
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
