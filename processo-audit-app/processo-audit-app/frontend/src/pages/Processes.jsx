@@ -44,8 +44,22 @@ const Processes = () => {
 
   const handleCreateProcess = async (e) => {
     e.preventDefault();
+    
+    // Auto-add current step if input is not empty
+    let finalFormData = { ...formData };
+    if (newStep.title) {
+      finalFormData.steps = [...formData.steps, { ...newStep, documentation_markdown: '' }];
+    }
+
+    if (finalFormData.steps.length === 0) {
+      if (!window.confirm('Este processo não tem passos. Deseja criar mesmo assim?')) {
+        return;
+      }
+    }
+
     try {
-      await processAPI.create(formData);
+      await processAPI.create(finalFormData);
+      alert(`Processo criado com ${finalFormData.steps.length} passos!`);
       setShowModal(false);
       setFormData({ title: '', description: '', department_id: '', steps: [] });
       setNewStep({ title: '', description: '' });

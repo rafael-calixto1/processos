@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Processes from './pages/Processes';
 import ProcessDetail from './pages/ProcessDetail';
+import ProcessEdit from './pages/ProcessEdit';
 import Departments from './pages/Departments';
 import Branding from './pages/Branding';
 import ProcessExecution from './pages/ProcessExecution';
@@ -109,6 +110,17 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <ProcessDetail />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/processos/:id/edit"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ProcessEdit />
             </Layout>
           </ProtectedRoute>
         }
