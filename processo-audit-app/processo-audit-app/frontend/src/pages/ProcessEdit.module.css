@@ -74,20 +74,41 @@
   background: #f9f9f9;
   border: 1px solid #eee;
   border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.stepItem.editing {
+  border-color: var(--primary-color, #0ba52b);
+  background: white;
+  box-shadow: 0 0 0 2px rgba(11, 165, 43, 0.1);
 }
 
 .stepInfo {
   flex: 1;
 }
 
-.stepInfo h4 {
-  margin: 0 0 0.25rem 0;
+.stepActions {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.stepInfo p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #666;
+.stepEditForm {
+  display: flex;
+  flex: 1;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.editInput {
+  flex: 1;
+  padding: 0.5rem !important;
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+}
+
+.editActions {
+  display: flex;
+  gap: 0.25rem;
 }
 
 .addStepForm {
