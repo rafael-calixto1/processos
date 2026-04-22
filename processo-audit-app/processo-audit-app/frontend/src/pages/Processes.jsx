@@ -1,0 +1,326 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { processAPI, departmentAPI } from '../api/index';
+import { useAuth } from '../context/AuthContext';
+import { FiPlus, FiEdit2, FiTrash2, FiEye } from 'react-icons/fi';
+import styles from './Processes.module.css';
+
+const Processes = () => {
+  const [processes, setProcesses] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filterDept, setFilterDept] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    department_id: '',
+    steps: []
+  });
+  const [newStep, setNewStep] = useState({ title: '', description: '' });
+  const { user } = useAuth();
+
+  useEffect(() => {
+    loadData();
+  }, [filterDept, filterStatus]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [procs, depts] = await Promise.all([
+        processAPI.list(filterDept || null, filterStatus || null),
+        departmentAPI.list()
+      ]);
+      setProcesses(procs);
+      setDepartments(depts);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProcess = async (e) => {
+    e.preventDefault();
+    try {
+      await processAPI.create(formData);
+      setShowModal(false);
+      setFormData({ title: '', description: '', department_id: '', steps: [] });
+      setNewStep({ title: '', description: '' });
+      loadData();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleAddStep = () => {
+    if (newStep.title) {
+      setFormData({
+        ...formData,
+        steps: [...formData.steps, { ...newStep, documentation_markdown: '' }]
+      });
+      setNewStep({ title: '', description: '' });
+    }
+  };
+
+  const handleRemoveStep = (index) => {
+    setFormData({
+      ...formData,
+      steps: formData.steps.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleDeleteProcess = async (id) => {
+    if (window.confirm('Tem certeza que deseja deletar este processo?')) {
+      try {
+        await processAPI.delete(id);
+        loadData();
+      } catch (err) {
+        setError(err.message);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className="spinner" />
+        <p>Carregando processos...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1>Processos</h1>
+        {(user?.role === 'admin' || user?.role === 'manager') && (
+          <button
+            className={`btn btn-primary`}
+            onClick={() => setShowModal(true)}
+          >
+            <FiPlus /> Novo Processo
+          </button>
+        )}
+      </div>
+
+      {error && <div className={styles.alert}>{error}</div>}
+
+      {/* Filtros */}
+      <div className={styles.filters}>
+        <select
+          value={filterDept}
+          onChange={(e) => setFilterDept(e.target.value)}
+        >
+          <option value="">Todos os Departamentos</option>
+          {departments.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+        >
+          <option value="">Todos os Status</option>
+          <option value="draft">Rascunho</option>
+          <option value="active">Ativo</option>
+          <option value="archived">Arquivado</option>
+        </select>
+      </div>
+
+      {/* Lista de Processos */}
+      {processes.length === 0 ? (
+        <div className={styles.emptyState}>
+          <p>Nenhum processo encontrado</p>
+        </div>
+      ) : (
+        <div className={styles.processList}>
+          {processes.map((process) => (
+            <div key={process.id} className={styles.processItem}>
+              <div className={styles.processInfo}>
+                <h3>{process.title}</h3>
+                <p>{process.description}</p>
+                <div className={styles.metadata}>
+                  <span className={`badge badge-${process.status}`}>
+                    {process.status === 'active' ? '✅ Ativo' : 
+                     process.status === 'draft' ? '📝 Rascunho' : 
+                     '📦 Arquivado'}
+                  </span>
+                  <span className={styles.dept}>🏢 {process.department_name}</span>
+                  <span className={styles.steps}>{process.steps?.length || 0} passos</span>
+                </div>
+              </div>
+
+              <div className={styles.actions}>
+                <Link
+                  to={`/processos/${process.id}`}
+                  className={`btn btn-outline btn-small`}
+                  title="Visualizar"
+                >
+                  <FiEye />
+                </Link>
+                {(user?.role === 'admin' || user?.role === 'manager') && (
+                  <>
+                    <Link
+                      to={`/processos/${process.id}/edit`}
+                      className={`btn btn-outline btn-small`}
+                      title="Editar"
+                    >
+                      <FiEdit2 />
+                    </Link>
+                    {user?.role === 'admin' && (
+                      <button
+                        className={`btn btn-danger btn-small`}
+                        onClick={() => handleDeleteProcess(process.id)}
+                        title="Deletar"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de Criar Processo */}
+      {showModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>Criar Novo Processo</h2>
+              <button
+                className={styles.closeBtn}
+                onClick={() => setShowModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProcess} className={styles.form}>
+              <div className={styles.formGroup}>
+                <label>Título *</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Descrição</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Departamento *</label>
+                <select
+                  value={formData.department_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, department_id: e.target.value })
+                  }
+                  required
+                >
+                  <option value="">Selecione um departamento</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Passos */}
+              <div className={styles.stepsSection}>
+                <h3>Passos do Processo</h3>
+
+                {formData.steps.length > 0 && (
+                  <div className={styles.stepsList}>
+                    {formData.steps.map((step, idx) => (
+                      <div key={idx} className={styles.stepItem}>
+                        <div>
+                          <strong>{idx + 1}. {step.title}</strong>
+                          {step.description && <p>{step.description}</p>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStep(idx)}
+                          className="btn btn-danger btn-small"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className={styles.addStepForm}>
+                  <input
+                    type="text"
+                    placeholder="Título do passo"
+                    value={newStep.title}
+                    onChange={(e) =>
+                      setNewStep({ ...newStep, title: e.target.value })
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Descrição (opcional)"
+                    value={newStep.description}
+                    onChange={(e) =>
+                      setNewStep({ ...newStep, description: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddStep}
+                    className="btn btn-secondary btn-small"
+                  >
+                    <FiPlus /> Adicionar Passo
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!formData.title || !formData.department_id}
+                >
+                  Criar Processo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="btn btn-outline"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className={styles.modalBackdrop} onClick={() => setShowModal(false)} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Processes;
