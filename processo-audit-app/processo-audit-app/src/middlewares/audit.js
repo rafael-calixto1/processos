@@ -2,7 +2,19 @@ import pool from '../config/database.js';
 
 export const logAudit = async (processId, userId, action, oldData, newData, req) => {
   try {
-    const ipAddress = req.ip || req.connection.remoteAddress;
+    // Tenta pegar o IP real do cliente (especialmente atrás de proxies)
+    let ipAddress = 
+      req.headers['x-forwarded-for']?.split(',')[0] || 
+      req.ip || 
+      req.connection.remoteAddress || 
+      req.socket.remoteAddress ||
+      '';
+
+    // Se o IP vier com IPv6 prefix (::ffff:), limpa para IPv4 se possível
+    if (ipAddress.includes('::ffff:')) {
+      ipAddress = ipAddress.split(':').pop();
+    }
+
     const userAgent = req.get('user-agent') || '';
 
     await pool.execute(
