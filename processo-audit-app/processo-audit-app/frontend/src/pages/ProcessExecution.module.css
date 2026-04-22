@@ -368,6 +368,90 @@
   word-break: break-word;
 }
 
+/* Photo Section */
+.photoSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.photoSection label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.photoInput {
+  display: none;
+}
+
+.photoButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #f0f0f0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  color: var(--text-dark);
+}
+
+.photoButton:hover {
+  background-color: #e0e0e0;
+  border-color: var(--primary-color);
+}
+
+.photoPreview {
+  margin-top: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+.photoPreview img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.photoDisplay {
+  margin-top: 1.5rem;
+}
+
+.photoDisplay h4 {
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.photoImg {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.photoImg:hover {
+  transform: scale(1.02);
+}
+
 /* Empty */
 .empty {
   text-align: center;
@@ -482,4 +566,14 @@
   .markdown code {
     font-size: 0.75rem;
   }
+}
+
+.instructionPhoto {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  display: block;
 }

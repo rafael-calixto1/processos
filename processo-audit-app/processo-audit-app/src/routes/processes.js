@@ -2,8 +2,49 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { logAudit } from '../middlewares/audit.js';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
+
+// Configuração do Multer para upload de fotos de instrução
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/process_steps/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'template-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Apenas imagens (jpeg, jpg, png, webp) são permitidas!'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+// Endpoint para upload de foto do passo (instrução)
+router.post('/processes/upload-step-photo', verifyToken, checkRole(['admin', 'manager']), upload.single('photo'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+    const photoUrl = `/uploads/process_steps/${req.file.filename}`;
+    res.json({ photo_url: photoUrl });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Criar novo processo
 router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
@@ -30,9 +71,9 @@ router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (r
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await pool.execute(
-          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown) 
-           VALUES (?, ?, ?, ?, ?)`,
-          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '']
+          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown, photo_url) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '', step.photo_url || null]
         );
       }
     }
@@ -160,9 +201,9 @@ router.put('/processes/:id', verifyToken, checkRole(['admin', 'manager']), async
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await pool.execute(
-          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown) 
-           VALUES (?, ?, ?, ?, ?)`,
-          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '']
+          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown, photo_url) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '', step.photo_url || null]
         );
       }
     }

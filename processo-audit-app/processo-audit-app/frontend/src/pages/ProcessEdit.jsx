@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
-import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX, FiCamera } from 'react-icons/fi';
 import styles from './ProcessEdit.module.css';
 
 const ProcessEdit = () => {
@@ -9,6 +9,7 @@ const ProcessEdit = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
@@ -18,9 +19,9 @@ const ProcessEdit = () => {
     status: '',
     steps: []
   });
-  const [newStep, setNewStep] = useState({ title: '', description: '' });
+  const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
   const [editingIndex, setEditingIndex] = useState(null);
-  const [editStepData, setEditStepData] = useState({ title: '', description: '' });
+  const [editStepData, setEditStepData] = useState({ title: '', description: '', photo_url: '' });
 
   useEffect(() => {
     loadData();
@@ -48,13 +49,41 @@ const ProcessEdit = () => {
     }
   };
 
+  const handleStepPhotoUpload = async (file, isEditing = false) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('photo', file);
+      const result = await processAPI.uploadStepPhoto(formData);
+      
+      if (isEditing) {
+        setEditStepData(prev => ({ ...prev, photo_url: result.photo_url }));
+      } else {
+        setNewStep(prev => ({ ...prev, photo_url: result.photo_url }));
+      }
+    } catch (err) {
+      setError('Erro ao subir foto: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const getFullUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5001
+    const host = window.location.hostname;
+    return `http://${host}:5001${url}`;
+  };
+
   const handleAddStep = () => {
     if (newStep.title) {
       setFormData({
         ...formData,
         steps: [...formData.steps, { ...newStep, documentation_markdown: '' }]
       });
-      setNewStep({ title: '', description: '' });
+      setNewStep({ title: '', description: '', photo_url: '' });
     }
   };
 
@@ -70,7 +99,8 @@ const ProcessEdit = () => {
     setEditingIndex(index);
     setEditStepData({
       title: formData.steps[index].title,
-      description: formData.steps[index].description || ''
+      description: formData.steps[index].description || '',
+      photo_url: formData.steps[index].photo_url || ''
     });
   };
 
@@ -79,7 +109,8 @@ const ProcessEdit = () => {
     updatedSteps[index] = {
       ...updatedSteps[index],
       title: editStepData.title,
-      description: editStepData.description
+      description: editStepData.description,
+      photo_url: editStepData.photo_url
     };
     setFormData({ ...formData, steps: updatedSteps });
     setEditingIndex(null);
@@ -183,13 +214,14 @@ const ProcessEdit = () => {
             {formData.steps.map((step, idx) => (
               <div key={idx} className={`${styles.stepItem} ${editingIndex === idx ? styles.editing : ''}`}>
                 {editingIndex === idx ? (
-                  <div className={styles.stepEditForm}>
+                  <div className={styles.stepEditForm} style={{ flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
                     <input
                       type="text"
                       value={editStepData.title}
                       onChange={(e) => setEditStepData({ ...editStepData, title: e.target.value })}
                       placeholder="Título do passo"
                       className={styles.editInput}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
                     />
                     <input
                       type="text"
@@ -197,15 +229,36 @@ const ProcessEdit = () => {
                       onChange={(e) => setEditStepData({ ...editStepData, description: e.target.value })}
                       placeholder="Descrição (opcional)"
                       className={styles.editInput}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
                     />
+                    
+                    <div className={styles.stepPhotoSection} style={{ marginBottom: '1rem' }}>
+                      <label htmlFor={`edit-photo-${idx}`} className={styles.photoBtn}>
+                        <FiCamera /> {editStepData.photo_url ? '📸 Alterar Foto' : '➕ Foto de Instrução'}
+                      </label>
+                      <input
+                        type="file"
+                        id={`edit-photo-${idx}`}
+                        accept="image/*"
+                        className={styles.photoInput}
+                        onChange={(e) => handleStepPhotoUpload(e.target.files[0], true)}
+                      />
+                      {editStepData.photo_url && (
+                        <div className={styles.photoPreview}>
+                          <img src={getFullUrl(editStepData.photo_url)} alt="Preview" />
+                        </div>
+                      )}
+                    </div>
+
                     <div className={styles.editActions}>
                       <button
                         type="button"
                         onClick={() => saveStepEdit(idx)}
                         className="btn btn-primary btn-small"
                         title="Salvar Passo"
+                        disabled={uploading}
                       >
-                        <FiCheck />
+                        <FiCheck /> Salvar Passo
                       </button>
                       <button
                         type="button"
@@ -213,7 +266,7 @@ const ProcessEdit = () => {
                         className="btn btn-outline btn-small"
                         title="Cancelar"
                       >
-                        <FiX />
+                        <FiX /> Cancelar
                       </button>
                     </div>
                   </div>
@@ -222,6 +275,13 @@ const ProcessEdit = () => {
                     <div className={styles.stepInfo}>
                       <h4>{idx + 1}. {step.title}</h4>
                       {step.description && <p>{step.description}</p>}
+                      {step.photo_url && (
+                        <img 
+                          src={getFullUrl(step.photo_url)} 
+                          alt="Thumbnail" 
+                          className={styles.stepThumb} 
+                        />
+                      )}
                     </div>
                     <div className={styles.stepActions}>
                       <button
@@ -265,11 +325,30 @@ const ProcessEdit = () => {
                 onChange={(e) => setNewStep({ ...newStep, description: e.target.value })}
               />
             </div>
+
+            <div className={styles.stepPhotoSection}>
+              <label htmlFor="new-step-photo" className={styles.photoBtn}>
+                <FiCamera /> {newStep.photo_url ? '📸 Alterar Foto' : '➕ Foto de Instrução'}
+              </label>
+              <input
+                type="file"
+                id="new-step-photo"
+                accept="image/*"
+                className={styles.photoInput}
+                onChange={(e) => handleStepPhotoUpload(e.target.files[0], false)}
+              />
+              {newStep.photo_url && (
+                <div className={styles.photoPreview}>
+                  <img src={getFullUrl(newStep.photo_url)} alt="Preview" />
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handleAddStep}
               className="btn btn-secondary btn-small"
-              disabled={!newStep.title}
+              disabled={!newStep.title || uploading}
             >
               <FiPlus /> Adicionar Passo
             </button>

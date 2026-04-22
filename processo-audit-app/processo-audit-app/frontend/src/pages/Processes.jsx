@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiPlus, FiEdit2, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiEye, FiCamera } from 'react-icons/fi';
 import styles from './Processes.module.css';
 
 const Processes = () => {
@@ -13,13 +13,14 @@ const Processes = () => {
   const [filterDept, setFilterDept] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     department_id: '',
     steps: []
   });
-  const [newStep, setNewStep] = useState({ title: '', description: '' });
+  const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
   const { user } = useAuth();
 
   useEffect(() => {
@@ -62,11 +63,34 @@ const Processes = () => {
       alert(`Processo criado com ${finalFormData.steps.length} passos!`);
       setShowModal(false);
       setFormData({ title: '', description: '', department_id: '', steps: [] });
-      setNewStep({ title: '', description: '' });
+      setNewStep({ title: '', description: '', photo_url: '' });
       loadData();
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleStepPhotoUpload = async (file) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('photo', file);
+      const result = await processAPI.uploadStepPhoto(formData);
+      setNewStep(prev => ({ ...prev, photo_url: result.photo_url }));
+    } catch (err) {
+      setError('Erro ao subir foto: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const getFullUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas porta 5001
+    const host = window.location.hostname;
+    return `http://${host}:5001${url}`;
   };
 
   const handleAddStep = () => {
@@ -75,7 +99,7 @@ const Processes = () => {
         ...formData,
         steps: [...formData.steps, { ...newStep, documentation_markdown: '' }]
       });
-      setNewStep({ title: '', description: '' });
+      setNewStep({ title: '', description: '', photo_url: '' });
     }
   };
 
@@ -271,6 +295,13 @@ const Processes = () => {
                         <div>
                           <strong>{idx + 1}. {step.title}</strong>
                           {step.description && <p>{step.description}</p>}
+                          {step.photo_url && (
+                            <img 
+                              src={getFullUrl(step.photo_url)} 
+                              alt="Thumbnail" 
+                              className={styles.stepThumb} 
+                            />
+                          )}
                         </div>
                         <button
                           type="button"
@@ -301,10 +332,31 @@ const Processes = () => {
                       setNewStep({ ...newStep, description: e.target.value })
                     }
                   />
+                  
+                  <div className={styles.stepPhotoSection}>
+                    <label htmlFor="step-photo" className={styles.photoBtn}>
+                      <FiCamera /> {newStep.photo_url ? '📸 Alterar Foto' : '➕ Foto de Instrução'}
+                    </label>
+                    <input
+                      type="file"
+                      id="step-photo"
+                      accept="image/*"
+                      className={styles.photoInput}
+                      onChange={(e) => handleStepPhotoUpload(e.target.files[0])}
+                    />
+                    {uploading && <p>Subindo...</p>}
+                    {newStep.photo_url && (
+                      <div className={styles.photoPreview}>
+                        <img src={getFullUrl(newStep.photo_url)} alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleAddStep}
                     className="btn btn-secondary btn-small"
+                    disabled={uploading}
                   >
                     <FiPlus /> Adicionar Passo
                   </button>

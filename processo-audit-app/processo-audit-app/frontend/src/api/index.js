@@ -89,6 +89,18 @@ export const processAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  uploadStepPhoto: async (formData) => {
+    const res = await fetch(`${API_URL}/processes/upload-step-photo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
@@ -186,11 +198,15 @@ export const executionAPI = {
     return res.json();
   },
 
-  completeStep: async (stepExecutionId, notes = '') => {
+  completeStep: async (stepExecutionId, data) => {
+    const isFormData = data instanceof FormData;
     const res = await fetch(`${API_URL}/step-executions/${stepExecutionId}/complete`, {
       method: 'PUT',
-      headers: headers(getToken()),
-      body: JSON.stringify({ notes })
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: isFormData ? data : JSON.stringify(data)
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();

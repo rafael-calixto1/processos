@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { processAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiArrowLeft, FiEdit2, FiTrash2, FiPlay } from 'react-icons/fi';
+import { FiArrowLeft, FiEdit2, FiTrash2, FiPlay, FiImage } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './ProcessDetail.module.css';
@@ -51,6 +51,14 @@ const ProcessDetail = () => {
 
   const handleExecute = async () => {
     navigate(`/execucoes/novo/${id}`);
+  };
+
+  const getFullUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5001
+    const host = window.location.hostname;
+    return `http://${host}:5001${url}`;
   };
 
   if (loading) {
@@ -194,13 +202,24 @@ const ProcessDetail = () => {
                       </div>
                     </div>
 
-                    {expandedStep === step.id && step.documentation_markdown && (
+                    {(expandedStep === step.id && (step.documentation_markdown || step.photo_url)) && (
                       <div className={styles.stepContent}>
-                        <div className={styles.markdown}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {step.documentation_markdown}
-                          </ReactMarkdown>
-                        </div>
+                        {step.documentation_markdown && (
+                          <div className={styles.markdown}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {step.documentation_markdown}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                        {step.photo_url && (
+                          <div className={styles.photoContainer}>
+                            <img 
+                              src={getFullUrl(step.photo_url)} 
+                              alt="Instrução visual" 
+                              className={styles.instructionPhoto}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -141,6 +141,7 @@ const initDb = async () => {
         step_id INT NOT NULL,
         completed_at TIMESTAMP NULL,
         notes VARCHAR(500),
+        photo_url VARCHAR(500),
         completed_by INT,
         FOREIGN KEY (execution_id) REFERENCES process_executions(id) ON DELETE CASCADE,
         FOREIGN KEY (step_id) REFERENCES steps(id),

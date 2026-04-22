@@ -24,13 +24,16 @@ app.use((req, res, next) => {
 
 // Middlewares
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: true,
   credentials: true
 }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(auditMiddleware);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Rotas
 app.use('/api/auth', authRoutes);
