@@ -43,10 +43,11 @@ const Layout = ({ children }) => {
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button
-              className={styles.menuToggle}
+              className={`${styles.menuToggle} ${sidebarOpen ? styles.toggleActive : ''}`}
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              {sidebarOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+              <FiMenu size={24} className={styles.iconHamburger} />
+              <FiX size={24} className={styles.iconClose} />
             </button>
             <Link to="/dashboard" className={styles.logo}>
               {branding?.logo_url ? (
