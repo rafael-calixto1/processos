@@ -19,6 +19,8 @@ app.set('trust proxy', true);
 // Request logger
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('IP:', req.ip);
+  console.log('X-Forwarded-For:', req.headers['x-forwarded-for']);
   if (['POST', 'PUT'].includes(req.method)) {
     console.log('Body:', JSON.stringify(req.body));
   }

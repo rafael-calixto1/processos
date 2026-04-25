@@ -43,16 +43,6 @@
 .filters select {
   flex: 1;
   max-width: 250px;
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-.filters select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
 }
 
 .processList {
@@ -198,24 +188,6 @@
 .formGroup label {
   font-weight: 600;
   color: var(--text-dark);
-}
-
-.formGroup input,
-.formGroup textarea,
-.formGroup select {
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.formGroup input:focus,
-.formGroup textarea:focus,
-.formGroup select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
 }
 
 /* Steps Section */
