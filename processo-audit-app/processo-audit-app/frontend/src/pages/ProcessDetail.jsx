@@ -17,6 +17,7 @@ const ProcessDetail = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('steps'); // steps, audit
   const [expandedStep, setExpandedStep] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -38,6 +39,14 @@ const ProcessDetail = () => {
     }
   };
 
+  const openImage = (url) => {
+    setSelectedImage(getFullUrl(url));
+  };
+
+  const closeImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleDelete = async () => {
     if (window.confirm('Tem certeza que deseja deletar este processo?')) {
       try {
@@ -55,10 +64,10 @@ const ProcessDetail = () => {
 
   const getFullUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http')) return url;
-    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5001
+    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5002
     const host = window.location.hostname;
-    return `http://${host}:5001${url}`;
+    return `http://${host}:5002${url}`;
   };
 
   if (loading) {
@@ -217,6 +226,7 @@ const ProcessDetail = () => {
                               src={getFullUrl(step.photo_url)} 
                               alt="Instrução visual" 
                               className={styles.instructionPhoto}
+                              onClick={() => openImage(step.photo_url)}
                             />
                           </div>
                         )}
@@ -281,6 +291,16 @@ const ProcessDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedImage && (
+        <div className={styles.modal} onClick={closeImage}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <button className={styles.closeModal} onClick={closeImage}>&times;</button>
+            <img src={selectedImage} alt="Expanded" className={styles.modalImage} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
