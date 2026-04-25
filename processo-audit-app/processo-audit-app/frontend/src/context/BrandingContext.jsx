@@ -19,6 +19,18 @@ export const BrandingProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (branding.favicon_url) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = branding.favicon_url;
+    }
+  }, [branding.favicon_url]);
+
   const fetchBranding = async () => {
     try {
       const response = await fetch('/api/branding');
