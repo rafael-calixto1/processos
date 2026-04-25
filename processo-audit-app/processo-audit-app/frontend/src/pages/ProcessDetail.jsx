@@ -70,6 +70,144 @@ const ProcessDetail = () => {
     return `http://${host}:5002${url}`;
   };
 
+  const formatStatus = (status) => {
+    switch (status) {
+      case 'active': return 'Ativo';
+      case 'draft': return 'Rascunho';
+      case 'archived': return 'Arquivado';
+      default: return status;
+    }
+  };
+
+  const JsonHighlighter = ({ json }) => {
+    const jsonString = JSON.stringify(json, null, 2);
+    
+    // Regex for basic syntax highlighting
+    const parts = jsonString.split(/("(?:\\.|[^"])*")|(\b\d+\b)|(\btrue\b|\bfalse\b)|(\bnull\b)/g);
+
+    return (
+      <pre className={styles.rawJson}>
+        {parts.map((part, index) => {
+          if (!part) return null;
+          
+          if (part.startsWith('"')) {
+            // Check if it's a key (ends with :)
+            const isKey = jsonString[jsonString.indexOf(part) + part.length] === ':';
+            return (
+              <span key={index} className={isKey ? styles.jsonKey : styles.jsonString}>
+                {part}
+              </span>
+            );
+          }
+          
+          if (/^\d+$/.test(part)) {
+            return <span key={index} className={styles.jsonNumber}>{part}</span>;
+          }
+          
+          if (part === 'true' || part === 'false') {
+            return <span key={index} className={styles.jsonBoolean}>{part}</span>;
+          }
+          
+          if (part === 'null') {
+            return <span key={index} className={styles.jsonNull}>{part}</span>;
+          }
+          
+          return part;
+        })}
+      </pre>
+    );
+  };
+
+  const DataViewer = ({ data }) => {
+    const [showTechnical, setShowTechnical] = useState(false);
+    if (!data) return null;
+    let parsedData;
+    try {
+      parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+    } catch (e) {
+      return <JsonHighlighter json={{ raw: data }} />;
+    }
+
+    const labels = {
+      title: 'Título',
+      description: 'Descrição',
+      status: 'Status',
+      version: 'Versão',
+      department_id: 'ID Departamento',
+      department_name: 'Departamento',
+      created_by: 'Criado por (ID)',
+      created_by_name: 'Proprietário',
+      created_at: 'Criado em',
+      updated_at: 'Atualizado em',
+      steps: 'Passos'
+    };
+
+    const formatValue = (key, value) => {
+      if (value === null || value === undefined) return 'N/A';
+      if (key === 'status') {
+        const statuses = {
+          'active': '✅ Ativo',
+          'draft': '📝 Rascunho',
+          'archived': '📦 Arquivado'
+        };
+        return statuses[value] || value.charAt(0).toUpperCase() + value.slice(1);
+      }
+      if (key === 'created_at' || key === 'updated_at' || key === 'timestamp') {
+        return new Date(value).toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      if (Array.isArray(value)) {
+        return `${value.length} passo(s)`;
+      }
+      if (typeof value === 'object') {
+        return 'Objeto de dados';
+      }
+      return String(value);
+    };
+
+    const technicalFields = ['id', 'department_id', 'created_by', 'updated_at', 'created_at', 'version', 'updated_by'];
+    const displayFields = Object.entries(parsedData).filter(([key]) => !technicalFields.includes(key));
+
+    return (
+      <div className={styles.dataViewer}>
+        <div className={styles.dataGrid}>
+          {displayFields.length > 0 ? (
+            displayFields.map(([key, value]) => (
+              <div key={key} className={styles.dataItem}>
+                <span className={styles.dataKey}>{labels[key] || key}:</span>
+                <span className={styles.dataValue}>{formatValue(key, value)}</span>
+              </div>
+            ))
+          ) : (
+            <p className={styles.empty}>Nenhum dado legível disponível.</p>
+          )}
+        </div>
+        
+        <div className={styles.technicalDetails}>
+          <button 
+            type="button"
+            className={styles.technicalBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTechnical(!showTechnical);
+            }}
+          >
+            {showTechnical ? 'Hide technical details' : 'View technical details (JSON)'}
+          </button>
+          
+          {showTechnical && (
+            <JsonHighlighter json={parsedData} />
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -269,14 +407,18 @@ const ProcessDetail = () => {
                       {log.old_data && (
                         <details className={styles.details}>
                           <summary>📋 Antes</summary>
-                          <pre>{JSON.stringify(JSON.parse(log.old_data), null, 2)}</pre>
+                          <div className={styles.auditContent}>
+                            <DataViewer data={log.old_data} />
+                          </div>
                         </details>
                       )}
 
                       {log.new_data && (
                         <details className={styles.details}>
                           <summary>📋 Depois</summary>
-                          <pre>{JSON.stringify(JSON.parse(log.new_data), null, 2)}</pre>
+                          <div className={styles.auditContent}>
+                            <DataViewer data={log.new_data} />
+                          </div>
                         </details>
                       )}
                     </div>
