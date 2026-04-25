@@ -25,5 +25,9 @@ dist/
 .fusebox/
 .dynamodb/
 .tern-port
-uploads/process_steps/
+uploads/process_steps/*
+!uploads/process_steps/.gitkeep
+uploads/steps/*
+!uploads/steps/.gitkeep
+
 
