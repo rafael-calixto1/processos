@@ -52,7 +52,7 @@ const initDb = async () => {
         created_by INT NOT NULL,
         updated_by INT,
         version INT DEFAULT 1,
-        status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+        status ENUM('draft', 'active', 'archived') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (department_id) REFERENCES departments(id),

@@ -16,7 +16,7 @@ const ProcessEdit = () => {
     title: '',
     description: '',
     department_id: '',
-    status: '',
+    status: 'active',
     steps: []
   });
   const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
@@ -30,18 +30,19 @@ const ProcessEdit = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [proc, depts] = await Promise.all([
-        processAPI.get(id),
-        departmentAPI.list()
-      ]);
-      setFormData({
-        title: proc.title,
-        description: proc.description || '',
-        department_id: proc.department_id,
-        status: proc.status,
-        steps: proc.steps || []
-      });
+      const depts = await departmentAPI.list();
       setDepartments(depts);
+
+      if (id) {
+        const proc = await processAPI.get(id);
+        setFormData({
+          title: proc.title,
+          description: proc.description || '',
+          department_id: proc.department_id,
+          status: proc.status,
+          steps: proc.steps || []
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
