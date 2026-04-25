@@ -60,7 +60,7 @@ router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (r
 
     const [result] = await pool.execute(
       `INSERT INTO processes (title, description, department_id, created_by, status) 
-       VALUES (?, ?, ?, ?, 'draft')`,
+       VALUES (?, ?, ?, ?, 'active')`,
       [title, description || '', department_id, req.userId]
     );
 
