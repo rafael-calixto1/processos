@@ -25,3 +25,5 @@ dist/
 .fusebox/
 .dynamodb/
 .tern-port
+uploads/process_steps/
+
