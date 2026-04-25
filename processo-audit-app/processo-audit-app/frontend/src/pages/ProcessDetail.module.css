@@ -508,9 +508,68 @@
 
 .instructionPhoto {
   margin-top: 1rem;
-  max-width: 100%;
+  max-width: 300px;
+  height: auto;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
   display: block;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.instructionPhoto:hover {
+  transform: scale(1.02);
+}
+
+/* Lightbox Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: zoom-out;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  max-width: 90%;
+  max-height: 90%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modalImage {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.closeModal {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s;
+}
+
+.closeModal:hover {
+  transform: scale(1.1);
 }

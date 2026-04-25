@@ -17,6 +17,7 @@ const ProcessExecution = () => {
   const [expandedStep, setExpandedStep] = useState(null);
   const [stepNotes, setStepNotes] = useState({});
   const [stepPhotos, setStepPhotos] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -44,6 +45,14 @@ const ProcessExecution = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openImage = (url) => {
+    setSelectedImage(getFullUrl(url));
+  };
+
+  const closeImage = () => {
+    setSelectedImage(null);
   };
 
   const handleCompleteStep = async (stepExecutionId) => {
@@ -91,10 +100,10 @@ const ProcessExecution = () => {
 
   const getFullUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http')) return url;
-    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5001
+    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5002
     const host = window.location.hostname;
-    return `http://${host}:5001${url}`;
+    return `http://${host}:5002${url}`;
   };
 
   const handleFinalize = async () => {
@@ -253,6 +262,7 @@ const ProcessExecution = () => {
                               src={getFullUrl(stepExec.photo_url)} 
                               alt="Instrução visual" 
                               className={styles.instructionPhoto}
+                              onClick={() => openImage(stepExec.photo_url)}
                             />
                           )}
                         </div>
@@ -300,6 +310,8 @@ const ProcessExecution = () => {
                                 <img 
                                   src={URL.createObjectURL(stepPhotos[stepExec.id])} 
                                   alt="Preview" 
+                                  onClick={() => openImage(URL.createObjectURL(stepPhotos[stepExec.id]))}
+                                  style={{ cursor: 'pointer' }}
                                 />
                                 <p style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '0.5rem' }}>
                                   ✓ Foto selecionada: {stepPhotos[stepExec.id].name}
@@ -334,7 +346,7 @@ const ProcessExecution = () => {
                                 src={getFullUrl(stepExec.photo_url)} 
                                 alt="Evidência do passo" 
                                 className={styles.photoImg}
-                                onClick={() => window.open(getFullUrl(stepExec.photo_url), '_blank')}
+                                onClick={() => openImage(stepExec.photo_url)}
                               />
                             </div>
                           )}
@@ -396,6 +408,16 @@ const ProcessExecution = () => {
           </p>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedImage && (
+        <div className={styles.modal} onClick={closeImage}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <button className={styles.closeModal} onClick={closeImage}>&times;</button>
+            <img src={selectedImage} alt="Expanded" className={styles.modalImage} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
