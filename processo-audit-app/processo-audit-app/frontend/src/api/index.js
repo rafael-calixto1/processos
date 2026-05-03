@@ -191,6 +191,54 @@ export const brandingAPI = {
   }
 };
 
+// ======== PROCESSOS VISUAIS ========
+export const visualProcessAPI = {
+  list: async () => {
+    const res = await fetch(`${API_URL}/visual-processes`, {
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  get: async (id) => {
+    const res = await fetch(`${API_URL}/visual-processes/${id}`, {
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  create: async (data) => {
+    const res = await fetch(`${API_URL}/visual-processes`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  update: async (id, data) => {
+    const res = await fetch(`${API_URL}/visual-processes/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  delete: async (id) => {
+    const res = await fetch(`${API_URL}/visual-processes/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+};
+
 // ======== EXECUÇÕES ========
 export const executionAPI = {
   start: async (processId) => {
