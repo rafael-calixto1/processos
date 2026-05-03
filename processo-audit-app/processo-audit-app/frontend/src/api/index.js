@@ -27,6 +27,43 @@ export const authAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  listUsers: async () => {
+    const res = await fetch(`${API_URL}/auth/users`, {
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  createUser: async (data) => {
+    const res = await fetch(`${API_URL}/auth/users`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  updateUser: async (id, data) => {
+    const res = await fetch(`${API_URL}/auth/users/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  deleteUser: async (id) => {
+    const res = await fetch(`${API_URL}/auth/users/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
