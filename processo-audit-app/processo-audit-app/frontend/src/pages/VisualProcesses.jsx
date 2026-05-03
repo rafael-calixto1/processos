@@ -31,6 +31,7 @@ const VisualProcesses = () => {
   const [title, setTitle] = useState('Novo Fluxo');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
     loadFlows();
@@ -51,6 +52,7 @@ const VisualProcesses = () => {
       setEdges([]);
       setSelectedFlowId(null);
       setTitle('Novo Fluxo');
+      setSelectedNode(null);
       return;
     }
 
@@ -58,25 +60,15 @@ const VisualProcesses = () => {
     try {
       const flow = await visualProcessAPI.get(id);
       
-      // Validação e parsing defensivo dos dados carregados
       let rawNodes = flow.nodes;
       let rawEdges = flow.edges;
 
-      // Se vierem como string (comum em alguns drivers MySQL), converter para objeto
       if (typeof rawNodes === 'string') {
-        try {
-          rawNodes = JSON.parse(rawNodes);
-        } catch (e) {
-          rawNodes = [];
-        }
+        try { rawNodes = JSON.parse(rawNodes); } catch (e) { rawNodes = []; }
       }
       
       if (typeof rawEdges === 'string') {
-        try {
-          rawEdges = JSON.parse(rawEdges);
-        } catch (e) {
-          rawEdges = [];
-        }
+        try { rawEdges = JSON.parse(rawEdges); } catch (e) { rawEdges = []; }
       }
 
       const validatedNodes = (Array.isArray(rawNodes) ? rawNodes : []).map(node => ({
@@ -90,6 +82,7 @@ const VisualProcesses = () => {
       setEdges(validatedEdges);
       setTitle(flow.title || 'Fluxo sem título');
       setSelectedFlowId(flow.id);
+      setSelectedNode(null);
     } catch (err) {
       console.error('Erro ao carregar o fluxo:', err);
       alert('Erro ao carregar o fluxo: ' + err.message);
@@ -115,6 +108,28 @@ const VisualProcesses = () => {
     setNodes((nds) => nds.concat(newNode));
   }, [setNodes]);
 
+  const onNodeClick = useCallback((event, node) => {
+    setSelectedNode(node);
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+  }, []);
+
+  const updateNodeLabel = (id, label) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return { ...node, data: { ...node.data, label } };
+        }
+        return node;
+      })
+    );
+    if (selectedNode?.id === id) {
+      setSelectedNode(prev => ({ ...prev, data: { ...prev.data, label } }));
+    }
+  };
+
   const onSave = useCallback(async () => {
     setSaving(true);
     try {
@@ -122,6 +137,7 @@ const VisualProcesses = () => {
       if (selectedFlowId) {
         await visualProcessAPI.update(selectedFlowId, flowData);
         alert('Fluxo atualizado com sucesso!');
+        loadFlows(); // Refresh list to get updated title
       } else {
         const result = await visualProcessAPI.create(flowData);
         setSelectedFlowId(result.id);
@@ -146,6 +162,12 @@ const VisualProcesses = () => {
     } catch (err) {
       alert('Erro ao excluir');
     }
+  };
+
+  const deleteNode = (id) => {
+    setNodes((nds) => nds.filter((node) => node.id !== id));
+    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+    setSelectedNode(null);
   };
 
   return (
@@ -175,38 +197,70 @@ const VisualProcesses = () => {
         <p>Desenhe e gerencie o fluxo dos seus processos de auditoria.</p>
       </div>
 
-      <div className={styles.flowWrapper}>
-        {loading ? (
-          <div className={styles.loading}>Carregando...</div>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            fitView
-          >
-            <Controls />
-            <MiniMap />
-            <Background variant="dots" gap={12} size={1} />
-            
-            <Panel position="top-right">
-              <div className={styles.panel}>
-                <button onClick={onAddNode} className={styles.addBtn}>
-                  + Adicionar Etapa
-                </button>
-                <button onClick={onSave} className={styles.saveBtn} disabled={saving}>
-                  {saving ? 'Salvando...' : '💾 Salvar Fluxo'}
-                </button>
-                {selectedFlowId && (
-                  <button onClick={onDelete} className={styles.deleteBtn}>
-                    🗑️ Excluir
+      <div className={styles.mainArea}>
+        <div className={styles.flowWrapper}>
+          {loading ? (
+            <div className={styles.loading}>Carregando...</div>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              fitView
+            >
+              <Controls />
+              <MiniMap />
+              <Background variant="dots" gap={12} size={1} />
+              
+              <Panel position="top-right">
+                <div className={styles.panel}>
+                  <button onClick={onAddNode} className={styles.addBtn}>
+                    + Adicionar Etapa
                   </button>
-                )}
-              </div>
-            </Panel>
-          </ReactFlow>
+                  <button onClick={onSave} className={styles.saveBtn} disabled={saving}>
+                    {saving ? 'Salvando...' : '💾 Salvar Fluxo'}
+                  </button>
+                  {selectedFlowId && (
+                    <button onClick={onDelete} className={styles.deleteBtn}>
+                      🗑️ Excluir
+                    </button>
+                  )}
+                </div>
+              </Panel>
+            </ReactFlow>
+          )}
+        </div>
+
+        {selectedNode && (
+          <aside className={styles.sidebar}>
+            <h3>Editar Etapa</h3>
+            <div className={styles.sidebarGroup}>
+              <label>Nome da Etapa</label>
+              <input
+                type="text"
+                value={selectedNode.data.label}
+                onChange={(e) => updateNodeLabel(selectedNode.id, e.target.value)}
+              />
+            </div>
+            <div className={styles.sidebarActions}>
+              <button 
+                onClick={() => deleteNode(selectedNode.id)} 
+                className={styles.sidebarDeleteBtn}
+              >
+                Remover Etapa
+              </button>
+              <button 
+                onClick={() => setSelectedNode(null)} 
+                className={styles.sidebarCloseBtn}
+              >
+                Fechar
+              </button>
+            </div>
+          </aside>
         )}
       </div>
     </div>
