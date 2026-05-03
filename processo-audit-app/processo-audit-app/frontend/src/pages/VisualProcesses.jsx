@@ -57,12 +57,22 @@ const VisualProcesses = () => {
     setLoading(true);
     try {
       const flow = await visualProcessAPI.get(id);
-      setNodes(flow.nodes || []);
-      setEdges(flow.edges || []);
-      setTitle(flow.title);
+      
+      // Validação defensiva dos dados carregados
+      const validatedNodes = (flow.nodes || []).map(node => ({
+        ...node,
+        position: node.position || { x: Math.random() * 200, y: Math.random() * 200 }
+      })).filter(node => node && node.id);
+
+      const validatedEdges = (flow.edges || []).filter(edge => edge && edge.source && edge.target);
+
+      setNodes(validatedNodes);
+      setEdges(validatedEdges);
+      setTitle(flow.title || 'Fluxo sem título');
       setSelectedFlowId(flow.id);
     } catch (err) {
-      alert('Erro ao carregar o fluxo');
+      console.error('Erro ao carregar o fluxo:', err);
+      alert('Erro ao carregar o fluxo. Verifique o console para mais detalhes.');
     } finally {
       setLoading(false);
     }
