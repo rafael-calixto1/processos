@@ -236,6 +236,18 @@ export const visualProcessAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  uploadStageImage: async (formData) => {
+    const res = await fetch(`${API_URL}/visual-processes/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
