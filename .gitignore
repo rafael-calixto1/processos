@@ -1,0 +1,11 @@
+backend.log
+frontend.log
+*.log
+*_log.txt
+node_modules/
+.env
+.env.local
+dist/
+build/
+.vscode/
+.idea/
