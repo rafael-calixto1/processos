@@ -12,6 +12,7 @@ import ProcessEdit from './pages/ProcessEdit';
 import Departments from './pages/Departments';
 import Branding from './pages/Branding';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 import VisualProcesses from './pages/VisualProcesses';
 import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
@@ -191,6 +192,17 @@ function AppContent() {
               <Branding />
             </Layout>
           </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/configuracoes"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Settings />
+            </Layout>
+          </ProtectedRoute>
         }
       />
 

@@ -99,6 +99,39 @@ router.get('/me', verifyToken, async (req, res) => {
   }
 });
 
+// Alterar senha do usuário logado
+router.put('/change-password', verifyToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+    }
+
+    const [users] = await pool.execute(
+      'SELECT password FROM users WHERE id = ?',
+      [req.userId]
+    );
+
+    const user = users[0];
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Senha atual incorreta' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await pool.execute(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedNewPassword, req.userId]
+    );
+
+    res.json({ message: 'Senha alterada com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Listar usuários (apenas admin)
 router.get('/users', verifyToken, async (req, res) => {
   try {

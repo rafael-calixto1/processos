@@ -64,6 +64,16 @@ export const authAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    const res = await fetch(`${API_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
