@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
-import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX, FiCamera } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX, FiCamera, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 import styles from './ProcessEdit.module.css';
 
 const ProcessEdit = () => {
@@ -88,12 +88,38 @@ const ProcessEdit = () => {
     }
   };
 
+  const handleInsertStep = (index) => {
+    const newEmptyStep = { title: '', description: '', photo_url: '', documentation_markdown: '' };
+    const updatedSteps = [...formData.steps];
+    updatedSteps.splice(index, 0, newEmptyStep);
+    
+    setFormData({
+      ...formData,
+      steps: updatedSteps
+    });
+    setEditingIndex(index);
+    setEditStepData({ title: '', description: '', photo_url: '' });
+  };
+
   const handleRemoveStep = (index) => {
     setFormData({
       ...formData,
       steps: formData.steps.filter((_, i) => i !== index)
     });
     if (editingIndex === index) setEditingIndex(null);
+  };
+
+  const handleMoveStep = (index, direction) => {
+    const updatedSteps = [...formData.steps];
+    const newIndex = index + direction;
+    if (newIndex >= 0 && newIndex < updatedSteps.length) {
+      const temp = updatedSteps[index];
+      updatedSteps[index] = updatedSteps[newIndex];
+      updatedSteps[newIndex] = temp;
+      setFormData({ ...formData, steps: updatedSteps });
+      if (editingIndex === index) setEditingIndex(newIndex);
+      else if (editingIndex === newIndex) setEditingIndex(index);
+    }
   };
 
   const startEditing = (index) => {
@@ -213,8 +239,20 @@ const ProcessEdit = () => {
           
           <div className={styles.stepsList}>
             {formData.steps.map((step, idx) => (
-              <div key={idx} className={`${styles.stepItem} ${editingIndex === idx ? styles.editing : ''}`}>
-                {editingIndex === idx ? (
+              <React.Fragment key={idx}>
+                <div className={styles.insertStepDivider}>
+                  <button 
+                    type="button" 
+                    onClick={() => handleInsertStep(idx)}
+                    className={styles.insertStepBtn}
+                    title="Inserir passo antes deste"
+                  >
+                    <FiPlus /> Inserir passo
+                  </button>
+                </div>
+                
+                <div className={`${styles.stepItem} ${editingIndex === idx ? styles.editing : ''}`}>
+                  {editingIndex === idx ? (
                   <div className={styles.stepEditForm} style={{ flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
                     <input
                       type="text"
@@ -287,6 +325,24 @@ const ProcessEdit = () => {
                     <div className={styles.stepActions}>
                       <button
                         type="button"
+                        onClick={() => handleMoveStep(idx, -1)}
+                        className="btn btn-outline btn-small"
+                        title="Mover para Cima"
+                        disabled={idx === 0}
+                      >
+                        <FiArrowUp />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveStep(idx, 1)}
+                        className="btn btn-outline btn-small"
+                        title="Mover para Baixo"
+                        disabled={idx === formData.steps.length - 1}
+                      >
+                        <FiArrowDown />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => startEditing(idx)}
                         className="btn btn-outline btn-small"
                         title="Editar Passo"
@@ -305,8 +361,22 @@ const ProcessEdit = () => {
                   </>
                 )}
               </div>
-            ))}
-          </div>
+            </React.Fragment>
+          ))}
+
+          {formData.steps.length > 0 && (
+            <div className={styles.insertStepDivider}>
+              <button 
+                type="button" 
+                onClick={() => handleInsertStep(formData.steps.length)}
+                className={styles.insertStepBtn}
+                title="Inserir passo ao final"
+              >
+                <FiPlus /> Inserir passo
+              </button>
+            </div>
+          )}
+        </div>
 
           <div className={styles.addStepForm}>
             <h4>Adicionar Novo Passo</h4>

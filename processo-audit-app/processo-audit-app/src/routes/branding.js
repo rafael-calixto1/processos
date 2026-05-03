@@ -2,8 +2,49 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { logAudit } from '../middlewares/audit.js';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
+
+// Configuração do Multer para upload de logos e favicons
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/branding/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'branding-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp|x-icon|vnd.microsoft.icon|svg\+xml/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype || extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Apenas imagens (jpeg, jpg, png, webp, ico, svg) são permitidas!'));
+  },
+  limits: { fileSize: 2 * 1024 * 1024 } // 2MB
+});
+
+// Endpoint para upload de logo/favicon
+router.post('/branding/upload', verifyToken, checkRole(['admin']), upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+    const imageUrl = `/uploads/branding/${req.file.filename}`;
+    res.json({ url: imageUrl });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Obter configurações de branding
 router.get('/branding', async (req, res) => {

@@ -22,6 +22,7 @@ const Layout = ({ children }) => {
   const menuItems = [
     { label: 'Dashboard', path: '/dashboard', icon: '📊' },
     { label: 'Processos', path: '/processos', icon: '📋' },
+    { label: 'Processos Visuais', path: '/processos-visual', icon: '🎨' },
     { label: 'Departamentos', path: '/departamentos', icon: '🏢' },
     { label: 'Minhas Execuções', path: '/execucoes', icon: '✓' },
   ];
