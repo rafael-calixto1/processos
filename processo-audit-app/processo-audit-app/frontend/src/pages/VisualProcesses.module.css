@@ -49,6 +49,13 @@
   color: #666;
 }
 
+.mainArea {
+  display: flex;
+  flex-grow: 1;
+  gap: 1rem;
+  overflow: hidden;
+}
+
 .flowWrapper {
   flex-grow: 1;
   background-color: #f8f9fa;
@@ -57,6 +64,95 @@
   overflow: hidden;
   position: relative;
   min-height: 500px;
+}
+
+.sidebar {
+  width: 300px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.sidebar h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.8rem;
+}
+
+.sidebarGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebarGroup label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.sidebarGroup input {
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.sidebarGroup input:focus {
+  border-color: #0ba52b;
+  box-shadow: 0 0 0 2px rgba(11, 165, 43, 0.1);
+}
+
+.sidebarActions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.sidebarDeleteBtn {
+  background-color: #fff;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebarDeleteBtn:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.sidebarCloseBtn {
+  background-color: #f8f9fa;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebarCloseBtn:hover {
+  background-color: #e9ecef;
 }
 
 .loading {
