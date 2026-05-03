@@ -29,6 +29,7 @@ const Layout = ({ children }) => {
 
   if (user?.role === 'admin') {
     menuItems.push({ label: 'Branding', path: '/branding', icon: '🎨' });
+    menuItems.push({ label: 'Usuários', path: '/users', icon: '👥' });
   }
 
   return (
