@@ -25,6 +25,7 @@ const Layout = ({ children }) => {
     { label: 'Processos Visuais', path: '/processos-visual', icon: '🎨' },
     { label: 'Departamentos', path: '/departamentos', icon: '🏢' },
     { label: 'Minhas Execuções', path: '/execucoes', icon: '✓' },
+    { label: 'Minha Conta', path: '/configuracoes', icon: '⚙️' },
   ];
 
   if (user?.role === 'admin') {
