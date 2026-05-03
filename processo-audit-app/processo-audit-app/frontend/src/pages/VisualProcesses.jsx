@@ -10,16 +10,22 @@ import {
   Panel,
 } from '@xyflow/react';
 import { visualProcessAPI } from '../api/index';
+import { StartNode, ProcessNode, EndNode } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
+
+const nodeTypes = {
+  startNode: StartNode,
+  processNode: ProcessNode,
+  endNode: EndNode,
+};
 
 const defaultNodes = [
   {
     id: 'node-1',
-    type: 'input',
-    data: { label: 'Início do Processo' },
+    type: 'startNode',
+    data: { label: 'Início', description: 'Ponto de partida do processo', department: '' },
     position: { x: 250, y: 50 },
-    style: { background: '#0ba52b', color: '#fff', borderRadius: '8px', padding: '10px' },
   },
 ];
 
@@ -31,7 +37,7 @@ const VisualProcesses = () => {
   const [title, setTitle] = useState('Novo Fluxo');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedElement, setSelectedElement] = useState(null);
 
   useEffect(() => {
     loadFlows();
@@ -52,7 +58,7 @@ const VisualProcesses = () => {
       setEdges([]);
       setSelectedFlowId(null);
       setTitle('Novo Fluxo');
-      setSelectedNode(null);
+      setSelectedElement(null);
       return;
     }
 
@@ -76,13 +82,16 @@ const VisualProcesses = () => {
         position: node.position || { x: Math.random() * 200, y: Math.random() * 200 }
       })).filter(node => node && node.id);
 
-      const validatedEdges = (Array.isArray(rawEdges) ? rawEdges : []).filter(edge => edge && edge.source && edge.target);
+      const validatedEdges = (Array.isArray(rawEdges) ? rawEdges : []).map(edge => ({
+        ...edge,
+        type: 'smoothstep'
+      })).filter(edge => edge && edge.source && edge.target);
 
       setNodes(validatedNodes);
       setEdges(validatedEdges);
       setTitle(flow.title || 'Fluxo sem título');
       setSelectedFlowId(flow.id);
-      setSelectedNode(null);
+      setSelectedElement(null);
     } catch (err) {
       console.error('Erro ao carregar o fluxo:', err);
       alert('Erro ao carregar o fluxo: ' + err.message);
@@ -92,14 +101,19 @@ const VisualProcesses = () => {
   };
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params) => setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds)),
     [setEdges]
   );
 
-  const onAddNode = useCallback(() => {
+  const onAddNode = useCallback((type = 'processNode') => {
     const newNode = {
       id: `node-${Date.now()}`,
-      data: { label: `Nova Etapa` },
+      type: type,
+      data: { 
+        label: type === 'endNode' ? 'Fim' : type === 'startNode' ? 'Início' : `Nova Etapa`,
+        description: '',
+        department: type === 'processNode' ? 'Suporte' : ''
+      },
       position: {
         x: 100 + Math.random() * 200,
         y: 100 + Math.random() * 200,
@@ -108,25 +122,39 @@ const VisualProcesses = () => {
     setNodes((nds) => nds.concat(newNode));
   }, [setNodes]);
 
-  const onNodeClick = useCallback((event, node) => {
-    setSelectedNode(node);
+  const onElementClick = useCallback((event, element) => {
+    setSelectedElement(element);
   }, []);
 
   const onPaneClick = useCallback(() => {
-    setSelectedNode(null);
+    setSelectedElement(null);
   }, []);
 
-  const updateNodeLabel = (id, label) => {
+  const updateNodeData = (id, newData) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
-          return { ...node, data: { ...node.data, label } };
+          return { ...node, data: { ...node.data, ...newData } };
         }
         return node;
       })
     );
-    if (selectedNode?.id === id) {
-      setSelectedNode(prev => ({ ...prev, data: { ...prev.data, label } }));
+    if (selectedElement?.id === id) {
+      setSelectedElement(prev => ({ ...prev, data: { ...prev.data, ...newData } }));
+    }
+  };
+
+  const updateEdgeData = (id, label) => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.id === id) {
+          return { ...edge, label };
+        }
+        return edge;
+      })
+    );
+    if (selectedElement?.id === id) {
+      setSelectedElement(prev => ({ ...prev, label }));
     }
   };
 
@@ -137,7 +165,7 @@ const VisualProcesses = () => {
       if (selectedFlowId) {
         await visualProcessAPI.update(selectedFlowId, flowData);
         alert('Fluxo atualizado com sucesso!');
-        loadFlows(); // Refresh list to get updated title
+        loadFlows();
       } else {
         const result = await visualProcessAPI.create(flowData);
         setSelectedFlowId(result.id);
@@ -164,10 +192,14 @@ const VisualProcesses = () => {
     }
   };
 
-  const deleteNode = (id) => {
-    setNodes((nds) => nds.filter((node) => node.id !== id));
-    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
-    setSelectedNode(null);
+  const deleteElement = (id) => {
+    if (selectedElement?.source) {
+      setEdges((eds) => eds.filter((edge) => edge.id !== id));
+    } else {
+      setNodes((nds) => nds.filter((node) => node.id !== id));
+      setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+    }
+    setSelectedElement(null);
   };
 
   return (
@@ -194,7 +226,7 @@ const VisualProcesses = () => {
             ))}
           </select>
         </div>
-        <p>Desenhe e gerencie o fluxo dos seus processos de auditoria.</p>
+        <p>Mapeamento profissional de processos de telecomunicações.</p>
       </div>
 
       <div className={styles.mainArea}>
@@ -205,11 +237,14 @@ const VisualProcesses = () => {
             <ReactFlow
               nodes={nodes}
               edges={edges}
+              nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeClick={onNodeClick}
+              onNodeClick={onElementClick}
+              onEdgeClick={onElementClick}
               onPaneClick={onPaneClick}
+              defaultEdgeOptions={{ type: 'smoothstep' }}
               fitView
             >
               <Controls />
@@ -218,43 +253,89 @@ const VisualProcesses = () => {
               
               <Panel position="top-right">
                 <div className={styles.panel}>
-                  <button onClick={onAddNode} className={styles.addBtn}>
-                    + Adicionar Etapa
-                  </button>
-                  <button onClick={onSave} className={styles.saveBtn} disabled={saving}>
-                    {saving ? 'Salvando...' : '💾 Salvar Fluxo'}
-                  </button>
-                  {selectedFlowId && (
-                    <button onClick={onDelete} className={styles.deleteBtn}>
-                      🗑️ Excluir
+                  <div className={styles.addButtons}>
+                    <button onClick={() => onAddNode('startNode')} className={styles.addStartBtn}>+ Início</button>
+                    <button onClick={() => onAddNode('processNode')} className={styles.addBtn}>+ Etapa</button>
+                    <button onClick={() => onAddNode('endNode')} className={styles.addEndBtn}>+ Fim</button>
+                  </div>
+                  <div className={styles.actionButtons}>
+                    <button onClick={onSave} className={styles.saveBtn} disabled={saving}>
+                      {saving ? 'Salvando...' : '💾 Salvar Fluxo'}
                     </button>
-                  )}
+                    {selectedFlowId && (
+                      <button onClick={onDelete} className={styles.deleteBtn}>
+                        🗑️ Excluir
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Panel>
             </ReactFlow>
           )}
         </div>
 
-        {selectedNode && (
+        {selectedElement && (
           <aside className={styles.sidebar}>
-            <h3>Editar Etapa</h3>
-            <div className={styles.sidebarGroup}>
-              <label>Nome da Etapa</label>
-              <input
-                type="text"
-                value={selectedNode.data.label}
-                onChange={(e) => updateNodeLabel(selectedNode.id, e.target.value)}
-              />
-            </div>
+            <h3>Propriedades</h3>
+            
+            {!selectedElement.source ? (
+              <>
+                <div className={styles.sidebarGroup}>
+                  <label>Título da Etapa</label>
+                  <input
+                    type="text"
+                    value={selectedElement.data.label || ''}
+                    onChange={(e) => updateNodeData(selectedElement.id, { label: e.target.value })}
+                  />
+                </div>
+                
+                <div className={styles.sidebarGroup}>
+                  <label>Descrição / Instruções</label>
+                  <textarea
+                    rows={4}
+                    value={selectedElement.data.description || ''}
+                    onChange={(e) => updateNodeData(selectedElement.id, { description: e.target.value })}
+                    placeholder="Detalhe as atividades desta etapa..."
+                  />
+                </div>
+
+                {selectedElement.type === 'processNode' && (
+                  <div className={styles.sidebarGroup}>
+                    <label>Departamento Responsável</label>
+                    <select
+                      value={selectedElement.data.department || ''}
+                      onChange={(e) => updateNodeData(selectedElement.id, { department: e.target.value })}
+                    >
+                      <option value="Suporte">Suporte Técnico</option>
+                      <option value="Financeiro">Financeiro</option>
+                      <option value="Vendas">Vendas / Comercial</option>
+                      <option value="Infraestrutura">Infraestrutura</option>
+                      <option value="Diretoria">Diretoria</option>
+                    </select>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className={styles.sidebarGroup}>
+                <label>Condição / Label da Conexão</label>
+                <input
+                  type="text"
+                  value={selectedElement.label || ''}
+                  onChange={(e) => updateEdgeData(selectedElement.id, e.target.value)}
+                  placeholder="Ex: Sucesso, Falha, Sim, Não"
+                />
+              </div>
+            )}
+
             <div className={styles.sidebarActions}>
               <button 
-                onClick={() => deleteNode(selectedNode.id)} 
+                onClick={() => deleteElement(selectedElement.id)} 
                 className={styles.sidebarDeleteBtn}
               >
-                Remover Etapa
+                Remover {selectedElement.source ? 'Conexão' : 'Etapa'}
               </button>
               <button 
-                onClick={() => setSelectedNode(null)} 
+                onClick={() => setSelectedElement(null)} 
                 className={styles.sidebarCloseBtn}
               >
                 Fechar
