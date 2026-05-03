@@ -176,6 +176,18 @@ export const brandingAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  uploadImage: async (formData) => {
+    const res = await fetch(`${API_URL}/branding/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
