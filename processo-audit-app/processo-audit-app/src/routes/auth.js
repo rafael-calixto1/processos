@@ -116,25 +116,83 @@ router.get('/users', verifyToken, async (req, res) => {
   }
 });
 
-// Atualizar papel do usuário (apenas admin)
-router.put('/users/:id/role', verifyToken, async (req, res) => {
+// Criar usuário (apenas admin)
+router.post('/users', verifyToken, async (req, res) => {
   try {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const { role } = req.body;
+    const { email, password, name, role } = req.body;
+
+    if (!email || !password || !name || !role) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
 
     if (!['admin', 'manager', 'viewer'].includes(role)) {
       return res.status(400).json({ error: 'Papel inválido' });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     await pool.execute(
-      'UPDATE users SET role = ? WHERE id = ?',
-      [role, req.params.id]
+      'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
+      [email, hashedPassword, name, role]
     );
 
-    res.json({ message: 'Papel atualizado com sucesso' });
+    res.status(201).json({ message: 'Usuário criado com sucesso' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Email já registrado' });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Atualizar usuário (apenas admin)
+router.put('/users/:id', verifyToken, async (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const { name, role, password } = req.body;
+
+    let query = 'UPDATE users SET name = ?, role = ?';
+    let params = [name, role];
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      query += ', password = ?';
+      params.push(hashedPassword);
+    }
+
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+
+    await pool.execute(query, params);
+
+    res.json({ message: 'Usuário atualizado com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Excluir usuário (apenas admin)
+router.delete('/users/:id', verifyToken, async (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    // Não permitir que o admin se exclua
+    if (parseInt(req.params.id) === req.userId) {
+      return res.status(400).json({ error: 'Você não pode excluir seu próprio usuário' });
+    }
+
+    await pool.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
+
+    res.json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

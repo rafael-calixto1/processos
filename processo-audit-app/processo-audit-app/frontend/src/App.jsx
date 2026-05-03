@@ -11,6 +11,7 @@ import ProcessDetail from './pages/ProcessDetail';
 import ProcessEdit from './pages/ProcessEdit';
 import Departments from './pages/Departments';
 import Branding from './pages/Branding';
+import Users from './pages/Users';
 import VisualProcesses from './pages/VisualProcesses';
 import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
@@ -188,6 +189,17 @@ function AppContent() {
           <AdminRoute>
             <Layout>
               <Branding />
+            </Layout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <AdminRoute>
+            <Layout>
+              <Users />
             </Layout>
           </AdminRoute>
         }
