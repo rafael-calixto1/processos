@@ -9,14 +9,43 @@
   margin-bottom: 1.5rem;
 }
 
-.header h1 {
-  margin: 0;
+.titleSection {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.titleInput {
   font-size: 1.8rem;
+  font-weight: bold;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.2rem 0.5rem;
+  background: transparent;
+  flex-grow: 1;
   color: #1a1a1a;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.titleInput:focus {
+  border-bottom-color: #0ba52b;
+}
+
+.flowSelect {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  min-width: 200px;
 }
 
 .header p {
-  margin: 0.5rem 0 0;
+  margin: 0;
   color: #666;
 }
 
@@ -28,6 +57,15 @@
   overflow: hidden;
   position: relative;
   min-height: 500px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: #666;
 }
 
 .panel {
@@ -72,7 +110,33 @@
   transform: translateY(-1px);
 }
 
+.saveBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.deleteBtn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
+  .titleSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
   .panel {
     flex-direction: column;
   }

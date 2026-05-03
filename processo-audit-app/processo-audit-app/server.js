@@ -5,6 +5,7 @@ import authRoutes from './src/routes/auth.js';
 import processRoutes from './src/routes/processes.js';
 import departmentRoutes from './src/routes/departments.js';
 import brandingRoutes from './src/routes/branding.js';
+import visualProcessRoutes from './src/routes/visual_processes.js';
 import executionRoutes from './src/routes/executions.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
 
@@ -45,6 +46,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', processRoutes);
 app.use('/api', departmentRoutes);
 app.use('/api', brandingRoutes);
+app.use('/api', visualProcessRoutes);
 app.use('/api', executionRoutes);
 
 // Health check
