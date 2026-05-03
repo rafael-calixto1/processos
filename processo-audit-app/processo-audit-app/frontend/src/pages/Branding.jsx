@@ -15,6 +15,8 @@ const Branding = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { branding, fetchBranding } = useBranding();
@@ -48,6 +50,32 @@ const Branding = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const isLogo = field === 'logo_url';
+    if (isLogo) setUploadingLogo(true);
+    else setUploadingFavicon(true);
+    
+    setError('');
+
+    const uploadFormData = new FormData();
+    uploadFormData.append('image', file);
+
+    try {
+      const { url } = await brandingAPI.uploadImage(uploadFormData);
+      setFormData(prev => ({ ...prev, [field]: url }));
+      setSuccess(`${isLogo ? 'Logo' : 'Favicon'} carregado com sucesso!`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(`Erro ao carregar ${isLogo ? 'logo' : 'favicon'}: ` + err.message);
+    } finally {
+      if (isLogo) setUploadingLogo(false);
+      else setUploadingFavicon(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -105,15 +133,27 @@ const Branding = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="logo_url">URL do Logo</label>
-            <input
-              id="logo_url"
-              type="url"
-              name="logo_url"
-              value={formData.logo_url}
-              onChange={handleChange}
-              placeholder="https://exemplo.com/logo.png"
-            />
+            <label htmlFor="logo_url">Logo</label>
+            <div className={styles.uploadWrapper}>
+              <input
+                id="logo_url"
+                type="text"
+                name="logo_url"
+                value={formData.logo_url}
+                onChange={handleChange}
+                placeholder="https://exemplo.com/logo.png ou faça upload"
+              />
+              <label className={styles.uploadBtn}>
+                {uploadingLogo ? 'Enviando...' : 'Fazer Upload'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'logo_url')}
+                  disabled={uploadingLogo}
+                  hidden
+                />
+              </label>
+            </div>
             {formData.logo_url && (
               <div className={styles.preview}>
                 <img src={formData.logo_url} alt="Preview do Logo" />
@@ -122,15 +162,32 @@ const Branding = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="favicon_url">URL do Favicon</label>
-            <input
-              id="favicon_url"
-              type="url"
-              name="favicon_url"
-              value={formData.favicon_url}
-              onChange={handleChange}
-              placeholder="https://exemplo.com/favicon.ico"
-            />
+            <label htmlFor="favicon_url">Favicon</label>
+            <div className={styles.uploadWrapper}>
+              <input
+                id="favicon_url"
+                type="text"
+                name="favicon_url"
+                value={formData.favicon_url}
+                onChange={handleChange}
+                placeholder="https://exemplo.com/favicon.ico ou faça upload"
+              />
+              <label className={styles.uploadBtn}>
+                {uploadingFavicon ? 'Enviando...' : 'Fazer Upload'}
+                <input
+                  type="file"
+                  accept=".ico,image/*"
+                  onChange={(e) => handleFileUpload(e, 'favicon_url')}
+                  disabled={uploadingFavicon}
+                  hidden
+                />
+              </label>
+            </div>
+            {formData.favicon_url && (
+              <div className={styles.preview}>
+                <img src={formData.favicon_url} alt="Preview do Favicon" style={{ width: '32px', height: '32px' }} />
+              </div>
+            )}
           </div>
         </div>
 

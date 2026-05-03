@@ -11,6 +11,7 @@ import ProcessDetail from './pages/ProcessDetail';
 import ProcessEdit from './pages/ProcessEdit';
 import Departments from './pages/Departments';
 import Branding from './pages/Branding';
+import VisualProcesses from './pages/VisualProcesses';
 import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
 import './styles/global.css';
@@ -99,6 +100,17 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <Processes />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/processos-visual"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <VisualProcesses />
             </Layout>
           </ProtectedRoute>
         }
