@@ -58,13 +58,33 @@ const VisualProcesses = () => {
     try {
       const flow = await visualProcessAPI.get(id);
       
-      // Validação defensiva dos dados carregados
-      const validatedNodes = (flow.nodes || []).map(node => ({
+      // Validação e parsing defensivo dos dados carregados
+      let rawNodes = flow.nodes;
+      let rawEdges = flow.edges;
+
+      // Se vierem como string (comum em alguns drivers MySQL), converter para objeto
+      if (typeof rawNodes === 'string') {
+        try {
+          rawNodes = JSON.parse(rawNodes);
+        } catch (e) {
+          rawNodes = [];
+        }
+      }
+      
+      if (typeof rawEdges === 'string') {
+        try {
+          rawEdges = JSON.parse(rawEdges);
+        } catch (e) {
+          rawEdges = [];
+        }
+      }
+
+      const validatedNodes = (Array.isArray(rawNodes) ? rawNodes : []).map(node => ({
         ...node,
         position: node.position || { x: Math.random() * 200, y: Math.random() * 200 }
       })).filter(node => node && node.id);
 
-      const validatedEdges = (flow.edges || []).filter(edge => edge && edge.source && edge.target);
+      const validatedEdges = (Array.isArray(rawEdges) ? rawEdges : []).filter(edge => edge && edge.source && edge.target);
 
       setNodes(validatedNodes);
       setEdges(validatedEdges);
@@ -72,7 +92,7 @@ const VisualProcesses = () => {
       setSelectedFlowId(flow.id);
     } catch (err) {
       console.error('Erro ao carregar o fluxo:', err);
-      alert('Erro ao carregar o fluxo. Verifique o console para mais detalhes.');
+      alert('Erro ao carregar o fluxo: ' + err.message);
     } finally {
       setLoading(false);
     }
