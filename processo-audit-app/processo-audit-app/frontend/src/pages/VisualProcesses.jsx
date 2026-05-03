@@ -37,6 +37,7 @@ const VisualProcesses = () => {
   const [title, setTitle] = useState('Novo Fluxo');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
 
   useEffect(() => {
@@ -141,6 +142,24 @@ const VisualProcesses = () => {
     );
     if (selectedElement?.id === id) {
       setSelectedElement(prev => ({ ...prev, data: { ...prev.data, ...newData } }));
+    }
+  };
+
+  const handleNodeImageUpload = async (e, id) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const { url } = await visualProcessAPI.uploadStageImage(formData);
+      updateNodeData(id, { image_url: url });
+    } catch (err) {
+      alert('Erro ao carregar imagem: ' + err.message);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -314,6 +333,34 @@ const VisualProcesses = () => {
                     </select>
                   </div>
                 )}
+
+                <div className={styles.sidebarGroup}>
+                  <label>Imagem da Etapa (Opcional)</label>
+                  <div className={styles.sidebarImageUpload}>
+                    {selectedElement.data.image_url ? (
+                      <div className={styles.sidebarImagePreview}>
+                        <img src={selectedElement.data.image_url} alt="Preview" />
+                        <button 
+                          onClick={() => updateNodeData(selectedElement.id, { image_url: '' })}
+                          className={styles.removeImageBtn}
+                        >
+                          Remover Imagem
+                        </button>
+                      </div>
+                    ) : (
+                      <label className={styles.sidebarUploadBtn}>
+                        {uploadingImage ? 'Enviando...' : 'Fazer Upload de Imagem'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleNodeImageUpload(e, selectedElement.id)}
+                          disabled={uploadingImage}
+                          hidden
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
               </>
             ) : (
               <div className={styles.sidebarGroup}>

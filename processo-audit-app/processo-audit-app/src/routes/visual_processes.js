@@ -1,8 +1,49 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
+
+// Configuração do Multer para upload de imagens das etapas do fluxo
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/visual_processes/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'stage-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Apenas imagens (jpeg, jpg, png, webp) são permitidas!'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+// Endpoint para upload de imagem da etapa
+router.post('/visual-processes/upload', verifyToken, checkRole(['admin', 'manager']), upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+    const imageUrl = `/uploads/visual_processes/${req.file.filename}`;
+    res.json({ url: imageUrl });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Listar todos os fluxos visuais
 router.get('/visual-processes', verifyToken, async (req, res) => {
