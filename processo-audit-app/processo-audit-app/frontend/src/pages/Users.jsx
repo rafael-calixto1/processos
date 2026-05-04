@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authAPI, departmentAPI } from '../api/index';
+import DepartmentSelector from '../components/DepartmentSelector';
 import styles from './Users.module.css';
 import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUserPlus, FiLock } from 'react-icons/fi';
 
@@ -97,24 +98,6 @@ const Users = () => {
     });
   };
 
-  const toggleDepartment = (deptId, isNewUser = true) => {
-    if (isNewUser) {
-      const current = newUser.department_ids;
-      if (current.includes(deptId)) {
-        setNewUser({ ...newUser, department_ids: current.filter(id => id !== deptId) });
-      } else {
-        setNewUser({ ...newUser, department_ids: [...current, deptId] });
-      }
-    } else {
-      const current = editData.department_ids;
-      if (current.includes(deptId)) {
-        setEditData({ ...editData, department_ids: current.filter(id => id !== deptId) });
-      } else {
-        setEditData({ ...editData, department_ids: [...current, deptId] });
-      }
-    }
-  };
-
   if (loading && users.length === 0) {
     return <div className="spinner-container"><div className="spinner" /></div>;
   }
@@ -182,18 +165,12 @@ const Users = () => {
             
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
               <label>Departamentos com Acesso</label>
-              <div className={styles.deptCheckboxGrid}>
-                {departments.map(dept => (
-                  <label key={dept.id} className={styles.checkboxLabel}>
-                    <input 
-                      type="checkbox"
-                      checked={newUser.department_ids.includes(dept.id)}
-                      onChange={() => toggleDepartment(dept.id, true)}
-                    />
-                    {dept.name}
-                  </label>
-                ))}
-              </div>
+              <DepartmentSelector 
+                selectedIds={newUser.department_ids}
+                allDepartments={departments}
+                onChange={(ids) => setNewUser({ ...newUser, department_ids: ids })}
+                placeholder="Selecione os departamentos permitidos..."
+              />
               <p className={styles.helpText}>Administradores sempre têm acesso a todos os departamentos.</p>
             </div>
 
@@ -263,27 +240,32 @@ const Users = () => {
                 </td>
                 <td>
                   {editingId === user.id ? (
-                    <div className={styles.deptEditGrid}>
-                      {departments.map(dept => (
-                        <label key={dept.id} className={styles.checkboxLabelSmall}>
-                          <input 
-                            type="checkbox"
-                            checked={editData.department_ids.includes(dept.id)}
-                            onChange={() => toggleDepartment(dept.id, false)}
-                          />
-                          {dept.name}
-                        </label>
-                      ))}
+                    <div className={styles.deptEditWrapper}>
+                      <DepartmentSelector 
+                        selectedIds={editData.department_ids}
+                        allDepartments={departments}
+                        onChange={(ids) => setEditData({ ...editData, department_ids: ids })}
+                      />
                     </div>
                   ) : (
                     <div className={styles.deptBadges}>
                       {user.role === 'admin' ? (
                         <span className={styles.allAccessBadge}>Todos</span>
                       ) : (
-                        user.department_ids?.map(id => {
-                          const dept = departments.find(d => d.id === id);
-                          return dept ? <span key={id} className={styles.deptBadge}>{dept.name}</span> : null;
-                        }) || <span className={styles.noAccess}>Nenhum</span>
+                        <>
+                          {(user.department_ids || []).slice(0, 2).map(id => {
+                            const dept = departments.find(d => d.id === id);
+                            return dept ? <span key={id} className={styles.deptBadge}>{dept.name}</span> : null;
+                          })}
+                          {(user.department_ids || []).length > 2 && (
+                            <span className={styles.moreBadge}>
+                              +{(user.department_ids || []).length - 2} mais
+                            </span>
+                          )}
+                          {(user.department_ids || []).length === 0 && (
+                            <span className={styles.noAccess}>Nenhum</span>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
