@@ -1,0 +1,208 @@
+.container {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+}
+
+.selector {
+  min-height: 42px;
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.selector:hover {
+  border-color: #0ba52b;
+}
+
+.selector.active {
+  border-color: #0ba52b;
+  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
+}
+
+.values {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.placeholder {
+  color: #999;
+  font-size: 0.95rem;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  background: #eaffed;
+  color: #0ba52b;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #c3f2d2;
+}
+
+.pill button {
+  background: none;
+  border: none;
+  color: #0ba52b;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.pill button:hover {
+  opacity: 1;
+}
+
+.moreBadge {
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding-left: 4px;
+}
+
+.chevron {
+  color: #999;
+  transition: transform 0.2s;
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.searchWrapper {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.searchIcon {
+  color: #999;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 5px 0;
+}
+
+.listItem {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.listItem:hover {
+  background: #f8f9fa;
+}
+
+.listItem.selected {
+  background: #f0fdf4;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0ba52b;
+  transition: all 0.2s;
+}
+
+.selected .checkbox {
+  background: #0ba52b;
+  border-color: #0ba52b;
+  color: white;
+}
+
+.deptName {
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.selected .deptName {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Custom Scrollbar */
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #eee;
+  border-radius: 10px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #ddd;
+}
