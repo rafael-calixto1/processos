@@ -82,14 +82,109 @@
   border-radius: 6px;
   font-size: 0.95rem;
 }
-
 .formActions {
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
 }
 
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.deptCheckboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkboxLabelSmall {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.helpText {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.5rem;
+}
+
+.userNameCell {
+  display: flex;
+  flex-direction: column;
+}
+
+.creationDate {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.editStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deptBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.deptBadge {
+  background: #f0f0f0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.allAccessBadge {
+  background: #eaffed;
+  color: #0ba52b;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #c3f2d2;
+}
+
+.noAccess {
+  color: #ccc;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.deptEditGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 100px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
 .usersGrid {
+...
   background: white;
   border-radius: 8px;
   box-shadow: var(--shadow);

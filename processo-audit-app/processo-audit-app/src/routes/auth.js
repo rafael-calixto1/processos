@@ -143,6 +143,15 @@ router.get('/users', verifyToken, async (req, res) => {
       'SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC'
     );
 
+    // Buscar departamentos para cada usuário
+    for (let user of users) {
+      const [userDeps] = await pool.execute(
+        'SELECT department_id FROM user_departments WHERE user_id = ?',
+        [user.id]
+      );
+      user.department_ids = userDeps.map(ud => ud.department_id);
+    }
+
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -151,45 +160,63 @@ router.get('/users', verifyToken, async (req, res) => {
 
 // Criar usuário (apenas admin)
 router.post('/users', verifyToken, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, department_ids } = req.body;
 
     if (!email || !password || !name || !role) {
       return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
     }
 
-    if (!['admin', 'manager', 'viewer'].includes(role)) {
-      return res.status(400).json({ error: 'Papel inválido' });
-    }
+    await connection.beginTransaction();
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await pool.execute(
+    const [result] = await connection.execute(
       'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
       [email, hashedPassword, name, role]
     );
 
+    const userId = result.insertId;
+
+    if (department_ids && Array.isArray(department_ids)) {
+      for (const depId of department_ids) {
+        await connection.execute(
+          'INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)',
+          [userId, depId]
+        );
+      }
+    }
+
+    await connection.commit();
     res.status(201).json({ message: 'Usuário criado com sucesso' });
   } catch (error) {
+    await connection.rollback();
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Email já registrado' });
     }
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 });
 
 // Atualizar usuário (apenas admin)
 router.put('/users/:id', verifyToken, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const { name, role, password } = req.body;
+    const { name, role, password, department_ids } = req.body;
+    const userId = req.params.id;
+
+    await connection.beginTransaction();
 
     let query = 'UPDATE users SET name = ?, role = ?';
     let params = [name, role];
@@ -201,13 +228,30 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     }
 
     query += ' WHERE id = ?';
-    params.push(req.params.id);
+    params.push(userId);
 
-    await pool.execute(query, params);
+    await connection.execute(query, params);
 
+    // Atualizar departamentos
+    if (department_ids && Array.isArray(department_ids)) {
+      // Remover antigos
+      await connection.execute('DELETE FROM user_departments WHERE user_id = ?', [userId]);
+      // Inserir novos
+      for (const depId of department_ids) {
+        await connection.execute(
+          'INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)',
+          [userId, depId]
+        );
+      }
+    }
+
+    await connection.commit();
     res.json({ message: 'Usuário atualizado com sucesso' });
   } catch (error) {
+    await connection.rollback();
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 });
 
