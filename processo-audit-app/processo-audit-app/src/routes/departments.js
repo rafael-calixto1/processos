@@ -30,9 +30,28 @@ router.post('/departments', verifyToken, checkRole(['admin']), async (req, res) 
 // Listar departamentos
 router.get('/departments', verifyToken, async (req, res) => {
   try {
-    const [departments] = await pool.execute(
-      'SELECT * FROM departments ORDER BY name'
-    );
+    let query = 'SELECT * FROM departments';
+    const params = [];
+
+    // Filtro por departamentos do usuário (se não for admin)
+    if (req.userRole !== 'admin') {
+      const [userDeps] = await pool.execute(
+        'SELECT department_id FROM user_departments WHERE user_id = ?',
+        [req.userId]
+      );
+      const depIds = userDeps.map(ud => ud.department_id);
+      
+      if (depIds.length === 0) {
+        return res.json([]); // Sem acesso a nenhum departamento
+      }
+      
+      const placeholders = depIds.map(() => '?').join(',');
+      query += ` WHERE id IN (${placeholders})`;
+      params.push(...depIds);
+    }
+
+    query += ' ORDER BY name';
+    const [departments] = await pool.execute(query, params);
 
     // Contar processos por departamento
     for (let dept of departments) {
@@ -52,10 +71,23 @@ router.get('/departments', verifyToken, async (req, res) => {
 // Obter departamento específico
 router.get('/departments/:id', verifyToken, async (req, res) => {
   try {
-    const [departments] = await pool.execute(
-      'SELECT * FROM departments WHERE id = ?',
-      [req.params.id]
-    );
+    const deptId = req.params.id;
+    let query = 'SELECT * FROM departments WHERE id = ?';
+    const params = [deptId];
+
+    if (req.userRole !== 'admin') {
+      const [userDeps] = await pool.execute(
+        'SELECT department_id FROM user_departments WHERE user_id = ?',
+        [req.userId]
+      );
+      const depIds = userDeps.map(ud => ud.department_id);
+      
+      if (depIds.length === 0 || !depIds.includes(parseInt(deptId))) {
+        return res.status(403).json({ error: 'Acesso negado a este departamento' });
+      }
+    }
+
+    const [departments] = await pool.execute(query, params);
 
     if (departments.length === 0) {
       return res.status(404).json({ error: 'Departamento não encontrado' });

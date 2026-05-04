@@ -103,6 +103,23 @@ router.get('/processes', verifyToken, async (req, res) => {
     `;
     const params = [];
 
+    // Filtro por departamentos do usuário (se não for admin)
+    if (req.userRole !== 'admin') {
+      const [userDeps] = await pool.execute(
+        'SELECT department_id FROM user_departments WHERE user_id = ?',
+        [req.userId]
+      );
+      const depIds = userDeps.map(ud => ud.department_id);
+      
+      if (depIds.length === 0) {
+        return res.json([]); // Sem acesso a nenhum departamento
+      }
+      
+      const placeholders = depIds.map(() => '?').join(',');
+      query += ` AND p.department_id IN (${placeholders})`;
+      params.push(...depIds);
+    }
+
     if (department_id) {
       query += ' AND p.department_id = ?';
       params.push(department_id);
@@ -135,17 +152,37 @@ router.get('/processes', verifyToken, async (req, res) => {
 // Obter processo específico
 router.get('/processes/:id', verifyToken, async (req, res) => {
   try {
-    const [processes] = await pool.execute(
-      `SELECT p.*, d.name as department_name, u.name as created_by_name
+    const processId = req.params.id;
+    let query = `
+      SELECT p.*, d.name as department_name, u.name as created_by_name
        FROM processes p
        JOIN departments d ON p.department_id = d.id
        JOIN users u ON p.created_by = u.id
-       WHERE p.id = ?`,
-      [req.params.id]
-    );
+       WHERE p.id = ?
+    `;
+    const params = [processId];
+
+    // Verificação de acesso por departamento (se não for admin)
+    if (req.userRole !== 'admin') {
+      const [userDeps] = await pool.execute(
+        'SELECT department_id FROM user_departments WHERE user_id = ?',
+        [req.userId]
+      );
+      const depIds = userDeps.map(ud => ud.department_id);
+      
+      if (depIds.length === 0) {
+        return res.status(403).json({ error: 'Acesso negado a este departamento' });
+      }
+      
+      const placeholders = depIds.map(() => '?').join(',');
+      query += ` AND p.department_id IN (${placeholders})`;
+      params.push(...depIds);
+    }
+
+    const [processes] = await pool.execute(query, params);
 
     if (processes.length === 0) {
-      return res.status(404).json({ error: 'Processo não encontrado' });
+      return res.status(404).json({ error: 'Processo não encontrado ou sem permissão' });
     }
 
     const process = processes[0];

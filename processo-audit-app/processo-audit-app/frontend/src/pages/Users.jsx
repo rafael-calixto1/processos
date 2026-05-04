@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { authAPI } from '../api/index';
+import { authAPI, departmentAPI } from '../api/index';
 import styles from './Users.module.css';
-import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUserPlus } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUserPlus, FiLock } from 'react-icons/fi';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -15,7 +16,8 @@ const Users = () => {
     name: '',
     email: '',
     password: '',
-    role: 'viewer'
+    role: 'viewer',
+    department_ids: []
   });
 
   // State for editing
@@ -23,20 +25,25 @@ const Users = () => {
   const [editData, setEditData] = useState({
     name: '',
     role: '',
-    password: ''
+    password: '',
+    department_ids: []
   });
 
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
 
-  const loadUsers = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await authAPI.listUsers();
-      setUsers(data);
+      const [usersData, deptsData] = await Promise.all([
+        authAPI.listUsers(),
+        departmentAPI.list()
+      ]);
+      setUsers(usersData);
+      setDepartments(deptsData);
     } catch (err) {
-      setError('Erro ao carregar usuários: ' + err.message);
+      setError('Erro ao carregar dados: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -47,9 +54,9 @@ const Users = () => {
     try {
       await authAPI.createUser(newUser);
       setSuccess('Usuário criado com sucesso!');
-      setNewUser({ name: '', email: '', password: '', role: 'viewer' });
+      setNewUser({ name: '', email: '', password: '', role: 'viewer', department_ids: [] });
       setShowAddForm(false);
-      loadUsers();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Erro ao criar usuário: ' + err.message);
@@ -61,7 +68,7 @@ const Users = () => {
       await authAPI.updateUser(id, editData);
       setSuccess('Usuário atualizado com sucesso!');
       setEditingId(null);
-      loadUsers();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Erro ao atualizar usuário: ' + err.message);
@@ -73,7 +80,7 @@ const Users = () => {
     try {
       await authAPI.deleteUser(id);
       setSuccess('Usuário excluído!');
-      loadUsers();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Erro ao excluir usuário: ' + err.message);
@@ -85,8 +92,27 @@ const Users = () => {
     setEditData({
       name: user.name,
       role: user.role,
-      password: ''
+      password: '',
+      department_ids: user.department_ids || []
     });
+  };
+
+  const toggleDepartment = (deptId, isNewUser = true) => {
+    if (isNewUser) {
+      const current = newUser.department_ids;
+      if (current.includes(deptId)) {
+        setNewUser({ ...newUser, department_ids: current.filter(id => id !== deptId) });
+      } else {
+        setNewUser({ ...newUser, department_ids: [...current, deptId] });
+      }
+    } else {
+      const current = editData.department_ids;
+      if (current.includes(deptId)) {
+        setEditData({ ...editData, department_ids: current.filter(id => id !== deptId) });
+      } else {
+        setEditData({ ...editData, department_ids: [...current, deptId] });
+      }
+    }
   };
 
   if (loading && users.length === 0) {
@@ -153,6 +179,24 @@ const Users = () => {
                 <option value="admin">Administrador</option>
               </select>
             </div>
+            
+            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+              <label>Departamentos com Acesso</label>
+              <div className={styles.deptCheckboxGrid}>
+                {departments.map(dept => (
+                  <label key={dept.id} className={styles.checkboxLabel}>
+                    <input 
+                      type="checkbox"
+                      checked={newUser.department_ids.includes(dept.id)}
+                      onChange={() => toggleDepartment(dept.id, true)}
+                    />
+                    {dept.name}
+                  </label>
+                ))}
+              </div>
+              <p className={styles.helpText}>Administradores sempre têm acesso a todos os departamentos.</p>
+            </div>
+
             <div className={styles.formActions}>
               <button type="submit" className="btn btn-primary">Salvar Usuário</button>
             </div>
@@ -167,7 +211,7 @@ const Users = () => {
               <th>Nome</th>
               <th>Email</th>
               <th>Papel</th>
-              <th>Criado em</th>
+              <th>Departamentos</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -176,13 +220,28 @@ const Users = () => {
               <tr key={user.id}>
                 <td>
                   {editingId === user.id ? (
-                    <input 
-                      type="text" 
-                      value={editData.name}
-                      onChange={(e) => setEditData({...editData, name: e.target.value})}
-                      className={styles.editInput}
-                    />
-                  ) : user.name}
+                    <div className={styles.editStack}>
+                      <input 
+                        type="text" 
+                        value={editData.name}
+                        onChange={(e) => setEditData({...editData, name: e.target.value})}
+                        className={styles.editInput}
+                        placeholder="Nome"
+                      />
+                      <input 
+                        type="password" 
+                        value={editData.password}
+                        onChange={(e) => setEditData({...editData, password: e.target.value})}
+                        className={styles.editInput}
+                        placeholder="Nova senha (deixe vazio p/ manter)"
+                      />
+                    </div>
+                  ) : (
+                    <div className={styles.userNameCell}>
+                      {user.name}
+                      <span className={styles.creationDate}>Desde {new Date(user.created_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
                 </td>
                 <td>{user.email}</td>
                 <td>
@@ -202,7 +261,33 @@ const Users = () => {
                     </span>
                   )}
                 </td>
-                <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                <td>
+                  {editingId === user.id ? (
+                    <div className={styles.deptEditGrid}>
+                      {departments.map(dept => (
+                        <label key={dept.id} className={styles.checkboxLabelSmall}>
+                          <input 
+                            type="checkbox"
+                            checked={editData.department_ids.includes(dept.id)}
+                            onChange={() => toggleDepartment(dept.id, false)}
+                          />
+                          {dept.name}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.deptBadges}>
+                      {user.role === 'admin' ? (
+                        <span className={styles.allAccessBadge}>Todos</span>
+                      ) : (
+                        user.department_ids?.map(id => {
+                          const dept = departments.find(d => d.id === id);
+                          return dept ? <span key={id} className={styles.deptBadge}>{dept.name}</span> : null;
+                        }) || <span className={styles.noAccess}>Nenhum</span>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td>
                   <div className={styles.actions}>
                     {editingId === user.id ? (
