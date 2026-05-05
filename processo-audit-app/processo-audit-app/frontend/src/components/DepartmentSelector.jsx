@@ -47,6 +47,29 @@ const DepartmentSelector = ({
     return allDepartments.filter(dept => selectedIds.includes(dept.id));
   }, [allDepartments, selectedIds]);
 
+  const handleSelectAll = (e) => {
+    e.stopPropagation();
+    // Se estiver filtrando, seleciona apenas os filtrados (mantendo os já selecionados que não estão no filtro)
+    if (searchTerm) {
+      const filteredIds = filteredDepartments.map(d => d.id);
+      const newIds = Array.from(new Set([...selectedIds, ...filteredIds]));
+      onChange(newIds);
+    } else {
+      onChange(allDepartments.map(dept => dept.id));
+    }
+  };
+
+  const handleClearAll = (e) => {
+    e.stopPropagation();
+    // Se estiver filtrando, remove apenas os filtrados
+    if (searchTerm) {
+      const filteredIds = filteredDepartments.map(d => d.id);
+      onChange(selectedIds.filter(id => !filteredIds.includes(id)));
+    } else {
+      onChange([]);
+    }
+  };
+
   return (
     <div className={styles.container} ref={containerRef}>
       <div 
@@ -97,6 +120,24 @@ const DepartmentSelector = ({
               autoFocus
             />
           </div>
+
+          <div className={styles.bulkActions}>
+            <button 
+              type="button" 
+              className={styles.bulkBtn}
+              onClick={handleSelectAll}
+            >
+              Selecionar Todos {searchTerm && '(Filtrados)'}
+            </button>
+            <button 
+              type="button" 
+              className={`${styles.bulkBtn} ${styles.clearBtn}`}
+              onClick={handleClearAll}
+            >
+              Remover Todos {searchTerm && '(Filtrados)'}
+            </button>
+          </div>
+
           <div className={styles.list}>
             {filteredDepartments.length > 0 ? (
               filteredDepartments.map(dept => {

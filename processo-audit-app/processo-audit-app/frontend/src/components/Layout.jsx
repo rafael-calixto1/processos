@@ -23,6 +23,7 @@ const Layout = ({ children }) => {
     { label: 'Dashboard', path: '/dashboard', icon: '📊' },
     { label: 'Processos', path: '/processos', icon: '📋' },
     { label: 'Processos Visuais', path: '/processos-visual', icon: '🎨' },
+    { label: 'Arquivos', path: '/arquivos', icon: '📁' },
     { label: 'Departamentos', path: '/departamentos', icon: '🏢' },
     { label: 'Minhas Execuções', path: '/execucoes', icon: '✓' },
     { label: 'Minha Conta', path: '/configuracoes', icon: '⚙️' },

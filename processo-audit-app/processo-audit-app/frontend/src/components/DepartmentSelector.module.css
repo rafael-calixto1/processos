@@ -119,6 +119,34 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+.bulkActions {
+  padding: 8px 12px;
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.bulkBtn {
+  background: none;
+  border: none;
+  color: #0ba52b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.bulkBtn:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.clearBtn {
+  color: #dc3545;
+}
+
 .searchIcon {
   color: #999;
 }
