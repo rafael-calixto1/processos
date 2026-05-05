@@ -357,3 +357,66 @@ export const executionAPI = {
     return res.json();
   }
 };
+
+// ======== ARQUIVOS ========
+export const fileAPI = {
+  list: async (folderId = null) => {
+    let url = `${API_URL}/files`;
+    if (folderId) url += `?folder_id=${folderId}`;
+    const res = await fetch(url, {
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  createFolder: async (name, parentId = null) => {
+    const res = await fetch(`${API_URL}/files/folders`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ name, parent_id: parentId })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  renameFolder: async (id, name) => {
+    const res = await fetch(`${API_URL}/files/folders/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  deleteFolder: async (id) => {
+    const res = await fetch(`${API_URL}/files/folders/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  upload: async (formData) => {
+    const res = await fetch(`${API_URL}/files/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  deleteFile: async (id) => {
+    const res = await fetch(`${API_URL}/files/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+};
