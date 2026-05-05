@@ -88,9 +88,7 @@ const Processes = () => {
   const getFullUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    // Usa o mesmo host (IP) que o usuário está usando, mas porta 5001
-    const host = window.location.hostname;
-    return `http://${host}:5002${url}`;
+    return url;
   };
 
   const handleAddStep = () => {

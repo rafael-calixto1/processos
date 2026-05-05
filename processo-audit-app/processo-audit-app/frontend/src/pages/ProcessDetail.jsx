@@ -65,9 +65,7 @@ const ProcessDetail = () => {
   const getFullUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http') || url.startsWith('blob:')) return url;
-    // Usa o mesmo host (IP) que o usuário está usando, mas na porta 5002
-    const host = window.location.hostname;
-    return `http://${host}:5002${url}`;
+    return url;
   };
 
   const formatStatus = (status) => {

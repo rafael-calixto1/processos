@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import VisualProcesses from './pages/VisualProcesses';
 import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
+import Files from './pages/Files';
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -113,6 +114,17 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <VisualProcesses />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/arquivos"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Files />
             </Layout>
           </ProtectedRoute>
         }

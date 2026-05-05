@@ -39,10 +39,19 @@ const VisualProcesses = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     loadFlows();
   }, []);
+
+  const openImage = (url) => {
+    setSelectedImage(url);
+  };
+
+  const closeImage = () => {
+    setSelectedImage(null);
+  };
 
   const loadFlows = async () => {
     try {
@@ -339,7 +348,12 @@ const VisualProcesses = () => {
                   <div className={styles.sidebarImageUpload}>
                     {selectedElement.data.image_url ? (
                       <div className={styles.sidebarImagePreview}>
-                        <img src={selectedElement.data.image_url} alt="Preview" />
+                        <img 
+                          src={selectedElement.data.image_url} 
+                          alt="Preview" 
+                          onClick={() => openImage(selectedElement.data.image_url)}
+                          className={styles.clickableImage}
+                        />
                         <button 
                           onClick={() => updateNodeData(selectedElement.id, { image_url: '' })}
                           className={styles.removeImageBtn}
@@ -391,6 +405,16 @@ const VisualProcesses = () => {
           </aside>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedImage && (
+        <div className={styles.modal} onClick={closeImage}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <button className={styles.closeModal} onClick={closeImage}>&times;</button>
+            <img src={selectedImage} alt="Expanded" className={styles.modalImage} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
