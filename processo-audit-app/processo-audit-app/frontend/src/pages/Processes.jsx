@@ -23,18 +23,39 @@ const Processes = () => {
   const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
   const { user } = useAuth();
 
+  // Search and Pagination
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProcesses, setTotalProcesses] = useState(0);
+
   useEffect(() => {
     loadData();
-  }, [filterDept, filterStatus]);
+  }, [filterDept, filterStatus, currentPage]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (currentPage === 1) {
+        loadData();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 700);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [procs, depts] = await Promise.all([
-        processAPI.list(filterDept || null, filterStatus || null),
+      const [procsResponse, depts] = await Promise.all([
+        processAPI.list(filterDept || null, filterStatus || null, search, currentPage),
         departmentAPI.list()
       ]);
-      setProcesses(procs);
+      setProcesses(procsResponse.processes);
+      setTotalPages(procsResponse.pages);
+      setTotalProcesses(procsResponse.total);
       setDepartments(depts);
     } catch (err) {
       setError(err.message);
@@ -144,29 +165,44 @@ const Processes = () => {
 
       {error && <div className={styles.alert}>{error}</div>}
 
-      {/* Filtros */}
-      <div className={styles.filters}>
-        <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-        >
-          <option value="">Todos os Departamentos</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+      {/* Filtros e Busca */}
+      <div className={styles.filtersArea}>
+        <div className={styles.searchBar}>
+          <input
+            type="text"
+            placeholder="Buscar por título ou descrição..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">Todos os Status</option>
-          <option value="draft">Rascunho</option>
-          <option value="active">Ativo</option>
-          <option value="archived">Arquivado</option>
-        </select>
+        <div className={styles.filters}>
+          <select
+            value={filterDept}
+            onChange={(e) => { setFilterDept(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">Todos os Departamentos</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">Todos os Status</option>
+            <option value="draft">Rascunho</option>
+            <option value="active">Ativo</option>
+            <option value="archived">Arquivado</option>
+          </select>
+        </div>
+      </div>
+
+      <div className={styles.stats}>
+        Total: <strong>{totalProcesses}</strong> processos encontrados
       </div>
 
       {/* Lista de Processos */}
@@ -223,6 +259,29 @@ const Processes = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            className={styles.pageBtn}
+          >
+            Anterior
+          </button>
+          <span className={styles.pageInfo}>
+            Página <strong>{currentPage}</strong> de {totalPages}
+          </span>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            className={styles.pageBtn}
+          >
+            Próxima
+          </button>
         </div>
       )}
 

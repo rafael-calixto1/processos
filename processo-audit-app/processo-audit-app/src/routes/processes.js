@@ -93,9 +93,10 @@ router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (r
 // Listar processos
 router.get('/processes', verifyToken, async (req, res) => {
   try {
-    const { department_id, status } = req.query;
-    let query = `
-      SELECT p.*, d.name as department_name, u.name as created_by_name
+    const { department_id, status, search, page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let baseQuery = `
       FROM processes p
       JOIN departments d ON p.department_id = d.id
       JOIN users u ON p.created_by = u.id
@@ -112,25 +113,36 @@ router.get('/processes', verifyToken, async (req, res) => {
       const depIds = userDeps.map(ud => ud.department_id);
       
       if (depIds.length === 0) {
-        return res.json([]); // Sem acesso a nenhum departamento
+        return res.json({ processes: [], total: 0, pages: 0, currentPage: parseInt(page) });
       }
       
       const placeholders = depIds.map(() => '?').join(',');
-      query += ` AND p.department_id IN (${placeholders})`;
+      baseQuery += ` AND p.department_id IN (${placeholders})`;
       params.push(...depIds);
     }
 
     if (department_id) {
-      query += ' AND p.department_id = ?';
+      baseQuery += ' AND p.department_id = ?';
       params.push(department_id);
     }
 
     if (status) {
-      query += ' AND p.status = ?';
+      baseQuery += ' AND p.status = ?';
       params.push(status);
     }
 
-    query += ' ORDER BY p.created_at DESC';
+    if (search) {
+      baseQuery += ' AND (p.title LIKE ? OR p.description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    const countQuery = `SELECT COUNT(*) as total ${baseQuery}`;
+    const [totalRes] = await pool.execute(countQuery, params);
+    const total = totalRes[0].total;
+
+    let query = `SELECT p.*, d.name as department_name, u.name as created_by_name ${baseQuery}`;
+    query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
 
     const [processes] = await pool.execute(query, params);
 
@@ -143,7 +155,12 @@ router.get('/processes', verifyToken, async (req, res) => {
       process.steps = steps;
     }
 
-    res.json(processes);
+    res.json({
+      processes,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: parseInt(page)
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

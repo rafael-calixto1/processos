@@ -41,6 +41,66 @@ const VisualProcesses = () => {
   const [selectedElement, setSelectedElement] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  // History for Undo/Redo
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
+
+  const takeSnapshot = useCallback(() => {
+    // Limit history to 30 steps
+    setPast((prev) => {
+      const newPast = [...prev, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }];
+      return newPast.slice(-30);
+    });
+    setFuture([]);
+  }, [nodes, edges]);
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return;
+
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+
+    setFuture((prev) => [{ nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }, ...prev].slice(0, 30));
+    setNodes(previous.nodes);
+    setEdges(previous.edges);
+    setPast(newPast);
+    setSelectedElement(null);
+  }, [past, nodes, edges, setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+
+    setPast((prev) => [...prev, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }].slice(-30));
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setFuture(newFuture);
+    setSelectedElement(null);
+  }, [future, nodes, edges, setNodes, setEdges]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        if (event.shiftKey) {
+          event.preventDefault();
+          redo();
+        } else {
+          event.preventDefault();
+          undo();
+        }
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+        event.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
   useEffect(() => {
     loadFlows();
   }, []);
@@ -102,6 +162,8 @@ const VisualProcesses = () => {
       setTitle(flow.title || 'Fluxo sem título');
       setSelectedFlowId(flow.id);
       setSelectedElement(null);
+      setPast([]);
+      setFuture([]);
     } catch (err) {
       console.error('Erro ao carregar o fluxo:', err);
       alert('Erro ao carregar o fluxo: ' + err.message);
@@ -111,11 +173,15 @@ const VisualProcesses = () => {
   };
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds)),
-    [setEdges]
+    (params) => {
+      takeSnapshot();
+      setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds));
+    },
+    [setEdges, takeSnapshot]
   );
 
   const onAddNode = useCallback((type = 'processNode') => {
+    takeSnapshot();
     const newNode = {
       id: `node-${Date.now()}`,
       type: type,
@@ -130,7 +196,7 @@ const VisualProcesses = () => {
       },
     };
     setNodes((nds) => nds.concat(newNode));
-  }, [setNodes]);
+  }, [setNodes, takeSnapshot]);
 
   const onElementClick = useCallback((event, element) => {
     setSelectedElement(element);
@@ -141,6 +207,8 @@ const VisualProcesses = () => {
   }, []);
 
   const updateNodeData = (id, newData) => {
+    // Note: We don't take snapshot here to avoid flooding history with every keystroke
+    // Snapshots for data changes are better handled on Blur or specific triggers
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -158,6 +226,7 @@ const VisualProcesses = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    takeSnapshot();
     setUploadingImage(true);
     const formData = new FormData();
     formData.append('image', file);
@@ -221,6 +290,7 @@ const VisualProcesses = () => {
   };
 
   const deleteElement = (id) => {
+    takeSnapshot();
     if (selectedElement?.source) {
       setEdges((eds) => eds.filter((edge) => edge.id !== id));
     } else {
@@ -262,19 +332,22 @@ const VisualProcesses = () => {
           {loading ? (
             <div className={styles.loading}>Carregando...</div>
           ) : (
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onElementClick}
-              onEdgeClick={onElementClick}
-              onPaneClick={onPaneClick}
-              defaultEdgeOptions={{ type: 'smoothstep' }}
-              fitView
-            >
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onElementClick}
+                onEdgeClick={onElementClick}
+                onPaneClick={onPaneClick}
+                onNodeDragStop={takeSnapshot}
+                onNodesDelete={takeSnapshot}
+                onEdgesDelete={takeSnapshot}
+                defaultEdgeOptions={{ type: 'smoothstep' }}
+                fitView
+              >
               <Controls />
               <MiniMap />
               <Background variant="dots" gap={12} size={1} />
@@ -314,6 +387,7 @@ const VisualProcesses = () => {
                     type="text"
                     value={selectedElement.data.label || ''}
                     onChange={(e) => updateNodeData(selectedElement.id, { label: e.target.value })}
+                    onFocus={takeSnapshot}
                   />
                 </div>
                 
@@ -324,6 +398,7 @@ const VisualProcesses = () => {
                     value={selectedElement.data.description || ''}
                     onChange={(e) => updateNodeData(selectedElement.id, { description: e.target.value })}
                     placeholder="Detalhe as atividades desta etapa..."
+                    onFocus={takeSnapshot}
                   />
                 </div>
 
@@ -333,6 +408,7 @@ const VisualProcesses = () => {
                     <select
                       value={selectedElement.data.department || ''}
                       onChange={(e) => updateNodeData(selectedElement.id, { department: e.target.value })}
+                      onFocus={takeSnapshot}
                     >
                       <option value="Suporte">Suporte Técnico</option>
                       <option value="Financeiro">Financeiro</option>
@@ -355,7 +431,10 @@ const VisualProcesses = () => {
                           className={styles.clickableImage}
                         />
                         <button 
-                          onClick={() => updateNodeData(selectedElement.id, { image_url: '' })}
+                          onClick={() => {
+                            takeSnapshot();
+                            updateNodeData(selectedElement.id, { image_url: '' });
+                          }}
                           className={styles.removeImageBtn}
                         >
                           Remover Imagem
@@ -384,6 +463,7 @@ const VisualProcesses = () => {
                   value={selectedElement.label || ''}
                   onChange={(e) => updateEdgeData(selectedElement.id, e.target.value)}
                   placeholder="Ex: Sucesso, Falha, Sim, Não"
+                  onFocus={takeSnapshot}
                 />
               </div>
             )}
