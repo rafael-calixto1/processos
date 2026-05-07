@@ -18,11 +18,11 @@ const Dashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [procs, depts] = await Promise.all([
-        processAPI.list(),
+      const [procsResponse, depts] = await Promise.all([
+        processAPI.list(null, null, '', 1, 1000),
         departmentAPI.list()
       ]);
-      setProcesses(procs);
+      setProcesses(procsResponse.processes || []);
       setDepartments(depts);
     } catch (err) {
       setError(err.message);
