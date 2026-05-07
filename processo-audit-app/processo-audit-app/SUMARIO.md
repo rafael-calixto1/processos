@@ -24,6 +24,8 @@
 - ✅ `src/routes/departments.js` - Gerenciamento de departamentos
 - ✅ `src/routes/branding.js` - Configurações de identidade visual
 - ✅ `src/routes/executions.js` - Execução de processos (checklists)
+- ✅ `src/routes/files.js` - Gerenciamento de arquivos e pastas (com download de ZIP)
+- ✅ `src/routes/visual_processes.js` - Gerenciamento de processos visuais
 
 ### Frontend (React + Vite)
 
