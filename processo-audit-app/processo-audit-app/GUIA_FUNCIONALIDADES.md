@@ -6,7 +6,8 @@
 3. [Execuções/Checklists](#execuções)
 4. [Auditoria](#auditoria)
 5. [Branding](#branding)
-6. [Dicas de Uso](#dicas)
+6. [Gestão de Arquivos](#arquivos)
+7. [Dicas de Uso](#dicas)
 
 ---
 
@@ -241,6 +242,26 @@ A seção onde você customiza a aparência da aplicação de acordo com sua emp
 1. Admin: Clique em "Branding"
 2. Scroll até "Histórico de Branding"
 3. Veja todas as mudanças de branding com quem/quando
+
+---
+
+## Gestão de Arquivos
+
+### O que é?
+Um sistema de arquivos centralizado para armazenar documentos, manuais, planilhas e outros recursos importantes.
+
+### Funcionalidades
+- **Pastas**: Organize seus arquivos em uma estrutura hierárquica
+- **Upload**: Envie múltiplos arquivos de uma vez
+- **Download**: Baixe arquivos individuais ou pastas inteiras (compactadas em ZIP)
+- **Gestão**: Renomeie pastas e exclua itens desnecessários
+
+### Download de Pastas
+Você pode baixar o conteúdo completo de uma pasta e todas as suas subpastas clicando no ícone de download (nuvem com seta) ao lado do nome da pasta. O sistema gerará automaticamente um arquivo ZIP contendo toda a estrutura de arquivos.
+
+### Como Acessar
+- Clique em **"Arquivos"** no menu lateral
+- Ou acesse diretamente: `/arquivos`
 
 ---
 

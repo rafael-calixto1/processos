@@ -59,6 +59,31 @@ const Files = () => {
     }
   };
 
+  const handleUploadFolder = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+      // webkitRelativePath contains the path starting with the folder name
+      formData.append('paths', files[i].webkitRelativePath);
+    }
+    formData.append('folder_id', currentFolderId || '');
+
+    try {
+      setUploading(true);
+      await fileAPI.upload(formData);
+      loadContents();
+    } catch (err) {
+      setError('Erro ao subir pasta: ' + err.message);
+    } finally {
+      setUploading(false);
+      // Clear input
+      e.target.value = null;
+    }
+  };
+
   const handleDeleteFolder = async (id, name) => {
     if (!window.confirm(`Tem certeza que deseja excluir a pasta "${name}" e todo seu conteúdo?`)) return;
     try {
@@ -87,6 +112,22 @@ const Files = () => {
       loadContents();
     } catch (err) {
       setError('Erro ao renomear pasta: ' + err.message);
+    }
+  };
+
+  const handleDownloadFolder = async (id, name) => {
+    try {
+      const blob = await fileAPI.downloadFolder(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Erro ao baixar pasta: ' + err.message);
     }
   };
 
@@ -135,12 +176,32 @@ const Files = () => {
         </div>
 
         <div className={styles.actions}>
+          {currentFolderId && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => handleDownloadFolder(currentFolderId, contents.currentFolder.name)}
+              title="Baixar esta pasta atual como ZIP"
+            >
+              <FiDownload /> Baixar Tudo
+            </button>
+          )}
           <label className={`btn btn-primary ${styles.uploadLabel} ${uploading ? styles.disabled : ''}`}>
             <FiUpload /> {uploading ? 'Subindo...' : 'Enviar Arquivos'}
             <input 
               type="file" 
               multiple 
               onChange={handleUpload} 
+              hidden 
+              disabled={uploading}
+            />
+          </label>
+          <label className={`btn btn-secondary ${styles.uploadLabel} ${uploading ? styles.disabled : ''}`}>
+            <FiFolder /> {uploading ? 'Subindo...' : 'Enviar Pasta'}
+            <input 
+              type="file" 
+              webkitdirectory="" 
+              directory=""
+              onChange={handleUploadFolder} 
               hidden 
               disabled={uploading}
             />
@@ -174,6 +235,13 @@ const Files = () => {
                 <span className={styles.itemMeta}>Pasta • Criada por {folder.user_name}</span>
               </div>
               <div className={styles.itemActions}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleDownloadFolder(folder.id, folder.name); }}
+                  className={styles.downloadBtn}
+                  title="Baixar Pasta (ZIP)"
+                >
+                  <FiDownload />
+                </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRenameFolder(folder.id, folder.name); }}
                   className={styles.editBtn}

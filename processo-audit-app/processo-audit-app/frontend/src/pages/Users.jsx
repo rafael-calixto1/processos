@@ -11,6 +11,12 @@ const Users = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  // Search and Pagination
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  
   // State for new user form
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -32,16 +38,31 @@ const Users = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (currentPage === 1) {
+        loadData();
+      } else {
+        setCurrentPage(1); // This will trigger the other useEffect
+      }
+    }, 700);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [usersData, deptsData] = await Promise.all([
-        authAPI.listUsers(),
+      const [usersResponse, deptsData] = await Promise.all([
+        authAPI.listUsers(search, currentPage),
         departmentAPI.list()
       ]);
-      setUsers(usersData);
+      setUsers(usersResponse.users);
+      setTotalPages(usersResponse.pages);
+      setTotalUsers(usersResponse.total);
       setDepartments(deptsData);
     } catch (err) {
       setError('Erro ao carregar dados: ' + err.message);
@@ -119,6 +140,21 @@ const Users = () => {
 
       {error && <div className={styles.error}>{error}</div>}
       {success && <div className={styles.success}>{success}</div>}
+
+      <div className={styles.filters}>
+        <div className={styles.searchContainer}>
+          <input 
+            type="text" 
+            placeholder="Buscar por nome ou email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={styles.searchInput}
+          />
+        </div>
+        <div className={styles.stats}>
+          Total: <strong>{totalUsers}</strong> usuários
+        </div>
+      </div>
 
       {showAddForm && (
         <div className={styles.addFormCard}>
@@ -314,6 +350,30 @@ const Users = () => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            className={styles.pageBtn}
+          >
+            Anterior
+          </button>
+          
+          <div className={styles.pageInfo}>
+            Página <strong>{currentPage}</strong> de {totalPages}
+          </div>
+
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            className={styles.pageBtn}
+          >
+            Próxima
+          </button>
+        </div>
+      )}
     </div>
   );
 };

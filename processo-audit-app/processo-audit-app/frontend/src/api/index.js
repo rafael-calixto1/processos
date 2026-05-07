@@ -29,8 +29,11 @@ export const authAPI = {
     return res.json();
   },
 
-  listUsers: async () => {
-    const res = await fetch(`${API_URL}/auth/users`, {
+  listUsers: async (search = '', page = 1, limit = 10) => {
+    let url = `${API_URL}/auth/users?page=${page}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    
+    const res = await fetch(url, {
       headers: headers(getToken())
     });
     if (!res.ok) throw new Error(await res.text());
@@ -79,11 +82,15 @@ export const authAPI = {
 
 // ======== PROCESSOS ========
 export const processAPI = {
-  list: async (departmentId = null, status = null) => {
+  list: async (departmentId = null, status = null, search = '', page = 1, limit = 10) => {
     let url = `${API_URL}/processes`;
     const params = new URLSearchParams();
     if (departmentId) params.append('department_id', departmentId);
     if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    params.append('page', page);
+    params.append('limit', limit);
+    
     if (params.toString()) url += '?' + params.toString();
 
     const res = await fetch(url, {
@@ -418,5 +425,15 @@ export const fileAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  downloadFolder: async (id) => {
+    const res = await fetch(`${API_URL}/files/folders/${id}/download`, {
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.blob();
   }
 };

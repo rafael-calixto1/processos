@@ -139,9 +139,27 @@ router.get('/users', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const [users] = await pool.execute(
-      'SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC'
-    );
+    const { search, page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = 'SELECT id, email, name, role, created_at FROM users';
+    let countQuery = 'SELECT COUNT(*) as total FROM users';
+    let params = [];
+    let countParams = [];
+
+    if (search) {
+      query += ' WHERE name LIKE ? OR email LIKE ?';
+      countQuery += ' WHERE name LIKE ? OR email LIKE ?';
+      params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [users] = await pool.execute(query, params);
+    const [totalRes] = await pool.execute(countQuery, countParams);
+    const total = totalRes[0].total;
 
     // Buscar departamentos para cada usuário
     for (let user of users) {
@@ -152,7 +170,12 @@ router.get('/users', verifyToken, async (req, res) => {
       user.department_ids = userDeps.map(ud => ud.department_id);
     }
 
-    res.json(users);
+    res.json({
+      users,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: parseInt(page)
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
