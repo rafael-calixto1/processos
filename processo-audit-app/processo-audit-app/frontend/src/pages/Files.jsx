@@ -12,6 +12,8 @@ const Files = () => {
   const [uploading, setUploading] = useState(false);
   const [clipboard, setClipboard] = useState(null); // { type, id, action: 'copy' | 'cut', name }
   const [activeMenu, setActiveMenu] = useState(null); // { type: 'folder' | 'file', id }
+  const [draggedItem, setDraggedItem] = useState(null); // { type, id }
+  const [dropTargetId, setDropTargetId] = useState(null);
 
   useEffect(() => {
     loadContents();
@@ -133,6 +135,63 @@ const Files = () => {
     }
   };
 
+  const handleDragStart = (e, type, id) => {
+    setDraggedItem({ type, id });
+    e.dataTransfer.setData('text/plain', id); // Required for some browsers
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, folderId) => {
+    e.preventDefault();
+    if (draggedItem && (draggedItem.type !== 'folder' || draggedItem.id !== folderId)) {
+      setDropTargetId(folderId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropTargetId(null);
+  };
+
+  const handleDrop = async (e, targetFolderId) => {
+    e.preventDefault();
+    setDropTargetId(null);
+    
+    // Check if it's an external file drop (upload)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = e.dataTransfer.files;
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      formData.append('folder_id', targetFolderId === 'back' ? (folderHistory[folderHistory.length - 1]?.id || '') : (targetFolderId || currentFolderId || ''));
+
+      try {
+        setUploading(true);
+        await fileAPI.upload(formData);
+        loadContents();
+      } catch (err) {
+        setError('Erro ao subir arquivos: ' + err.message);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    if (!draggedItem) return;
+    
+    // Prevent dropping a folder into itself
+    if (draggedItem.type === 'folder' && draggedItem.id === targetFolderId) return;
+
+    try {
+      await fileAPI.move(draggedItem.type, draggedItem.id, targetFolderId);
+      loadContents();
+    } catch (err) {
+      setError('Erro ao mover item: ' + err.message);
+    } finally {
+      setDraggedItem(null);
+    }
+  };
+
   const handleCopy = (type, id, name) => {
     setClipboard({ type, id, action: 'copy', name });
   };
@@ -213,7 +272,17 @@ const Files = () => {
       <header className={styles.header}>
         <div className={styles.titleArea}>
           {currentFolderId && (
-            <button onClick={goBack} className={styles.backBtn} title="Voltar">
+            <button 
+              onClick={goBack} 
+              className={`${styles.backBtn} ${dropTargetId === 'back' ? styles.dropTargetBack : ''}`} 
+              title="Voltar"
+              onDragOver={(e) => handleDragOver(e, 'back')}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => {
+                const prevFolder = folderHistory[folderHistory.length - 1];
+                handleDrop(e, prevFolder ? prevFolder.id : null);
+              }}
+            >
               <FiArrowLeft />
             </button>
           )}
@@ -280,7 +349,17 @@ const Files = () => {
       {loading ? (
         <div className="spinner-container"><div className="spinner" /></div>
       ) : (
-        <div className={styles.grid}>
+        <div 
+          className={`${styles.grid} ${dropTargetId === 'current' ? styles.gridDropTarget : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (e.dataTransfer.types.includes('Files')) {
+              setDropTargetId('current');
+            }
+          }}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, currentFolderId)}
+        >
           {contents.folders.length === 0 && contents.files.length === 0 && (
             <div className={styles.empty}>
               <FiFolder size={48} />
@@ -289,7 +368,16 @@ const Files = () => {
           )}
 
           {contents.folders.map(folder => (
-            <div key={`folder-${folder.id}`} className={styles.item} onClick={() => navigateToFolder(folder)}>
+            <div 
+              key={`folder-${folder.id}`} 
+              className={`${styles.item} ${dropTargetId === folder.id ? styles.dropTarget : ''}`} 
+              onClick={() => navigateToFolder(folder)}
+              draggable
+              onDragStart={(e) => handleDragStart(e, 'folder', folder.id)}
+              onDragOver={(e) => handleDragOver(e, folder.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, folder.id)}
+            >
               <div className={styles.itemIcon}>
                 <FiFolder className={styles.folderIcon} />
               </div>
@@ -337,7 +425,12 @@ const Files = () => {
           ))}
 
           {contents.files.map(file => (
-            <div key={`file-${file.id}`} className={styles.item}>
+            <div 
+              key={`file-${file.id}`} 
+              className={styles.item}
+              draggable
+              onDragStart={(e) => handleDragStart(e, 'file', file.id)}
+            >
               <div className={styles.itemIcon}>
                 <FiFile className={styles.fileIcon} />
               </div>
