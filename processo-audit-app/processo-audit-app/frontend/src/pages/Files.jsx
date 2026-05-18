@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fileAPI } from '../api/index';
 import styles from './Files.module.css';
-import { FiFolder, FiFile, FiPlus, FiUpload, FiArrowLeft, FiTrash2, FiDownload, FiEdit2, FiMoreVertical } from 'react-icons/fi';
+import { FiFolder, FiFile, FiPlus, FiUpload, FiArrowLeft, FiTrash2, FiDownload, FiEdit2, FiMoreVertical, FiCopy, FiScissors, FiClipboard } from 'react-icons/fi';
 
 const Files = () => {
   const [currentFolderId, setCurrentFolderId] = useState(null);
@@ -10,9 +10,16 @@ const Files = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [clipboard, setClipboard] = useState(null); // { type, id, action: 'copy' | 'cut', name }
+  const [activeMenu, setActiveMenu] = useState(null); // { type: 'folder' | 'file', id }
 
   useEffect(() => {
     loadContents();
+    
+    // Close menu when clicking outside
+    const handleClickOutside = () => setActiveMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
   }, [currentFolderId]);
 
   const loadContents = async () => {
@@ -115,6 +122,40 @@ const Files = () => {
     }
   };
 
+  const handleRenameFile = async (id, currentName) => {
+    const newName = prompt('Novo nome do arquivo:', currentName);
+    if (!newName || newName === currentName) return;
+    try {
+      await fileAPI.renameFile(id, newName);
+      loadContents();
+    } catch (err) {
+      setError('Erro ao renomear arquivo: ' + err.message);
+    }
+  };
+
+  const handleCopy = (type, id, name) => {
+    setClipboard({ type, id, action: 'copy', name });
+  };
+
+  const handleCut = (type, id, name) => {
+    setClipboard({ type, id, action: 'cut', name });
+  };
+
+  const handlePaste = async () => {
+    if (!clipboard) return;
+    try {
+      if (clipboard.action === 'copy') {
+        await fileAPI.copy(clipboard.type, clipboard.id, currentFolderId);
+      } else {
+        await fileAPI.move(clipboard.type, clipboard.id, currentFolderId);
+      }
+      setClipboard(null);
+      loadContents();
+    } catch (err) {
+      setError('Erro ao colar: ' + err.message);
+    }
+  };
+
   const handleDownloadFolder = async (id, name) => {
     try {
       const blob = await fileAPI.downloadFolder(id);
@@ -128,6 +169,22 @@ const Files = () => {
       document.body.removeChild(a);
     } catch (err) {
       setError('Erro ao baixar pasta: ' + err.message);
+    }
+  };
+
+  const handleDownloadFile = async (id, name) => {
+    try {
+      const blob = await fileAPI.downloadFile(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Erro ao baixar arquivo: ' + err.message);
     }
   };
 
@@ -149,12 +206,6 @@ const Files = () => {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFullUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return path;
   };
 
   return (
@@ -209,10 +260,22 @@ const Files = () => {
           <button className="btn btn-secondary" onClick={handleCreateFolder}>
             <FiPlus /> Nova Pasta
           </button>
+          {clipboard && (
+            <button className="btn btn-primary" onClick={handlePaste} title={`Colar ${clipboard.name}`}>
+              <FiClipboard /> Colar
+            </button>
+          )}
         </div>
       </header>
 
       {error && <div className={styles.error}>{error}</div>}
+
+      {clipboard && (
+        <div className={styles.clipboardInfo}>
+          <span>{clipboard.action === 'copy' ? 'Copiando' : 'Recortando'}: <strong>{clipboard.name}</strong></span>
+          <button onClick={() => setClipboard(null)} className="btn btn-link btn-sm">Cancelar</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="spinner-container"><div className="spinner" /></div>
@@ -234,28 +297,41 @@ const Files = () => {
                 <span className={styles.itemName}>{folder.name}</span>
                 <span className={styles.itemMeta}>Pasta • Criada por {folder.user_name}</span>
               </div>
-              <div className={styles.itemActions}>
+              <div className={styles.itemActions} onClick={(e) => e.stopPropagation()}>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleDownloadFolder(folder.id, folder.name); }}
+                  onClick={() => handleDownloadFolder(folder.id, folder.name)}
                   className={styles.downloadBtn}
                   title="Baixar Pasta (ZIP)"
                 >
                   <FiDownload />
                 </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleRenameFolder(folder.id, folder.name); }}
-                  className={styles.editBtn}
-                  title="Renomear"
-                >
-                  <FiEdit2 />
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id, folder.name); }}
-                  className={styles.deleteBtn}
-                  title="Excluir"
-                >
-                  <FiTrash2 />
-                </button>
+                
+                <div className={styles.dropdownContainer}>
+                  <button 
+                    onClick={() => setActiveMenu(activeMenu?.id === folder.id ? null : { type: 'folder', id: folder.id })}
+                    className={styles.moreBtn}
+                    title="Mais ações"
+                  >
+                    <FiMoreVertical />
+                  </button>
+                  
+                  {activeMenu?.type === 'folder' && activeMenu?.id === folder.id && (
+                    <div className={styles.dropdownMenu}>
+                      <button onClick={() => { handleCopy('folder', folder.id, folder.name); setActiveMenu(null); }}>
+                        <FiCopy /> Copiar
+                      </button>
+                      <button onClick={() => { handleCut('folder', folder.id, folder.name); setActiveMenu(null); }}>
+                        <FiScissors /> Recortar
+                      </button>
+                      <button onClick={() => { handleRenameFolder(folder.id, folder.name); setActiveMenu(null); }}>
+                        <FiEdit2 /> Renomear
+                      </button>
+                      <button onClick={() => { handleDeleteFolder(folder.id, folder.name); setActiveMenu(null); }} className={styles.deleteOption}>
+                        <FiTrash2 /> Excluir
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -272,22 +348,40 @@ const Files = () => {
                 </span>
               </div>
               <div className={styles.itemActions}>
-                <a 
-                  href={getFullUrl(file.file_path)} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <button 
+                  onClick={() => handleDownloadFile(file.id, file.name)}
                   className={styles.downloadBtn}
-                  title="Baixar / Abrir"
+                  title="Baixar"
                 >
                   <FiDownload />
-                </a>
-                <button 
-                  onClick={() => handleDeleteFile(file.id, file.name)}
-                  className={styles.deleteBtn}
-                  title="Excluir"
-                >
-                  <FiTrash2 />
                 </button>
+
+                <div className={styles.dropdownContainer}>
+                  <button 
+                    onClick={() => setActiveMenu(activeMenu?.id === file.id ? null : { type: 'file', id: file.id })}
+                    className={styles.moreBtn}
+                    title="Mais ações"
+                  >
+                    <FiMoreVertical />
+                  </button>
+                  
+                  {activeMenu?.type === 'file' && activeMenu?.id === file.id && (
+                    <div className={styles.dropdownMenu}>
+                      <button onClick={() => { handleCopy('file', file.id, file.name); setActiveMenu(null); }}>
+                        <FiCopy /> Copiar
+                      </button>
+                      <button onClick={() => { handleCut('file', file.id, file.name); setActiveMenu(null); }}>
+                        <FiScissors /> Recortar
+                      </button>
+                      <button onClick={() => { handleRenameFile(file.id, file.name); setActiveMenu(null); }}>
+                        <FiEdit2 /> Renomear
+                      </button>
+                      <button onClick={() => { handleDeleteFile(file.id, file.name); setActiveMenu(null); }} className={styles.deleteOption}>
+                        <FiTrash2 /> Excluir
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

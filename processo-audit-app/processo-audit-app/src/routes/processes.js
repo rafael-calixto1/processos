@@ -47,7 +47,7 @@ router.post('/processes/upload-step-photo', verifyToken, checkRole(['admin', 'ma
 });
 
 // Criar novo processo
-router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.post(['/processes', '/process'], verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const { title, description, department_id, steps } = req.body;
     
@@ -91,7 +91,7 @@ router.post('/processes', verifyToken, checkRole(['admin', 'manager']), async (r
 });
 
 // Listar processos
-router.get('/processes', verifyToken, async (req, res) => {
+router.get(['/processes', '/process'], verifyToken, async (req, res) => {
   try {
     const { department_id, status, search, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
@@ -167,7 +167,7 @@ router.get('/processes', verifyToken, async (req, res) => {
 });
 
 // Obter processo específico
-router.get('/processes/:id', verifyToken, async (req, res) => {
+router.get(['/processes/:id', '/process/:id'], verifyToken, async (req, res) => {
   try {
     const processId = req.params.id;
     let query = `
@@ -219,7 +219,7 @@ router.get('/processes/:id', verifyToken, async (req, res) => {
 });
 
 // Atualizar processo
-router.put('/processes/:id', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.put(['/processes/:id', '/process/:id'], verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const { title, description, status, steps } = req.body;
     const processId = req.params.id;
@@ -272,7 +272,7 @@ router.put('/processes/:id', verifyToken, checkRole(['admin', 'manager']), async
 });
 
 // Deletar processo
-router.delete('/processes/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.delete(['/processes/:id', '/process/:id'], verifyToken, checkRole(['admin']), async (req, res) => {
   try {
     const processId = req.params.id;
 
@@ -297,7 +297,7 @@ router.delete('/processes/:id', verifyToken, checkRole(['admin']), async (req, r
 });
 
 // Obter auditoria de um processo
-router.get('/processes/:id/audit', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.get(['/processes/:id/audit', '/process/:id/audit'], verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const [logs] = await pool.execute(
       `SELECT a.*, u.name as user_name 

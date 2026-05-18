@@ -164,6 +164,86 @@
   color: #0ba52b;
 }
 
+.moreBtn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  transition: all 0.2s;
+}
+
+.moreBtn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.dropdownContainer {
+  position: relative;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  margin-top: 5px;
+}
+
+.dropdownMenu button {
+  background: none;
+  border: none;
+  padding: 10px 15px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.dropdownMenu button:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.dropdownMenu button svg {
+  font-size: 1rem;
+}
+
+.deleteOption:hover {
+  background: #fff5f5 !important;
+  color: #c53030 !important;
+}
+
+.clipboardInfo {
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  color: #2b6cb0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
 .empty {
   grid-column: 1 / -1;
   display: flex;
