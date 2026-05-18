@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { processAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiArrowLeft, FiEdit2, FiTrash2, FiPlay, FiImage } from 'react-icons/fi';
+import { FiArrowLeft, FiEdit2, FiTrash2, FiPlay, FiImage, FiFileText } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './ProcessDetail.module.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ProcessDetail = () => {
   const { id } = useParams();
@@ -34,6 +36,152 @@ const ProcessDetail = () => {
       setAuditLogs(logs);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBase64ImageFromURL = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.setAttribute('crossOrigin', 'anonymous');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        resolve({
+          dataURL,
+          width: img.width,
+          height: img.height
+        });
+      };
+      img.onerror = (error) => {
+        reject(error);
+      };
+      img.src = url;
+    });
+  };
+
+  const handleExportPDF = async () => {
+    if (!process) return;
+
+    try {
+      setLoading(true);
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(11, 165, 43); // Primary color
+      doc.text(process.title, 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Departamento: ${process.department_name} | Versão: ${process.version}`, 14, 30);
+      doc.text(`Criado por: ${process.created_by_name} em ${new Date(process.created_at).toLocaleDateString()}`, 14, 35);
+      
+      // Description
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text('Descrição:', 14, 45);
+      doc.setFontSize(10);
+      const descLines = doc.splitTextToSize(process.description || 'Sem descrição', 180);
+      doc.text(descLines, 14, 52);
+      
+      let currentY = 52 + (descLines.length * 5) + 10;
+
+      // Steps Table
+      doc.setFontSize(14);
+      doc.setTextColor(11, 165, 43);
+      doc.text('Passos do Processo', 14, currentY);
+      
+      const tableColumn = ["#", "Título", "Procedimento / Instruções"];
+      const tableRows = [];
+      const rowStepMap = new Map();
+
+      // Pre-load all images
+      const stepsWithImages = await Promise.all(process.steps?.map(async (step) => {
+        let imageData = null;
+        if (step.photo_url) {
+          try {
+            imageData = await getBase64ImageFromURL(getFullUrl(step.photo_url));
+          } catch (e) {
+            console.error('Erro ao carregar imagem para o PDF:', e);
+          }
+        }
+        return { ...step, imageData };
+      }) || []);
+
+      stepsWithImages.forEach((step, index) => {
+        // Text row
+        tableRows.push([
+          index + 1,
+          step.title,
+          step.description || '-'
+        ]);
+
+        // Image row if exists
+        if (step.imageData) {
+          // Calculate aspect ratio
+          const maxWidth = 140;
+          const maxHeight = 80;
+          let imgWidth = step.imageData.width;
+          let imgHeight = step.imageData.height;
+          
+          const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+          imgWidth *= ratio;
+          imgHeight *= ratio;
+
+          rowStepMap.set(tableRows.length, { base64: step.imageData.dataURL, width: imgWidth, height: imgHeight });
+          tableRows.push([
+            '',
+            { 
+              content: '', 
+              colSpan: 2, 
+              styles: { minCellHeight: imgHeight + 10, halign: 'center' } 
+            }
+          ]);
+        }
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: currentY + 5,
+        theme: 'striped',
+        headStyles: { fillColor: [11, 165, 43] },
+        styles: { fontSize: 10, cellPadding: 5 },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 'auto' }
+        },
+        rowPageBreak: 'avoid',
+        didDrawCell: (data) => {
+          if (data.section === 'body' && rowStepMap.has(data.row.index) && data.column.index === 1) {
+            const imgInfo = rowStepMap.get(data.row.index);
+            // Center the image in the spanned cell
+            const x = data.cell.x + (data.cell.width - imgInfo.width) / 2;
+            const y = data.cell.y + 5;
+            doc.addImage(imgInfo.base64, 'JPEG', x, y, imgInfo.width, imgInfo.height);
+          }
+        }
+      });
+
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Página ${i} de ${pageCount} - Gerado em ${new Date().toLocaleString()}`, 14, doc.internal.pageSize.height - 10);
+      }
+
+      doc.save(`processo_${process.id}_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      setError('Erro ao exportar PDF: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -239,6 +387,15 @@ const ProcessDetail = () => {
           </span>
         </div>
         <div className={styles.actions}>
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <button 
+              onClick={handleExportPDF}
+              className="btn btn-secondary"
+              title="Exportar como PDF"
+            >
+              <FiFileText /> PDF
+            </button>
+          )}
           {process.status === 'active' && (
             <button 
               onClick={handleExecute}

@@ -21,6 +21,11 @@
   gap: 1rem;
 }
 
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .header h1 {
   margin: 0;
 }

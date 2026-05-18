@@ -132,8 +132,8 @@ router.put('/change-password', verifyToken, async (req, res) => {
   }
 });
 
-// Listar usuários (apenas admin)
-router.get('/users', verifyToken, async (req, res) => {
+// List usuários (apenas admin)
+router.get(['/users', '/user'], verifyToken, async (req, res) => {
   try {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado' });
@@ -182,7 +182,7 @@ router.get('/users', verifyToken, async (req, res) => {
 });
 
 // Criar usuário (apenas admin)
-router.post('/users', verifyToken, async (req, res) => {
+router.post(['/users', '/user'], verifyToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
     if (req.userRole !== 'admin') {
@@ -229,7 +229,7 @@ router.post('/users', verifyToken, async (req, res) => {
 });
 
 // Atualizar usuário (apenas admin)
-router.put('/users/:id', verifyToken, async (req, res) => {
+router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
     if (req.userRole !== 'admin') {
@@ -279,7 +279,7 @@ router.put('/users/:id', verifyToken, async (req, res) => {
 });
 
 // Excluir usuário (apenas admin)
-router.delete('/users/:id', verifyToken, async (req, res) => {
+router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
   try {
     if (req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Acesso negado' });

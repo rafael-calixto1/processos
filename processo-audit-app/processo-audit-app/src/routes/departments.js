@@ -5,7 +5,7 @@ import { verifyToken, checkRole } from '../middlewares/auth.js';
 const router = express.Router();
 
 // Criar departamento
-router.post('/departments', verifyToken, checkRole(['admin']), async (req, res) => {
+router.post(['/departments', '/department'], verifyToken, checkRole(['admin']), async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -28,7 +28,7 @@ router.post('/departments', verifyToken, checkRole(['admin']), async (req, res) 
 });
 
 // Listar departamentos
-router.get('/departments', verifyToken, async (req, res) => {
+router.get(['/departments', '/department'], verifyToken, async (req, res) => {
   try {
     let query = 'SELECT * FROM departments';
     const params = [];
@@ -69,7 +69,7 @@ router.get('/departments', verifyToken, async (req, res) => {
 });
 
 // Obter departamento específico
-router.get('/departments/:id', verifyToken, async (req, res) => {
+router.get(['/departments/:id', '/department/:id'], verifyToken, async (req, res) => {
   try {
     const deptId = req.params.id;
     let query = 'SELECT * FROM departments WHERE id = ?';
@@ -100,7 +100,7 @@ router.get('/departments/:id', verifyToken, async (req, res) => {
 });
 
 // Atualizar departamento
-router.put('/departments/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.put(['/departments/:id', '/department/:id'], verifyToken, checkRole(['admin']), async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -116,7 +116,7 @@ router.put('/departments/:id', verifyToken, checkRole(['admin']), async (req, re
 });
 
 // Deletar departamento
-router.delete('/departments/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.delete(['/departments/:id', '/department/:id'], verifyToken, checkRole(['admin']), async (req, res) => {
   try {
     const [processes] = await pool.execute(
       'SELECT COUNT(*) as count FROM processes WHERE department_id = ?',
