@@ -427,8 +427,48 @@ export const fileAPI = {
     return res.json();
   },
 
+  renameFile: async (id, name) => {
+    const res = await fetch(`${API_URL}/files/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  move: async (type, id, target_folder_id) => {
+    const res = await fetch(`${API_URL}/files/move`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ type, id, target_folder_id })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  copy: async (type, id, target_folder_id) => {
+    const res = await fetch(`${API_URL}/files/copy`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ type, id, target_folder_id })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   downloadFolder: async (id) => {
     const res = await fetch(`${API_URL}/files/folders/${id}/download`, {
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.blob();
+  },
+
+  downloadFile: async (id) => {
+    const res = await fetch(`${API_URL}/files/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
       }

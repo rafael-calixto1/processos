@@ -33,7 +33,7 @@ const upload = multer({
 });
 
 // Iniciar execução de um processo
-router.post('/executions/start/:processId', verifyToken, async (req, res) => {
+router.post(['/executions/start/:processId', '/execution/start/:processId'], verifyToken, async (req, res) => {
   try {
     const processId = req.params.processId;
 
@@ -78,7 +78,7 @@ router.post('/executions/start/:processId', verifyToken, async (req, res) => {
 });
 
 // Obter execução em andamento
-router.get('/executions/:executionId', verifyToken, async (req, res) => {
+router.get(['/executions/:executionId', '/execution/:executionId'], verifyToken, async (req, res) => {
   try {
     const [executions] = await pool.execute(
       `SELECT pe.*, p.title, p.description, u.name as started_by_name
@@ -145,7 +145,7 @@ router.put('/step-executions/:stepExecutionId/complete', verifyToken, upload.sin
 });
 
 // Finalizar execução
-router.put('/executions/:executionId/complete', verifyToken, async (req, res) => {
+router.put(['/executions/:executionId/complete', '/execution/:executionId/complete'], verifyToken, async (req, res) => {
   try {
     const [executions] = await pool.execute(
       'SELECT * FROM process_executions WHERE id = ?',
@@ -184,7 +184,7 @@ router.put('/executions/:executionId/complete', verifyToken, async (req, res) =>
 });
 
 // Cancelar execução
-router.put('/executions/:executionId/cancel', verifyToken, async (req, res) => {
+router.put(['/executions/:executionId/cancel', '/execution/:executionId/cancel'], verifyToken, async (req, res) => {
   try {
     await pool.execute(
       `UPDATE process_executions 
@@ -200,7 +200,7 @@ router.put('/executions/:executionId/cancel', verifyToken, async (req, res) => {
 });
 
 // Listar minhas execuções recentes
-router.get('/executions/user/me', verifyToken, async (req, res) => {
+router.get(['/executions/user/me', '/execution/user/me'], verifyToken, async (req, res) => {
   try {
     const [executions] = await pool.execute(
       `SELECT pe.*, p.title, p.description

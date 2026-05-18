@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiPlus, FiEdit2, FiTrash2, FiEye, FiCamera } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiEye, FiCamera, FiFileText } from 'react-icons/fi';
 import styles from './Processes.module.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Processes = () => {
   const [processes, setProcesses] = useState([]);
@@ -59,6 +61,73 @@ const Processes = () => {
       setDepartments(depts);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      setLoading(true);
+      // Fetch all processes with current filters (large limit)
+      const response = await processAPI.list(filterDept || null, filterStatus || null, search, 1, 1000);
+      const allProcesses = response.processes;
+
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.text('Relatório de Processos', 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      
+      // Add metadata
+      const date = new Date().toLocaleString();
+      doc.text(`Gerado em: ${date}`, 14, 30);
+      doc.text(`Total de processos: ${allProcesses.length}`, 14, 35);
+      
+      // Filters info
+      let filters = [];
+      if (search) filters.push(`Busca: "${search}"`);
+      if (filterDept) {
+        const dept = departments.find(d => d.id === parseInt(filterDept));
+        if (dept) filters.push(`Depto: ${dept.name}`);
+      }
+      if (filterStatus) filters.push(`Status: ${filterStatus}`);
+      
+      if (filters.length > 0) {
+        doc.text(`Filtros: ${filters.join(' | ')}`, 14, 40);
+      }
+      
+      // Define table columns
+      const tableColumn = ["ID", "Título", "Departamento", "Status", "Passos"];
+      const tableRows = [];
+
+      allProcesses.forEach(process => {
+        const processData = [
+          process.id,
+          process.title,
+          process.department_name,
+          process.status === 'active' ? 'Ativo' : process.status === 'draft' ? 'Rascunho' : 'Arquivado',
+          process.steps?.length || 0
+        ];
+        tableRows.push(processData);
+      });
+
+      // Generate table
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: filters.length > 0 ? 45 : 40,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 123, 255] },
+        styles: { fontSize: 9 }
+      });
+
+      doc.save(`relatorio_processos_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      setError('Erro ao exportar PDF: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -153,14 +222,25 @@ const Processes = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>Processos</h1>
-        {(user?.role === 'admin' || user?.role === 'manager') && (
-          <button
-            className={`btn btn-primary`}
-            onClick={() => setShowModal(true)}
-          >
-            <FiPlus /> Novo Processo
-          </button>
-        )}
+        <div className={styles.headerActions}>
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <>
+              <button
+                className={`btn btn-secondary`}
+                onClick={handleExportPDF}
+                style={{ marginRight: '10px' }}
+              >
+                <FiFileText /> Exportar PDF
+              </button>
+              <button
+                className={`btn btn-primary`}
+                onClick={() => setShowModal(true)}
+              >
+                <FiPlus /> Novo Processo
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {error && <div className={styles.alert}>{error}</div>}
