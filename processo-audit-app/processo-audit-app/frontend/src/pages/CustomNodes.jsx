@@ -71,9 +71,7 @@ export const ProcessNode = memo(({ data, selected }) => {
           </div>
         )}
         {data.image_url && (
-          <div className={styles.nodeThumb}>
-            <img src={data.image_url} alt="" />
-          </div>
+          <div className={styles.nodeHasImage} title="Esta etapa tem uma imagem" />
         )}
       </div>
       <Handle
