@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useBranding } from '../context/BrandingContext';
+import { BarChart3, CheckCircle2, FileEdit, Building2, ArrowRight } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
 const Dashboard = () => {
@@ -43,60 +44,64 @@ const Dashboard = () => {
     );
   }
 
+  const stats = [
+    {
+      value: processes.length,
+      label: 'Total de Processos',
+      Icon: BarChart3,
+      color: branding?.primary_color || '#0ba52b',
+      bg: 'rgba(11,165,43,0.1)',
+    },
+    {
+      value: activeProcesses,
+      label: 'Processos Ativos',
+      Icon: CheckCircle2,
+      color: branding?.secondary_color || '#bbf804',
+      bg: 'rgba(187,248,4,0.12)',
+    },
+    {
+      value: draftProcesses,
+      label: 'Rascunhos',
+      Icon: FileEdit,
+      color: branding?.accent_color || '#274518',
+      bg: 'rgba(39,69,24,0.09)',
+    },
+    {
+      value: departments.length,
+      label: 'Departamentos',
+      Icon: Building2,
+      color: '#2563eb',
+      bg: 'rgba(37,99,235,0.1)',
+    },
+  ];
+
   return (
     <div className={styles.dashboard}>
-      <h1>Dashboard</h1>
-      <p className={styles.subtitle}>
-        Bem-vindo ao {branding?.company_name || 'Processo Audit'}
-      </p>
+      <div className={styles.pageHeader}>
+        <h1>Dashboard</h1>
+        <p className={styles.subtitle}>
+          Bem-vindo ao {branding?.company_name || 'Processo Audit'}
+        </p>
+      </div>
 
       {error && <div className={styles.alert}>{error}</div>}
 
-      {/* Cards de Estatísticas */}
       <div className={styles.statsGrid}>
-        <div 
-          className={styles.statCard}
-          style={{ borderLeftColor: branding?.primary_color || '#0ba52b' }}
-        >
-          <div className={styles.statIcon}>📊</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{processes.length}</div>
-            <div className={styles.statLabel}>Total de Processos</div>
+        {stats.map(({ value, label, Icon, color, bg }) => (
+          <div
+            key={label}
+            className={styles.statCard}
+            style={{ '--stat-color': color, '--stat-bg': bg }}
+          >
+            <div className={styles.statIconWrap}>
+              <Icon size={22} strokeWidth={2} />
+            </div>
+            <div className={styles.statContent}>
+              <div className={styles.statValue}>{value}</div>
+              <div className={styles.statLabel}>{label}</div>
+            </div>
           </div>
-        </div>
-
-        <div 
-          className={styles.statCard}
-          style={{ borderLeftColor: branding?.secondary_color || '#bbf804' }}
-        >
-          <div className={styles.statIcon}>✅</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{activeProcesses}</div>
-            <div className={styles.statLabel}>Processos Ativos</div>
-          </div>
-        </div>
-
-        <div 
-          className={styles.statCard}
-          style={{ borderLeftColor: branding?.accent_color || '#274518' }}
-        >
-          <div className={styles.statIcon}>📋</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{draftProcesses}</div>
-            <div className={styles.statLabel}>Rascunhos</div>
-          </div>
-        </div>
-
-        <div 
-          className={styles.statCard}
-          style={{ borderLeftColor: '#2196f3' }}
-        >
-          <div className={styles.statIcon}>🏢</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{departments.length}</div>
-            <div className={styles.statLabel}>Departamentos</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Processos Recentes */}
@@ -104,7 +109,7 @@ const Dashboard = () => {
         <div className={styles.sectionHeader}>
           <h2>Processos Recentes</h2>
           <Link to="/processos" className={styles.viewMore}>
-            Ver todos →
+            Ver todos <ArrowRight size={14} />
           </Link>
         </div>
 
@@ -121,20 +126,18 @@ const Dashboard = () => {
               <div key={process.id} className={styles.processCard}>
                 <div className={styles.processHeader}>
                   <h3>
-                    <Link to={`/processos/${process.id}`}>
-                      {process.title}
-                    </Link>
+                    <Link to={`/processos/${process.id}`}>{process.title}</Link>
                   </h3>
-                  <span className={`badge badge-${process.status}`}>
-                    {process.status === 'active' ? '✅ Ativo' : 
-                     process.status === 'draft' ? '📝 Rascunho' : 
-                     '📦 Arquivado'}
+                  <span className={`badge badge-${process.status === 'active' ? 'success' : process.status === 'draft' ? 'warning' : 'accent'}`}>
+                    {process.status === 'active' ? 'Ativo' :
+                     process.status === 'draft' ? 'Rascunho' : 'Arquivado'}
                   </span>
                 </div>
                 <p className={styles.processDesc}>{process.description}</p>
                 <div className={styles.processFooter}>
                   <span className={styles.department}>
-                    🏢 {process.department_name}
+                    <Building2 size={13} />
+                    {process.department_name}
                   </span>
                   <span className={styles.steps}>
                     {process.steps?.length || 0} passos
@@ -148,7 +151,9 @@ const Dashboard = () => {
 
       {/* Departamentos */}
       <div className={styles.section}>
-        <h2>Departamentos</h2>
+        <div className={styles.sectionHeader}>
+          <h2>Departamentos</h2>
+        </div>
         {departments.length === 0 ? (
           <p className={styles.emptyText}>Nenhum departamento criado</p>
         ) : (

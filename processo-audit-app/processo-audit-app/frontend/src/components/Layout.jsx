@@ -2,8 +2,26 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
-import { FiMenu, FiX, FiLogOut, FiSettings } from 'react-icons/fi';
+import {
+  LayoutDashboard, FileText, Network, FolderOpen, Building2,
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight
+} from 'lucide-react';
 import styles from './Layout.module.css';
+
+const menuItems = [
+  { label: 'Dashboard', path: '/dashboard', Icon: LayoutDashboard },
+  { label: 'Processos', path: '/processos', Icon: FileText },
+  { label: 'Processos Visuais', path: '/processos-visual', Icon: Network },
+  { label: 'Arquivos', path: '/arquivos', Icon: FolderOpen },
+  { label: 'Departamentos', path: '/departamentos', Icon: Building2 },
+  { label: 'Minhas Execuções', path: '/execucoes', Icon: CheckSquare },
+  { label: 'Minha Conta', path: '/configuracoes', Icon: Settings },
+];
+
+const adminItems = [
+  { label: 'Branding', path: '/branding', Icon: Palette },
+  { label: 'Usuários', path: '/users', Icon: Users },
+];
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -19,111 +37,80 @@ const Layout = ({ children }) => {
 
   const isActive = (path) => location.pathname === path;
 
-  const menuItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { label: 'Processos', path: '/processos', icon: '📋' },
-    { label: 'Processos Visuais', path: '/processos-visual', icon: '🎨' },
-    { label: 'Arquivos', path: '/arquivos', icon: '📁' },
-    { label: 'Departamentos', path: '/departamentos', icon: '🏢' },
-    { label: 'Minhas Execuções', path: '/execucoes', icon: '✓' },
-    { label: 'Minha Conta', path: '/configuracoes', icon: '⚙️' },
-  ];
+  const primary = branding?.primary_color || '#0ba52b';
+  const secondary = branding?.secondary_color || '#bbf804';
 
-  if (user?.role === 'admin') {
-    menuItems.push({ label: 'Branding', path: '/branding', icon: '🎨' });
-    menuItems.push({ label: 'Usuários', path: '/users', icon: '👥' });
-  }
+  const allItems = user?.role === 'admin' ? [...menuItems, ...adminItems] : menuItems;
+
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
 
   return (
     <div className={styles.layout}>
-      {/* Header */}
-      <header 
-        className={styles.header}
-        style={{
-          backgroundColor: branding?.primary_color || '#0ba52b',
-          borderBottom: `4px solid ${branding?.secondary_color || '#bbf804'}`
-        }}
-      >
+      <header className={styles.header} style={{ backgroundColor: primary, borderBottom: `3px solid ${secondary}` }}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button
               className={`${styles.menuToggle} ${sidebarOpen ? styles.toggleActive : ''}`}
               onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Toggle menu"
             >
-              <FiMenu size={24} className={styles.iconHamburger} />
-              <FiX size={24} className={styles.iconClose} />
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
+
             <Link to="/dashboard" className={styles.logo}>
               {branding?.logo_url ? (
                 <img src={branding.logo_url} alt="Logo" className={styles.logoImage} />
               ) : (
-                <div className={styles.logoPlaceholder}>
-                  {branding?.company_name?.charAt(0).toUpperCase()}
+                <div className={styles.logoPlaceholder} style={{ color: primary }}>
+                  {branding?.company_name?.charAt(0).toUpperCase() || 'P'}
                 </div>
               )}
-              <span>{branding?.company_name || 'Processo Audit'}</span>
+              <span className={styles.logoText}>{branding?.company_name || 'Processo Audit'}</span>
             </Link>
           </div>
 
-          <div className={styles.headerRight}>
-            {user && (
-              <>
-                <div className={styles.userInfo}>
-                  <span className={styles.userName}>{user.name}</span>
-                  <span className={styles.userRole}>{user.role}</span>
-                </div>
-                <div className={styles.userMenu}>
-                  {user.role === 'admin' && (
-                    <Link
-                      to="/settings"
-                      className={styles.menuIcon}
-                      title="Configurações"
-                    >
-                      <FiSettings size={20} />
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className={styles.logoutBtn}
-                    title="Sair"
-                  >
-                    <FiLogOut size={20} />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          {user && (
+            <div className={styles.headerRight}>
+              <div className={styles.userInfo}>
+                <span className={styles.userName}>{user.name}</span>
+                <span className={styles.userRole}>{user.role}</span>
+              </div>
+              <div className={styles.avatar} title={user.name}>
+                {initials}
+              </div>
+              <button onClick={handleLogout} className={styles.logoutBtn} title="Sair">
+                <LogOut size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
       <div className={styles.container}>
-        {/* Sidebar */}
         <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
           <nav className={styles.nav}>
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`${styles.navItem} ${isActive(item.path) ? styles.active : ''}`}
-                onClick={() => setSidebarOpen(false)}
-                style={
-                  isActive(item.path)
-                    ? {
-                        backgroundColor: branding?.primary_color || '#0ba52b',
-                        color: 'white',
-                        borderLeft: `4px solid ${branding?.secondary_color || '#bbf804'}`
-                      }
-                    : {}
-                }
-              >
-                <span className={styles.navIcon}>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            ))}
+            <div className={styles.navSection}>
+              {allItems.map(({ label, path, Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
+                  onClick={() => setSidebarOpen(false)}
+                  style={isActive(path) ? { color: primary } : {}}
+                >
+                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                    <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
+                  </span>
+                  <span className={styles.navLabel}>{label}</span>
+                  {isActive(path) && <ChevronRight size={14} className={styles.activeArrow} />}
+                </Link>
+              ))}
+            </div>
           </nav>
         </aside>
 
-        {/* Main Content */}
         <main className={styles.main}>
           <div className={styles.content}>
             {children}
@@ -131,12 +118,8 @@ const Layout = ({ children }) => {
         </main>
       </div>
 
-      {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div
-          className={styles.overlay}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className={styles.overlay} onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   );
