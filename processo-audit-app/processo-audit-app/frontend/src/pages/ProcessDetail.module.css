@@ -1,16 +1,10 @@
 .container {
-  animation: fadeIn 0.3s ease-in;
+  animation: pageIn 0.22s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .header {
@@ -22,23 +16,24 @@
 }
 
 .backBtn {
-  background-color: white;
-  border: 2px solid var(--border-color);
-  color: var(--text-dark);
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
+  background-color: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-medium);
+  padding: 0.5625rem 1rem;
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.3s;
+  transition: var(--transition);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 500;
+  font-size: 0.875rem;
 }
 
 .backBtn:hover {
   border-color: var(--primary-color);
   color: var(--primary-color);
-  background-color: rgba(11, 165, 43, 0.05);
+  background-color: var(--primary-light);
 }
 
 .titleSection {
@@ -65,11 +60,11 @@
 
 /* Card */
 .card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: var(--shadow);
-  margin-bottom: 2rem;
+  background-color: var(--surface-color);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.75rem;
   border: 1px solid var(--border-color);
 }
 
@@ -103,42 +98,44 @@
   display: flex;
   gap: 0;
   margin-bottom: 0;
-  border-bottom: 2px solid var(--border-color);
-  background-color: white;
-  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   overflow: hidden;
 }
 
 .tab {
   flex: 1;
-  padding: 1rem;
+  padding: 0.875rem 1rem;
   border: none;
-  background-color: white;
-  color: var(--text-dark);
+  background-color: var(--surface-color);
+  color: var(--text-light);
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.3s;
-  border-bottom: 3px solid transparent;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  border-bottom: 2px solid transparent;
   text-align: center;
 }
 
 .tab:hover {
-  background-color: rgba(11, 165, 43, 0.05);
+  background-color: var(--primary-light);
   color: var(--primary-color);
 }
 
 .tab.active {
-  background-color: rgba(11, 165, 43, 0.05);
+  background-color: var(--primary-light);
   color: var(--primary-color);
   border-bottom-color: var(--primary-color);
+  font-weight: 600;
 }
 
 .tabContent {
-  background-color: white;
-  border-radius: 0 0 8px 8px;
+  background-color: var(--surface-color);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   border: 1px solid var(--border-color);
   border-top: none;
-  padding: 2rem;
+  padding: 1.75rem;
   min-height: 400px;
 }
 
@@ -156,14 +153,14 @@
 
 .stepCard {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  transition: all 0.3s;
+  transition: var(--transition);
 }
 
 .stepCard:hover {
   border-color: var(--primary-color);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .stepHeader {

@@ -24,29 +24,36 @@
   padding: 0.2rem 0.5rem;
   background: transparent;
   flex-grow: 1;
-  color: #1a1a1a;
+  color: var(--text-dark);
   outline: none;
   transition: border-color 0.2s;
 }
 
 .titleInput:focus {
-  border-bottom-color: #0ba52b;
+  border-bottom-color: var(--primary-color);
 }
 
 .flowSelect {
   padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  background: white;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
   font-size: 0.9rem;
-  color: #333;
+  color: var(--text-dark);
   cursor: pointer;
   min-width: 200px;
+  transition: var(--transition);
+}
+
+.flowSelect:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
 }
 
 .header p {
   margin: 0;
-  color: #666;
+  color: var(--text-light);
 }
 
 .mainArea {
@@ -58,9 +65,9 @@
 
 .flowWrapper {
   flex-grow: 1;
-  background-color: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
   min-height: 500px;
@@ -69,33 +76,33 @@
 /* Custom Nodes */
 .customNode {
   padding: 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   width: 180px;
   font-size: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  background: white;
-  border: 1px solid #ddd;
+  box-shadow: var(--shadow);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
 }
 
 .startNode {
-  border-color: #0ba52b;
-  background: #eaffed;
-  color: #0ba52b;
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+  color: var(--primary-color);
   border-width: 2px;
 }
 
 .processNode {
-  border-color: #007bff;
+  border-color: var(--info);
   border-width: 2px;
 }
 
 .endNode {
-  border-color: #dc3545;
-  background: #fff5f5;
-  color: #dc3545;
+  border-color: var(--error);
+  background: var(--error-light);
+  color: var(--error);
   border-width: 2px;
 }
 
@@ -111,12 +118,12 @@
 
 .nodeLabel {
   font-weight: bold;
-  color: #333;
+  color: var(--text-dark);
 }
 
 .nodeSubtitle {
   font-size: 10px;
-  color: #666;
+  color: var(--text-light);
   margin-top: 2px;
 }
 
@@ -125,7 +132,7 @@
   width: 100%;
   max-height: 80px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .nodeImage img {
@@ -137,28 +144,28 @@
 /* Sidebar / Drawer */
 .sidebar {
   width: 320px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  box-shadow: -4px 0 10px rgba(0,0,0,0.05);
-  animation: slideIn 0.3s ease-out;
+  box-shadow: var(--shadow);
+  animation: slideIn 0.25s ease-out;
   overflow-y: auto;
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .sidebar h3 {
   margin: 0;
-  font-size: 1.2rem;
-  color: #333;
-  border-bottom: 2px solid #f0f0f0;
+  font-size: 1.15rem;
+  color: var(--text-dark);
+  border-bottom: 2px solid var(--border-light);
   padding-bottom: 0.8rem;
 }
 
@@ -169,29 +176,31 @@
 }
 
 .sidebarGroup label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: #444;
+  color: var(--text-medium);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.sidebarGroup input, 
-.sidebarGroup textarea, 
+.sidebarGroup input,
+.sidebarGroup textarea,
 .sidebarGroup select {
-  padding: 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 0.95rem;
+  padding: 0.75rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
   outline: none;
   font-family: inherit;
-  transition: all 0.2s;
+  transition: var(--transition);
+  background: var(--surface-color);
+  color: var(--text-dark);
 }
 
-.sidebarGroup input:focus, 
-.sidebarGroup textarea:focus, 
+.sidebarGroup input:focus,
+.sidebarGroup textarea:focus,
 .sidebarGroup select:focus {
-  border-color: #0ba52b;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
 }
 
@@ -200,29 +209,29 @@
 }
 
 .sidebarUploadBtn {
-  background-color: #f8f9fa;
-  border: 2px dashed #ddd;
+  background-color: var(--background-color);
+  border: 2px dashed var(--border-color);
   padding: 1rem;
   display: block;
   text-align: center;
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 0.9rem;
-  color: #666;
-  transition: all 0.2s;
+  color: var(--text-light);
+  transition: var(--transition);
 }
 
 .sidebarUploadBtn:hover {
-  border-color: #0ba52b;
-  background-color: #eaffed;
-  color: #0ba52b;
+  border-color: var(--primary-color);
+  background-color: var(--primary-light);
+  color: var(--primary-color);
 }
 
 .sidebarImagePreview {
   position: relative;
-  border-radius: 6px;
+  border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
 }
 
 .sidebarImagePreview img {
@@ -273,7 +282,7 @@
   max-width: 100%;
   max-height: 85vh;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
   cursor: default;
 }
@@ -304,7 +313,7 @@
   color: white;
   border: none;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
   cursor: pointer;
 }
@@ -318,34 +327,35 @@
 }
 
 .sidebarDeleteBtn {
-  background-color: #fff;
-  color: #dc3545;
-  border: 1px solid #dc3545;
-  padding: 0.8rem;
-  border-radius: 6px;
+  background-color: var(--surface-color);
+  color: var(--error);
+  border: 1.5px solid var(--error);
+  padding: 0.75rem;
+  border-radius: var(--radius);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .sidebarDeleteBtn:hover {
-  background-color: #dc3545;
-  color: #fff;
+  background-color: var(--error);
+  color: white;
 }
 
 .sidebarCloseBtn {
-  background-color: #f8f9fa;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 0.8rem;
-  border-radius: 6px;
+  background-color: var(--background-color);
+  color: var(--text-light);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: var(--radius);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .sidebarCloseBtn:hover {
-  background-color: #e9ecef;
+  background-color: var(--border-light);
+  color: var(--text-dark);
 }
 
 /* Panel Controls */
@@ -353,11 +363,11 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: white;
+  background: var(--surface-color);
   padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid #eee;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
   min-width: 200px;
 }
 
@@ -371,7 +381,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   padding-top: 1rem;
 }
 
@@ -379,31 +389,31 @@
   color: white;
   border: none;
   padding: 0.7rem;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
   font-size: 0.85rem;
 }
 
-.addStartBtn { background-color: #28a745; }
-.addStartBtn:hover { background-color: #218838; transform: translateY(-1px); }
+.addStartBtn { background-color: var(--primary-color); }
+.addStartBtn:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
 
-.addBtn { background-color: #007bff; }
-.addBtn:hover { background-color: #0069d9; transform: translateY(-1px); }
+.addBtn { background-color: var(--info); }
+.addBtn:hover { background-color: #1d4ed8; transform: translateY(-1px); }
 
-.addEndBtn { background-color: #dc3545; }
-.addEndBtn:hover { background-color: #c82333; transform: translateY(-1px); }
+.addEndBtn { background-color: var(--error); }
+.addEndBtn:hover { background-color: #b91c1c; transform: translateY(-1px); }
 
 .saveBtn {
-  background-color: #274518;
+  background-color: var(--accent-color);
   color: white;
   border: none;
-  padding: 0.8rem;
-  border-radius: 6px;
+  padding: 0.75rem;
+  border-radius: var(--radius);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .saveBtn:hover {
@@ -414,21 +424,22 @@
 .saveBtn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  transform: none;
 }
 
 .deleteBtn {
-  background-color: #6c757d;
+  background-color: #6b7280;
   color: white;
   border: none;
-  padding: 0.8rem;
-  border-radius: 6px;
+  padding: 0.75rem;
+  border-radius: var(--radius);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .deleteBtn:hover {
-  background-color: #5a6268;
+  background-color: #4b5563;
 }
 
 .loading {
@@ -437,7 +448,7 @@
   justify-content: center;
   height: 100%;
   font-size: 1.2rem;
-  color: #666;
+  color: var(--text-light);
 }
 
 @media (max-width: 768px) {
