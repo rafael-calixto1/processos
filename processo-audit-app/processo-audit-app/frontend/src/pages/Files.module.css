@@ -1,162 +1,194 @@
 .container {
-  padding: 20px;
+  animation: pageIn 0.22s ease-out;
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 1.75rem;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 1rem;
 }
 
 .titleArea {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 0.875rem;
 }
 
 .backBtn {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 8px;
-  border-radius: 8px;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  padding: 0.5rem;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  color: #666;
+  transition: var(--transition);
+  color: var(--text-light);
 }
 
 .backBtn:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--primary-light);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .breadcrumb {
   margin: 0;
-  color: #999;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .uploadLabel {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .error {
-  background: #fff5f5;
-  color: #c53030;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #feb2b2;
+  background: var(--error-light);
+  color: #991b1b;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  border: 1px solid #fecaca;
+  font-size: 0.9rem;
 }
 
+/* ── Clipboard notice ────────────────────────── */
+.clipboardInfo {
+  background: var(--info-light);
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ── Grid ────────────────────────────────────── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 15px;
-  min-height: 400px;
-  padding: 10px;
-  border-radius: 12px;
-  transition: all 0.2s;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.875rem;
+  min-height: 380px;
+  padding: 0.5rem;
+  border-radius: var(--radius-lg);
+  transition: var(--transition);
 }
 
 .gridDropTarget {
-  background: #f0fdf4;
-  outline: 2px dashed #0ba52b;
+  background: var(--primary-light);
+  outline: 2px dashed var(--primary-color);
   outline-offset: -2px;
 }
 
+/* ── Item ────────────────────────────────────── */
 .item {
-  background: white;
-  border: 1px solid #eee;
-  padding: 15px;
-  border-radius: 12px;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  padding: 1rem 1.125rem;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .item:hover {
-  border-color: #0ba52b;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+  background-color: #fafffe;
 }
 
 .dropTarget {
-  border: 2px dashed #0ba52b !important;
-  background: #f0fdf4 !important;
+  border: 2px dashed var(--primary-color) !important;
+  background: var(--primary-light) !important;
   transform: scale(1.02);
 }
 
 .dropTargetBack {
-  border: 2px dashed #0ba52b !important;
-  background: #f0fdf4 !important;
-  color: #0ba52b !important;
+  border: 2px dashed var(--primary-color) !important;
+  background: var(--primary-light) !important;
+  color: var(--primary-color) !important;
 }
 
+/* ── Icons ───────────────────────────────────── */
 .itemIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .folderIcon {
-  color: #fbbf24;
-  font-size: 24px;
+  color: #d97706;
+  font-size: 22px;
 }
 
 .fileIcon {
   color: #6366f1;
-  font-size: 24px;
+  font-size: 22px;
 }
 
+/* ── Info ────────────────────────────────────── */
 .itemInfo {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .itemName {
   font-weight: 600;
-  color: #333;
+  color: var(--text-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.9rem;
 }
 
 .itemMeta {
   font-size: 0.75rem;
-  color: #999;
+  color: var(--text-muted);
+  margin-top: 0.125rem;
 }
 
+/* ── Item actions ────────────────────────────── */
 .itemActions {
   display: flex;
-  gap: 5px;
+  gap: 3px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.18s;
 }
 
 .item:hover .itemActions {
@@ -166,42 +198,43 @@
 .deleteBtn, .downloadBtn, .editBtn {
   background: none;
   border: none;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 0.4375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  transition: all 0.2s;
+  color: var(--text-muted);
+  transition: var(--transition);
 }
 
 .deleteBtn:hover {
-  background: #fff5f5;
-  color: #e53e3e;
+  background: var(--error-light);
+  color: var(--error);
 }
 
 .downloadBtn:hover, .editBtn:hover {
-  background: #f0fdf4;
-  color: #0ba52b;
+  background: var(--primary-light);
+  color: var(--primary-color);
 }
 
+/* ── Dropdown ────────────────────────────────── */
 .moreBtn {
   background: none;
   border: none;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 0.4375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  transition: all 0.2s;
+  color: var(--text-muted);
+  transition: var(--transition);
 }
 
 .moreBtn:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: #f3f4f6;
+  color: var(--text-dark);
 }
 
 .dropdownContainer {
@@ -210,71 +243,56 @@
 
 .dropdownMenu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   right: 0;
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   z-index: 100;
-  min-width: 150px;
+  min-width: 160px;
   display: flex;
   flex-direction: column;
-  padding: 5px;
-  margin-top: 5px;
+  padding: 4px;
 }
 
 .dropdownMenu button {
   background: none;
   border: none;
-  padding: 10px 15px;
+  padding: 0.5625rem 0.875rem;
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   cursor: pointer;
-  border-radius: 6px;
-  color: #666;
-  font-size: 0.9rem;
-  transition: all 0.2s;
+  border-radius: var(--radius-sm);
+  color: var(--text-medium);
+  font-size: 0.875rem;
+  transition: var(--transition);
+  font-weight: 500;
 }
 
 .dropdownMenu button:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.dropdownMenu button svg {
-  font-size: 1rem;
+  background: #f9fafb;
+  color: var(--text-dark);
 }
 
 .deleteOption:hover {
-  background: #fff5f5 !important;
-  color: #c53030 !important;
+  background: var(--error-light) !important;
+  color: #991b1b !important;
 }
 
-.clipboardInfo {
-  background: #ebf8ff;
-  border: 1px solid #bee3f8;
-  color: #2b6cb0;
-  padding: 10px 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-}
-
+/* ── Empty ───────────────────────────────────── */
 .empty {
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px;
-  color: #ccc;
-  gap: 10px;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+  gap: 0.75rem;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 600px) {
@@ -282,12 +300,17 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .actions {
     width: 100%;
   }
-  
+
   .actions button, .actions label {
     flex: 1;
+    justify-content: center;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
   }
 }
