@@ -13,13 +13,14 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
+  GitBranch, Magnet, LayoutGrid,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
-import { StartNode, ProcessNode, EndNode } from './CustomNodes';
+import { StartNode, ProcessNode, EndNode, GatewayNode, ICON_OPTIONS } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
 
-const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode };
+const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode };
 
 const DEFAULT_NODES = [
   {
@@ -35,12 +36,12 @@ const EDGE_DEFAULTS = {
   markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#9ca3af' },
   style: { strokeWidth: 2, stroke: '#9ca3af' },
   labelStyle: { fontSize: 11, fontWeight: 600, fill: '#374151' },
-  labelBgStyle: { fill: '#ffffff', fillOpacity: 0.85 },
-  labelBgPadding: [4, 6],
-  labelBgBorderRadius: 4,
+  labelBgStyle: { fill: '#ffffff', fillOpacity: 1 },
+  labelBgPadding: [6, 10],
+  labelBgBorderRadius: 6,
 };
 
-const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa' };
+const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa', gatewayNode: 'Decisão' };
 
 export default function VisualProcesses() {
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
@@ -55,6 +56,7 @@ export default function VisualProcesses() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [snapToGrid, setSnapToGrid] = useState(false);
 
   // Undo / Redo
   const [past, setPast] = useState([]);
@@ -102,6 +104,55 @@ export default function VisualProcesses() {
     setFuture(f => f.slice(1));
     setSelectedElement(null);
   }, [future, nodes, edges, setNodes, setEdges]);
+
+  // ── Auto-layout ──────────────────────────────────────────
+  const autoLayout = useCallback(() => {
+    takeSnapshot();
+    const inDegree = {};
+    const adjacency = {};
+    nodes.forEach(n => { inDegree[n.id] = 0; adjacency[n.id] = []; });
+    edges.forEach(e => {
+      if (inDegree[e.target] !== undefined) inDegree[e.target]++;
+      if (adjacency[e.source] !== undefined) adjacency[e.source].push(e.target);
+    });
+    const levels = {};
+    const nodeLevel = {};
+    const visited = new Set();
+    let queue = nodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
+    let lvl = 0;
+    while (queue.length > 0) {
+      levels[lvl] = queue;
+      queue.forEach(id => { nodeLevel[id] = lvl; visited.add(id); });
+      const nextSet = new Set();
+      const next = [];
+      queue.forEach(id => {
+        (adjacency[id] || []).forEach(tgt => {
+          if (!visited.has(tgt)) {
+            inDegree[tgt]--;
+            if (inDegree[tgt] <= 0 && !nextSet.has(tgt)) { next.push(tgt); nextSet.add(tgt); }
+          }
+        });
+      });
+      queue = next;
+      lvl++;
+    }
+    nodes.forEach(n => {
+      if (!visited.has(n.id)) {
+        if (!levels[lvl]) levels[lvl] = [];
+        levels[lvl].push(n.id);
+        nodeLevel[n.id] = lvl++;
+      }
+    });
+    const LEVEL_H = 200, NODE_W = 260, BASE_X = 280, BASE_Y = 60;
+    setNodes(nds => nds.map(n => {
+      const l = nodeLevel[n.id] ?? 0;
+      const row = levels[l] || [n.id];
+      const i = row.indexOf(n.id);
+      const total = row.length;
+      return { ...n, position: { x: BASE_X - ((total - 1) * NODE_W) / 2 + i * NODE_W, y: BASE_Y + l * LEVEL_H } };
+    }));
+    showToast('Fluxo organizado!', 'info');
+  }, [nodes, edges, setNodes, takeSnapshot, showToast]);
 
   // ── Delete element ───────────────────────────────────────
   const deleteElement = useCallback((id, isEdge) => {
@@ -388,6 +439,8 @@ export default function VisualProcesses() {
               fitView
               fitViewOptions={{ padding: 0.25 }}
               deleteKeyCode={null}
+              snapToGrid={snapToGrid}
+              snapGrid={[16, 16]}
             >
               <Controls showInteractive={false} />
               <MiniMap
@@ -436,8 +489,33 @@ export default function VisualProcesses() {
                     <button className={styles.addBtn} onClick={() => onAddNode('processNode')}>
                       <Box size={13} /> Etapa
                     </button>
+                    <button className={styles.addGatewayBtn} onClick={() => onAddNode('gatewayNode')}>
+                      <GitBranch size={13} /> Decisão
+                    </button>
                     <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}>
                       <StopCircle size={13} /> Fim
+                    </button>
+                  </div>
+
+                  <div className={styles.panelDivider} />
+
+                  <div className={styles.panelSection}>
+                    <p className={styles.panelLabel}>Canvas</p>
+                    <button
+                      className={`${styles.toolBtn} ${snapToGrid ? styles.toolBtnActive : ''}`}
+                      onClick={() => setSnapToGrid(v => !v)}
+                      title="Alinhar nós ao grid durante arraste"
+                    >
+                      <Magnet size={13} />
+                      Snap ao Grid
+                    </button>
+                    <button
+                      className={styles.toolBtn}
+                      onClick={autoLayout}
+                      title="Organizar nós automaticamente por camadas"
+                    >
+                      <LayoutGrid size={13} />
+                      Organizar Fluxo
                     </button>
                   </div>
 
@@ -474,7 +552,7 @@ export default function VisualProcesses() {
             <div className={styles.sidebarHead}>
               <div className={styles.sidebarHeadLeft}>
                 <span className={`${styles.typePill} ${isEdge ? styles.pillEdge : styles[`pill_${selectedNodeType}`]}`}>
-                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : 'Etapa'}
+                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : selectedNodeType === 'gatewayNode' ? 'Decisão' : 'Etapa'}
                 </span>
                 <span className={styles.sidebarHeadTitle}>Propriedades</span>
               </div>
@@ -508,6 +586,29 @@ export default function VisualProcesses() {
                       placeholder="Detalhe as atividades desta etapa..."
                     />
                   </div>
+
+                  {selectedNodeType === 'processNode' && (
+                    <div className={styles.sidebarGroup}>
+                      <label>Ícone</label>
+                      <div className={styles.iconGrid}>
+                        <button
+                          className={`${styles.iconCell} ${!selectedElement.data?.icon ? styles.iconCellActive : ''}`}
+                          onClick={() => updateNodeData(selectedElement.id, { icon: null })}
+                          title="Sem ícone"
+                        >—</button>
+                        {ICON_OPTIONS.map(({ key, label, Icon }) => (
+                          <button
+                            key={key}
+                            className={`${styles.iconCell} ${selectedElement.data?.icon === key ? styles.iconCellActive : ''}`}
+                            onClick={() => updateNodeData(selectedElement.id, { icon: key })}
+                            title={label}
+                          >
+                            <Icon size={13} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {selectedNodeType === 'processNode' && (
                     <div className={styles.sidebarGroup}>
