@@ -272,7 +272,7 @@
 }
 
 /* Add node buttons */
-.addStartBtn, .addBtn, .addEndBtn, .addGatewayBtn, .saveBtn, .deletePanelBtn {
+.addStartBtn, .addBtn, .addEndBtn, .addGatewayBtn, .addSubFlowBtn, .saveBtn, .deletePanelBtn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -314,6 +314,16 @@
 }
 .addGatewayBtn:hover {
   background: #d97706;
+  color: white;
+}
+
+.addSubFlowBtn {
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1.5px solid rgba(124, 58, 237, 0.2);
+}
+.addSubFlowBtn:hover {
+  background: #7c3aed;
   color: white;
 }
 
@@ -432,6 +442,7 @@
 .pill_processNode { background: #dbeafe; color: #1d4ed8; }
 .pill_endNode { background: var(--error-light); color: var(--error); }
 .pill_gatewayNode { background: #fef3c7; color: #b45309; }
+.pill_subFlowNode { background: #ede9fe; color: #5b21b6; }
 
 .closeBtn {
   display: flex;
@@ -913,6 +924,62 @@
   border-color: var(--primary-color) !important;
   color: var(--primary-color) !important;
   background: var(--primary-light) !important;
+}
+
+/* ── Sub-flow / Group node ────────────────────────────────── */
+.subFlowNode {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  border: 2px dashed #7c3aed;
+  background: rgba(124, 58, 237, 0.03);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.subFlowSelected {
+  border-color: #5b21b6;
+  border-style: solid;
+  background: rgba(124, 58, 237, 0.05);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.subFlowHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: rgba(124, 58, 237, 0.1);
+  border-bottom: 1.5px dashed #7c3aed;
+  border-radius: 8px 8px 0 0;
+  color: #5b21b6;
+  flex-shrink: 0;
+}
+
+.subFlowSelected .subFlowHeader {
+  background: rgba(124, 58, 237, 0.15);
+  border-bottom-style: solid;
+}
+
+.subFlowTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5b21b6;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subFlowHeaderDesc {
+  font-size: 10px;
+  color: #7c3aed;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
