@@ -125,20 +125,45 @@ export const GatewayNode = memo(({ data, selected }) => (
   </div>
 ));
 
-export const LinkedFlowNode = memo(({ data, selected }) => (
-  <div className={`${styles.customNode} ${styles.linkedFlowNode} ${selected ? styles.linkedFlowNodeSelected : ''}`}>
-    <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#0891b2' }} />
-    <div className={styles.nodeIconWrap} style={{ color: '#0891b2' }}>
-      <ExternalLink size={14} />
+export const LinkedFlowNode = memo(({ data, selected }) => {
+  if (data.expanded) {
+    return (
+      <div className={`${styles.linkedFlowContainer} ${selected ? styles.linkedFlowContainerSelected : ''}`}>
+        <NodeResizer
+          color="#0891b2"
+          isVisible={selected}
+          minWidth={320}
+          minHeight={220}
+          lineStyle={{ strokeWidth: 2 }}
+          handleStyle={{ width: 10, height: 10, borderRadius: 3, border: '2px solid #0891b2', background: 'white' }}
+        />
+        <div className={styles.linkedFlowContainerHeader}>
+          <ExternalLink size={11} />
+          <span className={styles.linkedFlowContainerTitle}>{data.ref_flow_title || data.label || 'Sub-processo'}</span>
+          <span className={styles.linkedFlowContainerBadge}>sub-processo</span>
+        </div>
+        <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#0891b2' }} />
+        <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0891b2' }} />
+        <Handle type="source" position={Position.Left}   id="left"  style={{ ...HDL, background: '#0891b2' }} />
+        <Handle type="source" position={Position.Right}  id="right" style={{ ...HDL, background: '#0891b2' }} />
+      </div>
+    );
+  }
+  return (
+    <div className={`${styles.customNode} ${styles.linkedFlowNode} ${selected ? styles.linkedFlowNodeSelected : ''}`}>
+      <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#0891b2' }} />
+      <div className={styles.nodeIconWrap} style={{ color: '#0891b2' }}>
+        <ExternalLink size={14} />
+      </div>
+      <div className={styles.nodeBody}>
+        <div className={styles.linkedFlowBadge}>sub-processo</div>
+        <div className={styles.nodeLabel}>{data.label || data.ref_flow_title || 'Chamar Fluxo'}</div>
+        {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
+      </div>
+      <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0891b2' }} />
     </div>
-    <div className={styles.nodeBody}>
-      <div className={styles.linkedFlowBadge}>sub-processo</div>
-      <div className={styles.nodeLabel}>{data.label || data.ref_flow_title || 'Chamar Fluxo'}</div>
-      {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
-    </div>
-    <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0891b2' }} />
-  </div>
-));
+  );
+});
 
 export const SubFlowNode = memo(({ data, selected }) => (
   <div className={`${styles.subFlowNode} ${selected ? styles.subFlowSelected : ''}`}>
