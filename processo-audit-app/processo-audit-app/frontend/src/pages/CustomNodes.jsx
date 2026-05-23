@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
 import {
-  Play, StopCircle, Building2, GitBranch, Layers,
+  Play, StopCircle, Building2, GitBranch, Layers, ExternalLink,
   CheckCircle2, AlertCircle, Info, Upload, Download,
   Search, Settings, Database, Wifi, WifiOff, Shield,
   Clock, Mail, Phone, Zap, Lock, User, Wrench, Eye, Star,
@@ -122,6 +122,21 @@ export const GatewayNode = memo(({ data, selected }) => (
     <Handle type="source"  position={Position.Bottom} id="bottom" style={{ ...HDL, background: '#d97706' }} />
     <Handle type="source"  position={Position.Left}   id="left"   style={{ ...HDL, background: '#d97706' }} />
     <Handle type="source"  position={Position.Right}  id="right"  style={{ ...HDL, background: '#d97706' }} />
+  </div>
+));
+
+export const LinkedFlowNode = memo(({ data, selected }) => (
+  <div className={`${styles.customNode} ${styles.linkedFlowNode} ${selected ? styles.linkedFlowNodeSelected : ''}`}>
+    <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#0891b2' }} />
+    <div className={styles.nodeIconWrap} style={{ color: '#0891b2' }}>
+      <ExternalLink size={14} />
+    </div>
+    <div className={styles.nodeBody}>
+      <div className={styles.linkedFlowBadge}>sub-processo</div>
+      <div className={styles.nodeLabel}>{data.label || data.ref_flow_title || 'Chamar Fluxo'}</div>
+      {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
+    </div>
+    <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0891b2' }} />
   </div>
 ));
 

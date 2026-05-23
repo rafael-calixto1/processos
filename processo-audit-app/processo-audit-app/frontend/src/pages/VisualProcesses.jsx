@@ -13,14 +13,14 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
-  GitBranch, Magnet, LayoutGrid, Layers,
+  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
-import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, ICON_OPTIONS } from './CustomNodes';
+import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
 
-const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode, subFlowNode: SubFlowNode };
+const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode, subFlowNode: SubFlowNode, linkedFlowNode: LinkedFlowNode };
 
 const DEFAULT_NODES = [
   {
@@ -41,7 +41,7 @@ const EDGE_DEFAULTS = {
   labelBgBorderRadius: 6,
 };
 
-const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa', gatewayNode: 'Decisão', subFlowNode: 'Sub-fluxo' };
+const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa', gatewayNode: 'Decisão', subFlowNode: 'Sub-fluxo', linkedFlowNode: 'Chamar Fluxo' };
 
 export default function VisualProcesses() {
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
@@ -581,6 +581,9 @@ export default function VisualProcesses() {
                     <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}>
                       <Layers size={13} /> Sub-fluxo
                     </button>
+                    <button className={styles.addLinkedFlowBtn} onClick={() => onAddNode('linkedFlowNode')}>
+                      <ExternalLink size={13} /> Chamar Fluxo
+                    </button>
                   </div>
 
                   <div className={styles.panelDivider} />
@@ -638,7 +641,7 @@ export default function VisualProcesses() {
             <div className={styles.sidebarHead}>
               <div className={styles.sidebarHeadLeft}>
                 <span className={`${styles.typePill} ${isEdge ? styles.pillEdge : styles[`pill_${selectedNodeType}`]}`}>
-                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : selectedNodeType === 'gatewayNode' ? 'Decisão' : selectedNodeType === 'subFlowNode' ? 'Sub-fluxo' : 'Etapa'}
+                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : selectedNodeType === 'gatewayNode' ? 'Decisão' : selectedNodeType === 'subFlowNode' ? 'Sub-fluxo' : selectedNodeType === 'linkedFlowNode' ? 'Sub-processo' : 'Etapa'}
                 </span>
                 <span className={styles.sidebarHeadTitle}>Propriedades</span>
               </div>
@@ -673,6 +676,38 @@ export default function VisualProcesses() {
                     />
                   </div>
 
+                  {selectedNodeType === 'linkedFlowNode' && (
+                    <div className={styles.sidebarGroup}>
+                      <label>Fluxo referenciado</label>
+                      <select
+                        value={selectedElement.data?.ref_flow_id || ''}
+                        onChange={(e) => {
+                          const picked = flows.find(f => String(f.id) === e.target.value);
+                          if (picked) {
+                            updateNodeData(selectedElement.id, {
+                              ref_flow_id: picked.id,
+                              ref_flow_title: picked.title,
+                              label: picked.title,
+                            });
+                          } else {
+                            updateNodeData(selectedElement.id, { ref_flow_id: null, ref_flow_title: null });
+                          }
+                        }}
+                      >
+                        <option value="">— Selecionar fluxo —</option>
+                        {flows
+                          .filter(f => f.id !== selectedFlowId)
+                          .map(f => (
+                            <option key={f.id} value={f.id}>{f.title}</option>
+                          ))
+                        }
+                      </select>
+                      <p className={styles.fieldHint}>
+                        Este nó representa a chamada de outro fluxo. Use o botão abaixo para navegar até ele.
+                      </p>
+                    </div>
+                  )}
+
                   {selectedNodeType === 'subFlowNode' && (
                     <p className={styles.fieldHint}>
                       Selecione este nó para ver as alças de redimensionamento nas bordas.
@@ -681,7 +716,7 @@ export default function VisualProcesses() {
                     </p>
                   )}
 
-                  {selectedNodeType !== 'subFlowNode' && nodes.some(n => n.type === 'subFlowNode') && (
+                  {selectedNodeType !== 'subFlowNode' && selectedNodeType !== 'linkedFlowNode' && nodes.some(n => n.type === 'subFlowNode') && (
                     <div className={styles.sidebarGroup}>
                       <label>Grupo pai</label>
                       <select
@@ -749,7 +784,7 @@ export default function VisualProcesses() {
                     </div>
                   )}
 
-                  {selectedNodeType !== 'subFlowNode' && <div className={styles.sidebarGroup}>
+                  {selectedNodeType !== 'subFlowNode' && selectedNodeType !== 'linkedFlowNode' && <div className={styles.sidebarGroup}>
                     <label>Imagem da Etapa</label>
                     {selectedElement.data?.image_url ? (
                       <div className={styles.imagePreviewWrap}>
@@ -797,7 +832,15 @@ export default function VisualProcesses() {
 
             {/* Footer actions */}
             <div className={styles.sidebarFoot}>
-              {!isEdge && (
+              {selectedNodeType === 'linkedFlowNode' && selectedElement.data?.ref_flow_id && (
+                <button
+                  className={styles.openLinkedFlowBtn}
+                  onClick={() => loadFlow(selectedElement.data.ref_flow_id)}
+                >
+                  <ExternalLink size={13} /> Abrir fluxo referenciado
+                </button>
+              )}
+              {!isEdge && selectedNodeType !== 'linkedFlowNode' && (
                 <button className={styles.duplicateBtn} onClick={duplicateNode}>
                   <Copy size={13} /> Duplicar nó
                 </button>
