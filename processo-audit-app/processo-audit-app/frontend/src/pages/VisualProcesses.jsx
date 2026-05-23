@@ -13,14 +13,14 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
-  GitBranch, Magnet, LayoutGrid,
+  GitBranch, Magnet, LayoutGrid, Layers,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
-import { StartNode, ProcessNode, EndNode, GatewayNode, ICON_OPTIONS } from './CustomNodes';
+import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, ICON_OPTIONS } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
 
-const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode };
+const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode, subFlowNode: SubFlowNode };
 
 const DEFAULT_NODES = [
   {
@@ -41,7 +41,7 @@ const EDGE_DEFAULTS = {
   labelBgBorderRadius: 6,
 };
 
-const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa', gatewayNode: 'Decisão' };
+const NODE_LABELS = { startNode: 'Início', endNode: 'Fim', processNode: 'Nova Etapa', gatewayNode: 'Decisão', subFlowNode: 'Sub-fluxo' };
 
 export default function VisualProcesses() {
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
@@ -108,17 +108,21 @@ export default function VisualProcesses() {
   // ── Auto-layout ──────────────────────────────────────────
   const autoLayout = useCallback(() => {
     takeSnapshot();
+    // Only layout top-level non-group nodes; children move with their parent
+    const layoutNodes = nodes.filter(n => !n.parentId && n.type !== 'subFlowNode');
+    const layoutIds   = new Set(layoutNodes.map(n => n.id));
     const inDegree = {};
     const adjacency = {};
-    nodes.forEach(n => { inDegree[n.id] = 0; adjacency[n.id] = []; });
+    layoutNodes.forEach(n => { inDegree[n.id] = 0; adjacency[n.id] = []; });
     edges.forEach(e => {
+      if (!layoutIds.has(e.source) || !layoutIds.has(e.target)) return;
       if (inDegree[e.target] !== undefined) inDegree[e.target]++;
       if (adjacency[e.source] !== undefined) adjacency[e.source].push(e.target);
     });
     const levels = {};
     const nodeLevel = {};
     const visited = new Set();
-    let queue = nodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
+    let queue = layoutNodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
     let lvl = 0;
     while (queue.length > 0) {
       levels[lvl] = queue;
@@ -136,7 +140,7 @@ export default function VisualProcesses() {
       queue = next;
       lvl++;
     }
-    nodes.forEach(n => {
+    layoutNodes.forEach(n => {
       if (!visited.has(n.id)) {
         if (!levels[lvl]) levels[lvl] = [];
         levels[lvl].push(n.id);
@@ -145,6 +149,7 @@ export default function VisualProcesses() {
     });
     const LEVEL_H = 200, NODE_W = 260, BASE_X = 280, BASE_Y = 60;
     setNodes(nds => nds.map(n => {
+      if (n.parentId || n.type === 'subFlowNode') return n;
       const l = nodeLevel[n.id] ?? 0;
       const row = levels[l] || [n.id];
       const i = row.indexOf(n.id);
@@ -160,7 +165,23 @@ export default function VisualProcesses() {
     if (isEdge) {
       setEdges(eds => eds.filter(e => e.id !== id));
     } else {
-      setNodes(nds => nds.filter(n => n.id !== id));
+      setNodes(nds => {
+        const deleted = nds.find(n => n.id === id);
+        return nds
+          .filter(n => n.id !== id)
+          .map(n => {
+            if (n.parentId !== id) return n;
+            // Unparent children: convert relative → absolute position
+            const { parentId: _p, extent: _e, ...rest } = n;
+            return {
+              ...rest,
+              position: {
+                x: (n.position.x || 0) + (deleted?.position?.x || 0),
+                y: (n.position.y || 0) + (deleted?.position?.y || 0),
+              },
+            };
+          });
+      });
       setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
     }
     setSelectedElement(null);
@@ -266,6 +287,12 @@ export default function VisualProcesses() {
       },
       position: getSmartPosition(),
     };
+    if (type === 'subFlowNode') {
+      newNode.style = { width: 420, height: 320 };
+      // Prepend so parent renders before its children
+      setNodes(nds => [newNode, ...nds]);
+      return;
+    }
     setNodes(nds => [...nds, newNode]);
   }, [setNodes, takeSnapshot, getSmartPosition, departments]);
 
@@ -282,6 +309,62 @@ export default function VisualProcesses() {
     };
     setNodes(nds => [...nds, dup]);
     setSelectedElement(dup);
+  }, [takeSnapshot, setNodes]);
+
+  // ── Assign node to group / unparent ─────────────────────
+  const assignToGroup = useCallback((nodeId, newParentId) => {
+    takeSnapshot();
+    setNodes(nds => {
+      const parentNode = newParentId ? nds.find(n => n.id === newParentId) : null;
+      const childNode  = nds.find(n => n.id === nodeId);
+      if (!childNode) return nds;
+
+      let newPos = { ...childNode.position };
+      if (newParentId && parentNode) {
+        // absolute → relative to new parent
+        newPos = {
+          x: childNode.position.x - parentNode.position.x,
+          y: childNode.position.y - parentNode.position.y,
+        };
+      } else if (!newParentId && childNode.parentId) {
+        // relative → absolute (convert back on unassign)
+        const oldParent = nds.find(n => n.id === childNode.parentId);
+        if (oldParent) {
+          newPos = {
+            x: childNode.position.x + oldParent.position.x,
+            y: childNode.position.y + oldParent.position.y,
+          };
+        }
+      }
+
+      const updated = nds.map(n => {
+        if (n.id !== nodeId) return n;
+        if (newParentId) {
+          return { ...n, position: newPos, parentId: newParentId, extent: 'parent' };
+        }
+        const { parentId: _p, extent: _e, ...rest } = n;
+        return { ...rest, position: newPos };
+      });
+
+      // Parent must appear before child in nodes array
+      if (newParentId) {
+        const pi = updated.findIndex(n => n.id === newParentId);
+        const ci = updated.findIndex(n => n.id === nodeId);
+        if (pi > ci) {
+          const arr = [...updated];
+          const [par] = arr.splice(pi, 1);
+          arr.splice(ci, 0, par);
+          return arr;
+        }
+      }
+      return updated;
+    });
+    setSelectedElement(prev => {
+      if (!prev || prev.id !== nodeId) return prev;
+      if (newParentId) return { ...prev, parentId: newParentId, extent: 'parent' };
+      const { parentId: _p, extent: _e, ...rest } = prev;
+      return rest;
+    });
   }, [takeSnapshot, setNodes]);
 
   // ── Connections ──────────────────────────────────────────
@@ -495,6 +578,9 @@ export default function VisualProcesses() {
                     <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}>
                       <StopCircle size={13} /> Fim
                     </button>
+                    <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}>
+                      <Layers size={13} /> Sub-fluxo
+                    </button>
                   </div>
 
                   <div className={styles.panelDivider} />
@@ -552,7 +638,7 @@ export default function VisualProcesses() {
             <div className={styles.sidebarHead}>
               <div className={styles.sidebarHeadLeft}>
                 <span className={`${styles.typePill} ${isEdge ? styles.pillEdge : styles[`pill_${selectedNodeType}`]}`}>
-                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : selectedNodeType === 'gatewayNode' ? 'Decisão' : 'Etapa'}
+                  {isEdge ? 'Conexão' : selectedNodeType === 'startNode' ? 'Início' : selectedNodeType === 'endNode' ? 'Fim' : selectedNodeType === 'gatewayNode' ? 'Decisão' : selectedNodeType === 'subFlowNode' ? 'Sub-fluxo' : 'Etapa'}
                 </span>
                 <span className={styles.sidebarHeadTitle}>Propriedades</span>
               </div>
@@ -586,6 +672,33 @@ export default function VisualProcesses() {
                       placeholder="Detalhe as atividades desta etapa..."
                     />
                   </div>
+
+                  {selectedNodeType === 'subFlowNode' && (
+                    <p className={styles.fieldHint}>
+                      Selecione este nó para ver as alças de redimensionamento nas bordas.
+                      Arraste outros nós para dentro do grupo e use o seletor "Grupo pai" nas
+                      propriedades deles para vinculá-los.
+                    </p>
+                  )}
+
+                  {selectedNodeType !== 'subFlowNode' && nodes.some(n => n.type === 'subFlowNode') && (
+                    <div className={styles.sidebarGroup}>
+                      <label>Grupo pai</label>
+                      <select
+                        value={selectedElement?.parentId || ''}
+                        onChange={(e) => assignToGroup(selectedElement.id, e.target.value || null)}
+                      >
+                        <option value="">— Nenhum —</option>
+                        {nodes
+                          .filter(n => n.type === 'subFlowNode' && n.id !== selectedElement?.id)
+                          .map(n => (
+                            <option key={n.id} value={n.id}>{n.data?.label || 'Sub-fluxo'}</option>
+                          ))
+                        }
+                      </select>
+                      <p className={styles.fieldHint}>Agrupar este nó dentro de um sub-fluxo.</p>
+                    </div>
+                  )}
 
                   {selectedNodeType === 'processNode' && (
                     <div className={styles.sidebarGroup}>
@@ -636,7 +749,7 @@ export default function VisualProcesses() {
                     </div>
                   )}
 
-                  <div className={styles.sidebarGroup}>
+                  {selectedNodeType !== 'subFlowNode' && <div className={styles.sidebarGroup}>
                     <label>Imagem da Etapa</label>
                     {selectedElement.data?.image_url ? (
                       <div className={styles.imagePreviewWrap}>
@@ -665,7 +778,7 @@ export default function VisualProcesses() {
                         />
                       </label>
                     )}
-                  </div>
+                  </div>}
                 </>
               ) : (
                 <div className={styles.sidebarGroup}>

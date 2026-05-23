@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, NodeResizer } from '@xyflow/react';
 import {
-  Play, StopCircle, Building2, GitBranch,
+  Play, StopCircle, Building2, GitBranch, Layers,
   CheckCircle2, AlertCircle, Info, Upload, Download,
   Search, Settings, Database, Wifi, WifiOff, Shield,
   Clock, Mail, Phone, Zap, Lock, User, Wrench, Eye, Star,
@@ -122,5 +122,27 @@ export const GatewayNode = memo(({ data, selected }) => (
     <Handle type="source"  position={Position.Bottom} id="bottom" style={{ ...HDL, background: '#d97706' }} />
     <Handle type="source"  position={Position.Left}   id="left"   style={{ ...HDL, background: '#d97706' }} />
     <Handle type="source"  position={Position.Right}  id="right"  style={{ ...HDL, background: '#d97706' }} />
+  </div>
+));
+
+export const SubFlowNode = memo(({ data, selected }) => (
+  <div className={`${styles.subFlowNode} ${selected ? styles.subFlowSelected : ''}`}>
+    <NodeResizer
+      color="#7c3aed"
+      isVisible={selected}
+      minWidth={220}
+      minHeight={160}
+      lineStyle={{ strokeWidth: 2 }}
+      handleStyle={{ width: 10, height: 10, borderRadius: 3, border: '2px solid #7c3aed', background: 'white' }}
+    />
+    <div className={styles.subFlowHeader}>
+      <Layers size={11} />
+      <span className={styles.subFlowTitle}>{data.label || 'Sub-fluxo'}</span>
+      {data.description && <span className={styles.subFlowHeaderDesc}>— {data.description}</span>}
+    </div>
+    <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#7c3aed' }} />
+    <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#7c3aed' }} />
+    <Handle type="source" position={Position.Left}   id="left"  style={{ ...HDL, background: '#7c3aed' }} />
+    <Handle type="source" position={Position.Right}  id="right" style={{ ...HDL, background: '#7c3aed' }} />
   </div>
 ));
