@@ -13,7 +13,7 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
-  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink,
+  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
 import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
@@ -165,13 +165,14 @@ export default function VisualProcesses() {
     if (isEdge) {
       setEdges(eds => eds.filter(e => e.id !== id));
     } else {
+      const refPrefix = `_ref_${id}_`;
       setNodes(nds => {
         const deleted = nds.find(n => n.id === id);
         return nds
-          .filter(n => n.id !== id)
+          .filter(n => n.id !== id && !n.id.startsWith(refPrefix))
           .map(n => {
             if (n.parentId !== id) return n;
-            // Unparent children: convert relative → absolute position
+            // Unparent sub-flow container children: convert relative → absolute
             const { parentId: _p, extent: _e, ...rest } = n;
             return {
               ...rest,
@@ -182,7 +183,9 @@ export default function VisualProcesses() {
             };
           });
       });
-      setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
+      setEdges(eds => eds.filter(e =>
+        e.source !== id && e.target !== id && !e.id.startsWith(refPrefix)
+      ));
     }
     setSelectedElement(null);
   }, [takeSnapshot, setEdges, setNodes]);
@@ -367,6 +370,121 @@ export default function VisualProcesses() {
     });
   }, [takeSnapshot, setNodes]);
 
+  // ── Expand / collapse linked flow inline ─────────────────
+  const expandLinkedFlow = useCallback(async (node) => {
+    const refId = node.data?.ref_flow_id;
+    if (!refId || node.data?.expanded) return;
+    setLoading(true);
+    try {
+      const flow = await visualProcessAPI.get(refId);
+      let subNodes = flow.nodes;
+      let subEdges = flow.edges;
+      if (typeof subNodes === 'string') try { subNodes = JSON.parse(subNodes); } catch { subNodes = []; }
+      if (typeof subEdges === 'string') try { subEdges = JSON.parse(subEdges); } catch { subEdges = []; }
+      subNodes = (Array.isArray(subNodes) ? subNodes : []).filter(n => n?.id && !n.parentId);
+      subEdges = (Array.isArray(subEdges) ? subEdges : []).filter(e => e?.source && e?.target);
+
+      if (!subNodes.length) { showToast('O fluxo referenciado está vazio.', 'info'); return; }
+      takeSnapshot();
+
+      const PREFIX     = `_ref_${node.id}_`;
+      const PADDING    = 40;
+      const HEADER_H   = 36;
+      const H_BY_TYPE  = { gatewayNode: 160 };
+
+      // Bounding box of sub-flow nodes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      subNodes.forEach(n => {
+        const x = n.position?.x ?? 0, y = n.position?.y ?? 0;
+        const w = n.style?.width  ?? 220;
+        const h = n.style?.height ?? (H_BY_TYPE[n.type] ?? 80);
+        if (x     < minX) minX = x;
+        if (y     < minY) minY = y;
+        if (x + w > maxX) maxX = x + w;
+        if (y + h > maxY) maxY = y + h;
+      });
+      if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 600; maxY = 400; }
+
+      const containerW = Math.max(maxX - minX + PADDING * 2, 420);
+      const containerH = Math.max(maxY - minY + PADDING * 2 + HEADER_H, 300);
+
+      // Namespace IDs so they don't collide with the parent flow
+      const idMap = {};
+      const childNodes = subNodes.map(n => {
+        const newId = `${PREFIX}${n.id}`;
+        idMap[n.id] = newId;
+        return {
+          ...n,
+          id: newId,
+          parentId: node.id,
+          extent: 'parent',
+          position: {
+            x: (n.position?.x ?? 0) - minX + PADDING,
+            y: (n.position?.y ?? 0) - minY + PADDING + HEADER_H,
+          },
+          draggable:   false,
+          selectable:  false,
+          connectable: false,
+          deletable:   false,
+          focusable:   false,
+        };
+      });
+
+      const childEdges = subEdges.map(e => ({
+        ...EDGE_DEFAULTS,
+        ...e,
+        id:       `${PREFIX}${e.id || `${e.source}-${e.target}`}`,
+        source:   idMap[e.source] ?? `${PREFIX}${e.source}`,
+        target:   idMap[e.target] ?? `${PREFIX}${e.target}`,
+        deletable:  false,
+        focusable:  false,
+        selectable: false,
+      }));
+
+      setNodes(nds => {
+        const updated = nds.map(n => n.id !== node.id ? n : {
+          ...n,
+          style: { width: containerW, height: containerH },
+          data:  { ...n.data, expanded: true },
+        });
+        const pi = updated.findIndex(n => n.id === node.id);
+        updated.splice(pi + 1, 0, ...childNodes);
+        return updated;
+      });
+      setEdges(eds => [...eds, ...childEdges]);
+      setSelectedElement(prev => prev?.id === node.id
+        ? { ...prev, data: { ...prev.data, expanded: true }, style: { width: containerW, height: containerH } }
+        : prev
+      );
+      showToast('Sub-processo expandido!', 'success');
+    } catch (err) {
+      showToast('Erro ao expandir: ' + err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [takeSnapshot, setNodes, setEdges, showToast]);
+
+  const collapseLinkedFlow = useCallback((node) => {
+    if (!node.data?.expanded) return;
+    takeSnapshot();
+    const PREFIX = `_ref_${node.id}_`;
+    setNodes(nds => nds
+      .filter(n => !n.id.startsWith(PREFIX))
+      .map(n => {
+        if (n.id !== node.id) return n;
+        const { style: _s, ...rest } = n;
+        return { ...rest, data: { ...n.data, expanded: false } };
+      })
+    );
+    setEdges(eds => eds.filter(e => !e.id.startsWith(PREFIX)));
+    setSelectedElement(prev => {
+      if (!prev || prev.id !== node.id) return prev;
+      const { style: _s, ...rest } = prev;
+      return { ...rest, data: { ...prev.data, expanded: false } };
+    });
+    showToast('Sub-processo recolhido.', 'info');
+  }, [takeSnapshot, setNodes, setEdges, showToast]);
+
   // ── Connections ──────────────────────────────────────────
   const onConnect = useCallback((params) => {
     takeSnapshot();
@@ -411,7 +529,16 @@ export default function VisualProcesses() {
     if (!title.trim()) { showToast('O fluxo precisa de um título.', 'error'); return; }
     setSaving(true);
     try {
-      const payload = { title, nodes, edges };
+      // Strip inline-expanded ref children — save linkedFlowNodes in collapsed form
+    const saveNodes = nodes
+      .filter(n => !n.id.startsWith('_ref_'))
+      .map(n => {
+        if (n.type !== 'linkedFlowNode' || !n.data?.expanded) return n;
+        const { style: _s, ...rest } = n;
+        return { ...rest, data: { ...n.data, expanded: false } };
+      });
+    const saveEdges = edges.filter(e => !e.id.startsWith('_ref_'));
+    const payload = { title, nodes: saveNodes, edges: saveEdges };
       if (selectedFlowId) {
         await visualProcessAPI.update(selectedFlowId, payload);
         showToast('Fluxo salvo com sucesso!');
@@ -833,12 +960,29 @@ export default function VisualProcesses() {
             {/* Footer actions */}
             <div className={styles.sidebarFoot}>
               {selectedNodeType === 'linkedFlowNode' && selectedElement.data?.ref_flow_id && (
-                <button
-                  className={styles.openLinkedFlowBtn}
-                  onClick={() => loadFlow(selectedElement.data.ref_flow_id)}
-                >
-                  <ExternalLink size={13} /> Abrir fluxo referenciado
-                </button>
+                <>
+                  {selectedElement.data?.expanded ? (
+                    <button
+                      className={styles.collapseLinkedFlowBtn}
+                      onClick={() => collapseLinkedFlow(selectedElement)}
+                    >
+                      <Minimize2 size={13} /> Recolher sub-processo
+                    </button>
+                  ) : (
+                    <button
+                      className={styles.expandLinkedFlowBtn}
+                      onClick={() => expandLinkedFlow(selectedElement)}
+                    >
+                      <Maximize2 size={13} /> Expandir sub-processo
+                    </button>
+                  )}
+                  <button
+                    className={styles.openLinkedFlowBtn}
+                    onClick={() => loadFlow(selectedElement.data.ref_flow_id)}
+                  >
+                    <ExternalLink size={13} /> Abrir em tela cheia
+                  </button>
+                </>
               )}
               {!isEdge && selectedNodeType !== 'linkedFlowNode' && (
                 <button className={styles.duplicateBtn} onClick={duplicateNode}>
