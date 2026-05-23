@@ -327,6 +327,16 @@
   color: white;
 }
 
+.addLinkedFlowBtn {
+  background: #cffafe;
+  color: #0e7490;
+  border: 1.5px solid rgba(8, 145, 178, 0.2);
+}
+.addLinkedFlowBtn:hover {
+  background: #0891b2;
+  color: white;
+}
+
 .addEndBtn {
   background: var(--error-light);
   color: var(--error);
@@ -443,6 +453,7 @@
 .pill_endNode { background: var(--error-light); color: var(--error); }
 .pill_gatewayNode { background: #fef3c7; color: #b45309; }
 .pill_subFlowNode { background: #ede9fe; color: #5b21b6; }
+.pill_linkedFlowNode { background: #cffafe; color: #0e7490; }
 
 .closeBtn {
   display: flex;
@@ -924,6 +935,60 @@
   border-color: var(--primary-color) !important;
   color: var(--primary-color) !important;
   background: var(--primary-light) !important;
+}
+
+/* ── Linked flow (call-activity) node ────────────────────── */
+.linkedFlowNode {
+  border-color: #0891b2;
+  background: #ecfeff;
+  /* Double-border: inner border + white gap + outer border */
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #0891b2, var(--shadow);
+  min-width: 180px;
+}
+
+.linkedFlowNodeSelected {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #0891b2, 0 0 0 7px rgba(8, 145, 178, 0.3) !important;
+}
+
+.linkedFlowNode .nodeLabel {
+  color: #0e7490;
+}
+
+.linkedFlowBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(8, 145, 178, 0.15);
+  color: #0891b2;
+  margin-bottom: 3px;
+}
+
+.openLinkedFlowBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  border: 1.5px solid rgba(8, 145, 178, 0.35);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  color: #0891b2;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+}
+
+.openLinkedFlowBtn:hover {
+  background: #0891b2;
+  border-color: #0891b2;
+  color: white;
 }
 
 /* ── Sub-flow / Group node ────────────────────────────────── */
