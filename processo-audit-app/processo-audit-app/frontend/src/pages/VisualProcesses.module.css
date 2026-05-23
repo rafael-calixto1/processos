@@ -968,7 +968,9 @@
   margin-bottom: 3px;
 }
 
-.openLinkedFlowBtn {
+.openLinkedFlowBtn,
+.expandLinkedFlowBtn,
+.collapseLinkedFlowBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -985,10 +987,71 @@
   width: 100%;
 }
 
-.openLinkedFlowBtn:hover {
+.openLinkedFlowBtn:hover,
+.expandLinkedFlowBtn:hover {
   background: #0891b2;
   border-color: #0891b2;
   color: white;
+}
+
+.collapseLinkedFlowBtn {
+  background: rgba(8, 145, 178, 0.07);
+}
+.collapseLinkedFlowBtn:hover {
+  background: rgba(8, 145, 178, 0.15);
+}
+
+/* ── Expanded linked flow container ──────────────────────── */
+.linkedFlowContainer {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  border: 2px solid #0891b2;
+  background: rgba(8, 145, 178, 0.03);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #0891b2;
+}
+
+.linkedFlowContainerSelected {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #0891b2, 0 0 0 7px rgba(8, 145, 178, 0.3) !important;
+}
+
+.linkedFlowContainerHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  height: 36px;
+  background: rgba(8, 145, 178, 0.12);
+  border-bottom: 1.5px solid rgba(8, 145, 178, 0.4);
+  border-radius: 8px 8px 0 0;
+  color: #0e7490;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.linkedFlowContainerTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0e7490;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linkedFlowContainerBadge {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(8, 145, 178, 0.15);
+  color: #0891b2;
+  flex-shrink: 0;
 }
 
 /* ── Sub-flow / Group node ────────────────────────────────── */
