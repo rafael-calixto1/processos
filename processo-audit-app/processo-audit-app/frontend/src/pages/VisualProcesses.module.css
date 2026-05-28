@@ -207,6 +207,29 @@
   box-shadow: var(--shadow-md);
   overflow: hidden;
   width: 176px;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  user-select: none;
+}
+
+.panelHeader:hover {
+  background: var(--border-light);
+}
+
+.panelHeaderTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dark);
 }
 
 .panelSection {
@@ -1110,6 +1133,65 @@
   max-width: 120px;
 }
 
+/* ── Panel FAB (mobile toggle button) ───────────────────── */
+.panelFab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.panelFab:hover {
+  background: var(--primary-dark);
+  transform: scale(1.08);
+}
+
+/* ── Panel mobile header (close button row) ─────────────── */
+.panelMobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--background-color);
+  flex-shrink: 0;
+}
+
+.panelMobileTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dark);
+}
+
+.panelCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.panelCloseBtn:hover {
+  background: var(--border-color);
+  color: var(--text-dark);
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
   .container {
@@ -1177,10 +1259,10 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Adjust panel inside React Flow for mobile */
+  /* Panel inside React Flow on mobile */
   .panel {
-    width: 150px;
-    max-height: 300px;
+    width: 190px;
+    max-height: 85vh;
     overflow-y: auto;
   }
 

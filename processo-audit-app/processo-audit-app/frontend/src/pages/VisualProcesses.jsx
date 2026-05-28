@@ -13,7 +13,7 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
-  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2,
+  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2, Menu,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
 import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
@@ -57,6 +57,8 @@ export default function VisualProcesses() {
   const [departments, setDepartments] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 768);
 
   // Undo / Redo
   const [past, setPast] = useState([]);
@@ -209,6 +211,17 @@ export default function VisualProcesses() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo, deleteElement]);
+
+  // ── Mobile detection ────────────────────────────────────
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setPanelOpen(!mobile);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // ── Load ────────────────────────────────────────────────
   useEffect(() => {
@@ -653,109 +666,133 @@ export default function VisualProcesses() {
               snapGrid={[16, 16]}
             >
               <Controls showInteractive={false} />
-              <MiniMap
-                nodeStrokeWidth={3}
-                zoomable
-                pannable
-                style={{ borderRadius: 8 }}
-              />
+              {!isMobile && (
+                <MiniMap
+                  nodeStrokeWidth={3}
+                  zoomable
+                  pannable
+                  style={{ borderRadius: 8 }}
+                />
+              )}
               <Background variant="dots" gap={18} size={1} color="#d1d5db" />
 
               {/* ── Side panel ── */}
               <Panel position="top-right">
-                <div className={styles.panel}>
+                {!panelOpen ? (
+                  <button
+                    className={styles.panelFab}
+                    onClick={() => setPanelOpen(true)}
+                    title="Abrir menu"
+                  >
+                    <Menu size={20} />
+                  </button>
+                ) : (
+                  <div className={styles.panel}>
+                    {isMobile && (
+                      <div className={styles.panelMobileHeader}>
+                        <span className={styles.panelMobileTitle}>Menu</span>
+                        <button
+                          className={styles.panelCloseBtn}
+                          onClick={() => setPanelOpen(false)}
+                          title="Fechar"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
 
-                  <div className={styles.panelSection}>
-                    <p className={styles.panelLabel}>Histórico</p>
-                    <div className={styles.row}>
-                      <button
-                        className={styles.toolBtn}
-                        onClick={undo}
-                        disabled={!past.length}
-                        title="Desfazer (Ctrl+Z)"
-                      >
-                        <Undo2 size={13} />
-                        Desfazer
+                    <div className={styles.panelSection}>
+                      <p className={styles.panelLabel}>Histórico</p>
+                      <div className={styles.row}>
+                        <button
+                          className={styles.toolBtn}
+                          onClick={undo}
+                          disabled={!past.length}
+                          title="Desfazer (Ctrl+Z)"
+                        >
+                          <Undo2 size={13} />
+                          Desfazer
+                        </button>
+                        <button
+                          className={styles.toolBtn}
+                          onClick={redo}
+                          disabled={!future.length}
+                          title="Refazer (Ctrl+Y)"
+                        >
+                          Refazer
+                          <Redo2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.panelDivider} />
+
+                    <div className={styles.panelSection}>
+                      <p className={styles.panelLabel}>Adicionar nó</p>
+                      <button className={styles.addStartBtn} onClick={() => onAddNode('startNode')}>
+                        <PlayCircle size={13} /> Início
                       </button>
-                      <button
-                        className={styles.toolBtn}
-                        onClick={redo}
-                        disabled={!future.length}
-                        title="Refazer (Ctrl+Y)"
-                      >
-                        Refazer
-                        <Redo2 size={13} />
+                      <button className={styles.addBtn} onClick={() => onAddNode('processNode')}>
+                        <Box size={13} /> Etapa
+                      </button>
+                      <button className={styles.addGatewayBtn} onClick={() => onAddNode('gatewayNode')}>
+                        <GitBranch size={13} /> Decisão
+                      </button>
+                      <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}>
+                        <StopCircle size={13} /> Fim
+                      </button>
+                      <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}>
+                        <Layers size={13} /> Sub-fluxo
+                      </button>
+                      <button className={styles.addLinkedFlowBtn} onClick={() => onAddNode('linkedFlowNode')}>
+                        <ExternalLink size={13} /> Chamar Fluxo
                       </button>
                     </div>
-                  </div>
 
-                  <div className={styles.panelDivider} />
+                    <div className={styles.panelDivider} />
 
-                  <div className={styles.panelSection}>
-                    <p className={styles.panelLabel}>Adicionar nó</p>
-                    <button className={styles.addStartBtn} onClick={() => onAddNode('startNode')}>
-                      <PlayCircle size={13} /> Início
-                    </button>
-                    <button className={styles.addBtn} onClick={() => onAddNode('processNode')}>
-                      <Box size={13} /> Etapa
-                    </button>
-                    <button className={styles.addGatewayBtn} onClick={() => onAddNode('gatewayNode')}>
-                      <GitBranch size={13} /> Decisão
-                    </button>
-                    <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}>
-                      <StopCircle size={13} /> Fim
-                    </button>
-                    <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}>
-                      <Layers size={13} /> Sub-fluxo
-                    </button>
-                    <button className={styles.addLinkedFlowBtn} onClick={() => onAddNode('linkedFlowNode')}>
-                      <ExternalLink size={13} /> Chamar Fluxo
-                    </button>
-                  </div>
-
-                  <div className={styles.panelDivider} />
-
-                  <div className={styles.panelSection}>
-                    <p className={styles.panelLabel}>Canvas</p>
-                    <button
-                      className={`${styles.toolBtn} ${snapToGrid ? styles.toolBtnActive : ''}`}
-                      onClick={() => setSnapToGrid(v => !v)}
-                      title="Alinhar nós ao grid durante arraste"
-                    >
-                      <Magnet size={13} />
-                      Snap ao Grid
-                    </button>
-                    <button
-                      className={styles.toolBtn}
-                      onClick={autoLayout}
-                      title="Organizar nós automaticamente por camadas"
-                    >
-                      <LayoutGrid size={13} />
-                      Organizar Fluxo
-                    </button>
-                  </div>
-
-                  <div className={styles.panelDivider} />
-
-                  <div className={styles.panelSection}>
-                    <p className={styles.panelLabel}>Fluxo</p>
-                    <button className={styles.saveBtn} onClick={onSave} disabled={saving}>
-                      <Save size={13} />
-                      {saving ? 'Salvando...' : 'Salvar Fluxo'}
-                    </button>
-                    {selectedFlowId && (
-                      <button className={styles.deletePanelBtn} onClick={onDeleteFlow}>
-                        <Trash2 size={13} /> Excluir Fluxo
+                    <div className={styles.panelSection}>
+                      <p className={styles.panelLabel}>Canvas</p>
+                      <button
+                        className={`${styles.toolBtn} ${snapToGrid ? styles.toolBtnActive : ''}`}
+                        onClick={() => setSnapToGrid(v => !v)}
+                        title="Alinhar nós ao grid durante arraste"
+                      >
+                        <Magnet size={13} />
+                        Snap ao Grid
                       </button>
-                    )}
-                  </div>
+                      <button
+                        className={styles.toolBtn}
+                        onClick={autoLayout}
+                        title="Organizar nós automaticamente por camadas"
+                      >
+                        <LayoutGrid size={13} />
+                        Organizar Fluxo
+                      </button>
+                    </div>
 
-                  <div className={styles.panelDivider} />
-                  <div className={styles.panelHints}>
-                    <span><kbd>Del</kbd> remover selecionado</span>
-                    <span><kbd>Ctrl+Z / Y</kbd> desfazer/refazer</span>
+                    <div className={styles.panelDivider} />
+
+                    <div className={styles.panelSection}>
+                      <p className={styles.panelLabel}>Fluxo</p>
+                      <button className={styles.saveBtn} onClick={onSave} disabled={saving}>
+                        <Save size={13} />
+                        {saving ? 'Salvando...' : 'Salvar Fluxo'}
+                      </button>
+                      {selectedFlowId && (
+                        <button className={styles.deletePanelBtn} onClick={onDeleteFlow}>
+                          <Trash2 size={13} /> Excluir Fluxo
+                        </button>
+                      )}
+                    </div>
+
+                    <div className={styles.panelDivider} />
+                    <div className={styles.panelHints}>
+                      <span><kbd>Del</kbd> remover selecionado</span>
+                      <span><kbd>Ctrl+Z / Y</kbd> desfazer/refazer</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </Panel>
             </ReactFlow>
           )}
