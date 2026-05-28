@@ -30,5 +30,11 @@ uploads/process_steps/*
 !uploads/process_steps/.gitkeep
 uploads/steps/*
 !uploads/steps/.gitkeep
+uploads/archives/*
+!uploads/archives/.gitkeep
+uploads/visual_processes/*
+!uploads/visual_processes/.gitkeep
+uploads/branding/*
+!uploads/branding/.gitkeep
 
 

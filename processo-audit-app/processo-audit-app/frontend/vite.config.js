@@ -1,8 +1,31 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: 'Processo Audit',
+        short_name: 'AuditApp',
+        description: 'Sistema de Gerenciamento e Auditoria de Processos',
+        theme_color: '#007bff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'icon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    })
+  ],
   server: {
     port: 3004,
     host: '0.0.0.0',
