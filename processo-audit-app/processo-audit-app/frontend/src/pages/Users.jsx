@@ -231,7 +231,7 @@ const Users = () => {
           <tbody>
             {users.map(user => (
               <tr key={user.id}>
-                <td>
+                <td data-label="Nome">
                   {editingId === user.id ? (
                     <div className={styles.editStack}>
                       <input 
@@ -256,8 +256,8 @@ const Users = () => {
                     </div>
                   )}
                 </td>
-                <td>{user.email}</td>
-                <td>
+                <td data-label="Email">{user.email}</td>
+                <td data-label="Papel">
                   {editingId === user.id ? (
                     <select 
                       value={editData.role}
@@ -274,7 +274,7 @@ const Users = () => {
                     </span>
                   )}
                 </td>
-                <td>
+                <td data-label="Departamentos">
                   {editingId === user.id ? (
                     <div className={styles.deptEditWrapper}>
                       <DepartmentSelector 
@@ -306,7 +306,7 @@ const Users = () => {
                     </div>
                   )}
                 </td>
-                <td>
+                <td data-label="Ações">
                   <div className={styles.actions}>
                     {editingId === user.id ? (
                       <>
