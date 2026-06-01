@@ -196,7 +196,7 @@ const ProcessDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Tem certeza que deseja deletar este processo?')) {
+    if (window.confirm('Tem certeza que deseja inativar este processo?')) {
       try {
         await processAPI.delete(id);
         navigate('/processos');
@@ -418,9 +418,9 @@ const ProcessDetail = () => {
                 <button
                   onClick={handleDelete}
                   className="btn btn-danger"
-                  title="Deletar"
+                  title="Inativar"
                 >
-                  <FiTrash2 /> Deletar
+                  <FiTrash2 /> Inativar
                 </button>
               )}
             </>

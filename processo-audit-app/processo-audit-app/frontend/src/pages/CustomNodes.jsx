@@ -55,7 +55,7 @@ const getDeptStyle = (dept) => {
   return match ? DEPT_PALETTE[match] : { color: '#6b7280', bg: '#f3f4f6' };
 };
 
-const HDL = { width: 10, height: 10, border: '2px solid white' };
+const HDL = { width: 11, height: 11, border: '2px solid white', zIndex: 10 };
 
 export const StartNode = memo(({ data, selected }) => (
   <div className={`${styles.customNode} ${styles.startNode} ${selected ? styles.nodeSelected : ''}`}>
@@ -67,6 +67,7 @@ export const StartNode = memo(({ data, selected }) => (
       {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
     </div>
     <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0ba52b' }} />
+    <Handle type="source" position={Position.Right}  id="right" style={{ ...HDL, background: '#0ba52b' }} />
   </div>
 ));
 
@@ -75,7 +76,8 @@ export const ProcessNode = memo(({ data, selected }) => {
   const NodeIcon = data.icon ? ICON_MAP[data.icon] : null;
   return (
     <div className={`${styles.customNode} ${styles.processNode} ${selected ? styles.nodeSelected : ''}`}>
-      <Handle type="target" position={Position.Top} style={{ ...HDL, background: '#2563eb' }} />
+      <Handle type="target" position={Position.Top}   style={{ ...HDL, background: '#2563eb' }} />
+    <Handle type="target" position={Position.Left}  id="left"  style={{ ...HDL, background: '#2563eb' }} />
       {NodeIcon && (
         <div className={styles.nodeIconWrap} style={{ color: '#2563eb', opacity: 1 }}>
           <NodeIcon size={14} />
@@ -93,13 +95,15 @@ export const ProcessNode = memo(({ data, selected }) => {
         {data.image_url && <div className={styles.nodeHasImage} title="Esta etapa tem uma imagem" />}
       </div>
       <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#2563eb' }} />
+      <Handle type="source" position={Position.Right}  id="right" style={{ ...HDL, background: '#2563eb' }} />
     </div>
   );
 });
 
 export const EndNode = memo(({ data, selected }) => (
   <div className={`${styles.customNode} ${styles.endNode} ${selected ? styles.nodeSelected : ''}`}>
-    <Handle type="target" position={Position.Top} style={{ ...HDL, background: '#dc2626' }} />
+    <Handle type="target" position={Position.Top}  style={{ ...HDL, background: '#dc2626' }} />
+    <Handle type="target" position={Position.Left} id="left" style={{ ...HDL, background: '#dc2626' }} />
     <div className={styles.nodeBody}>
       <div className={styles.nodeLabel}>{data.label || 'Fim'}</div>
       {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
@@ -118,10 +122,12 @@ export const GatewayNode = memo(({ data, selected }) => (
       <span className={styles.gatewayLabel}>{data.label || 'Decisão'}</span>
       {data.description && <div className={styles.gatewayDesc}>{data.description}</div>}
     </div>
-    <Handle type="target"  position={Position.Top}    style={{ ...HDL, background: '#d97706' }} />
-    <Handle type="source"  position={Position.Bottom} id="bottom" style={{ ...HDL, background: '#d97706' }} />
-    <Handle type="source"  position={Position.Left}   id="left"   style={{ ...HDL, background: '#d97706' }} />
-    <Handle type="source"  position={Position.Right}  id="right"  style={{ ...HDL, background: '#d97706' }} />
+    {/* incoming */}
+    <Handle type="target" position={Position.Top}  id="in-top"  style={{ ...HDL, background: '#d97706' }} />
+    <Handle type="target" position={Position.Left} id="in-left" style={{ ...HDL, background: '#d97706' }} />
+    {/* outgoing branches */}
+    <Handle type="source" position={Position.Right}  id="out-right"  style={{ ...HDL, background: '#d97706' }} />
+    <Handle type="source" position={Position.Bottom} id="out-bottom" style={{ ...HDL, background: '#d97706' }} />
   </div>
 ));
 
@@ -151,7 +157,8 @@ export const LinkedFlowNode = memo(({ data, selected }) => {
   }
   return (
     <div className={`${styles.customNode} ${styles.linkedFlowNode} ${selected ? styles.linkedFlowNodeSelected : ''}`}>
-      <Handle type="target" position={Position.Top}    style={{ ...HDL, background: '#0891b2' }} />
+      <Handle type="target" position={Position.Top}   style={{ ...HDL, background: '#0891b2' }} />
+      <Handle type="target" position={Position.Left}  id="left"  style={{ ...HDL, background: '#0891b2' }} />
       <div className={styles.nodeIconWrap} style={{ color: '#0891b2' }}>
         <ExternalLink size={14} />
       </div>
@@ -161,6 +168,7 @@ export const LinkedFlowNode = memo(({ data, selected }) => {
         {data.description && <div className={styles.nodeDesc}>{data.description}</div>}
       </div>
       <Handle type="source" position={Position.Bottom} style={{ ...HDL, background: '#0891b2' }} />
+      <Handle type="source" position={Position.Right}  id="right" style={{ ...HDL, background: '#0891b2' }} />
     </div>
   );
 });

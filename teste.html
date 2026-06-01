@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integração Google Sheets - Hotspot MikroTik - Clube de Rede</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #3b82f6 100%);
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px 16px 0 0;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+        }
+        
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+        }
+        
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .brand-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #15803d;
+        }
+        
+        .brand-link {
+            font-size: 11px;
+            color: #16a34a;
+            font-weight: 500;
+            text-decoration: none;
+            margin-top: 2px;
+        }
+        
+        .brand-link:hover {
+            color: #15803d;
+            text-decoration: underline;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+        
+        .header .subtitle {
+            font-size: 13px;
+            color: #64748b;
+        }
+        
+        .addon-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 0 0 16px 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border: 1px solid #16a34a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h3 {
+            color: #15803d;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-box p {
+            color: #166534;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .info-box .steps {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .steps ol {
+            margin-left: 16px;
+            color: #15803d;
+            font-size: 11px;
+        }
+        
+        .steps li {
+            margin-bottom: 4px;
+        }
+        
+        .template-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
+            transition: transform 0.2s ease;
+        }
+        
+        .template-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .section:hover {
+            border-color: #16a34a;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.1);
+        }
+        
+        .section h3 {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: white;
+            color: #374151;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #16a34a;
+        }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            padding: 12px 20px;
+            font-size: 13px;
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+            width: 100%;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            display: none;
+        }
+        
+        .result h3 {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .result textarea {
+            width: 100%;
+            height: 400px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Cascadia Code', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+        
+        .result-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .copy-btn, .download-btn {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+        
+        .copy-btn:hover, .download-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .download-btn:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .warning-box p {
+            color: #92400e;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        
+        .url-example {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            padding: 6px;
+            font-family: 'Monaco', monospace;
+            font-size: 10px;
+            color: #4b5563;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="addon-badge">🔌 INTEGRAÇÃO GOOGLE SHEETS</div>
+            <div class="logo-container">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM6 12h4v1H6v-1zm0-2h6v1H6v-1zm0 4h8v1H6v-1z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-name">CLUBE DE REDE</div>
+                    <a href="https://linktr.ee/clubederede" target="_blank" class="brand-link">linktr.ee/clubederede</a>
+                </div>
+            </div>
+            <h1>Integração Google Sheets</h1>
+            <div class="subtitle">Sistema completo com automações inteligentes!</div>
+        </div>
+        
+        <div class="form-content">
+            <div class="info-box">
+                <h3>📊 O que faz esta integração?</h3>
+                <p><strong>Sistema completo de integração MikroTik + Google Sheets com automações inteligentes!</strong></p>
+                
+                <div style="background: rgba(255, 255, 255, 0.7); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <p><strong>🔄 FUNCIONAMENTO BÁSICO:</strong></p>
+                    <p style="margin: 4px 0;">• Recebe cadastros do hotspot em tempo real</p>
+                    <p style="margin: 4px 0;">• Registra logs completos (conexão + desconexão + IP)</p>
+                    <p style="margin: 4px 0;">• Organiza dados em abas separadas (USUARIOS / LOGS)</p>
+                </div>
+                
+                <div style="background: rgba(255, 255, 255, 0.7); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <p><strong>🤖 AUTOMAÇÕES INTELIGENTES:</strong></p>
+                    <p style="margin: 4px 0;">• <strong>Limpeza de duplicatas:</strong> Remove usuários repetidos a cada 4h (mantém o mais recente)</p>
+                    <p style="margin: 4px 0;">• <strong>Backup mensal:</strong> Arquiva logs antigos (>30 dias) em abas mensais a cada 12h</p>
+                    <p style="margin: 4px 0;">• <strong>Performance otimizada:</strong> Planilha sempre limpa e organizada</p>
+                </div>
+                
+                <div style="background: rgba(255, 255, 255, 0.7); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <p><strong>📁 ESTRUTURA DAS ABAS:</strong></p>
+                    <p style="margin: 4px 0;">• <strong>USUARIOS:</strong> Lista única de clientes cadastrados</p>
+                    <p style="margin: 4px 0;">• <strong>LOGS:</strong> Conexões dos últimos 30 dias</p>
+                    <p style="margin: 4px 0;">• <strong>LOGS_2025_01:</strong> Janeiro arquivado automaticamente</p>
+                    <p style="margin: 4px 0;">• <strong>LOGS_2025_02:</strong> Fevereiro arquivado automaticamente</p>
+                </div>
+                
+                <a href="https://docs.google.com/spreadsheets/d/1pGf69Qlj7T0aYIx0nPX45u77d6jxgTwRtQq_Gi1P7oM/copy" class="template-link" target="_blank">
+                    📋 PLANILHA MODELO PRONTA (Apps Script incluso)
+                </a>
+                
+                <div class="steps">
+                    <p><strong>📋 COMO PUBLICAR O APPS SCRIPT (detalhado):</strong></p>
+                    <ol>
+                        <li><strong>Abrir Apps Script:</strong> Na planilha → "Extensões" → "Apps Script"</li>
+                        <li><strong>Publicar:</strong> Clique em "Implantar" (canto superior direito)</li>
+                        <li><strong>Nova implantação:</strong> Clique em "Nova implantação"</li>
+                        <li><strong>Tipo:</strong> Clique no ícone ⚙️ → "Aplicativo da web"</li>
+                        <li><strong>Configurar:</strong>
+                            <ul style="margin-top: 4px; margin-left: 16px; font-size: 11px;">
+                                <li>Executar como: <strong>"Eu"</strong> (seu email)</li>
+                                <li>Quem tem acesso: <strong>"Qualquer pessoa"</strong></li>
+                            </ul>
+                        </li>
+                        <li><strong>Implantar:</strong> Clique "Implantar" → Autorizar se necessário</li>
+                        <li><strong>Copiar URL:</strong> Copie a URL longa que aparece (termina com /exec)</li>
+                        <li><strong>Ativar automação:</strong> Execute a função "configurarTriggers" uma vez</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3><div class="section-icon">🔗</div> URL do Google Apps Script</h3>
+                <div class="form-group">
+                    <label for="urlGoogleScript">Cole aqui a URL do seu Apps Script:</label>
+                    <input type="url" id="urlGoogleScript" placeholder="https://script.google.com/macros/s/ABC123.../exec">
+                    <div class="url-example">
+                        Exemplo: https://script.google.com/macros/s/AKfycbziOYPTymmr9_JOCVxbft7U303Hc5oGvVGkVQyhmAt5F7Po6C3_2D0RlPStEcnIk64/exec
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3><div class="section-icon">⚙️</div> Configurações da Integração</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enviarCadastros" checked>
+                    <label for="enviarCadastros">📝 Enviar cadastros em tempo real</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enviarLogs" checked>
+                    <label for="enviarLogs">📋 Enviar logs completos (conexão + desconexão)</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="intervaloMonitoramento">Intervalo de monitoramento:</label>
+                    <select id="intervaloMonitoramento">
+                        <option value="30s">30 segundos (muito rápido)</option>
+                        <option value="1m" selected>1 minuto (recomendado)</option>
+                        <option value="2m">2 minutos</option>
+                        <option value="3m">3 minutos</option>
+                        <option value="5m">5 minutos</option>
+                        <option value="10m">10 minutos</option>
+                    </select>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
+                        Frequência aplicada para cadastros E logs. Sistema anti-duplicatas e backup automático inclusos.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="warning-box">
+                <p><strong>⚠️ IMPORTANTE:</strong> Esta integração funciona junto com seu sistema atual.</p>
+                <p>• Não modifica nada que já está funcionando</p>
+                <p>• Adiciona apenas o envio para Google Sheets</p>
+                <p>• Sistema anti-duplicatas e backup automático inclusos</p>
+                <p>• Planilha sempre organizada com automações inteligentes</p>
+                <p>• Pode ser removido a qualquer momento sem afetar o hotspot</p>
+            </div>
+            
+            <button class="btn btn-primary" onclick="gerarScript()">
+                🚀 Gerar Integração Google Sheets
+            </button>
+            
+            <div class="result" id="result">
+                <h3>🔌 Script da Integração Gerado</h3>
+                <textarea id="scriptOutput" readonly></textarea>
+                <div class="result-actions">
+                    <button class="copy-btn" onclick="copiarScript()">📋 Copiar Script</button>
+                    <button class="download-btn" onclick="baixarScript()">⬇️ Baixar .rsc</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function gerarScript() {
+            const url = document.getElementById('urlGoogleScript').value.trim();
+            const cadastros = document.getElementById('enviarCadastros').checked;
+            const logs = document.getElementById('enviarLogs').checked;
+            const intervalo = document.getElementById('intervaloMonitoramento').value;
+            
+            if (!url) {
+                alert('❌ URL obrigatória!');
+                return;
+            }
+            
+            if (!url.includes('script.google.com/macros/s/')) {
+                alert('❌ URL inválida!');
+                return;
+            }
+            
+            if (!cadastros && !logs) {
+                alert('❌ Selecione pelo menos uma opção!');
+                return;
+            }
+            
+            const script = criarScript(url, cadastros, logs, intervalo);
+            document.getElementById('scriptOutput').value = script;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+            
+            alert('✅ Script gerado! Cole no MikroTik.');
+        }
+        
+        function criarScript(url, cadastros, logs, intervalo) {
+            const agora = new Date();
+            let script = `# =====================================================
+# INTEGRAÇÃO GOOGLE SHEETS - ${agora.toLocaleString('pt-BR')}
+# CLUBE DE REDE - linktr.ee/clubederede
+# =====================================================
+# VERSÃO 3.2 - SISTEMA COMPLETO COM AUTOMAÇÕES
+# - Sistema anti-duplicatas por contador (usuários)
+# - Sistema anti-duplicatas por timestamp (logs)
+# - Backup automático mensal dos logs
+# - Script pós-reboot para evitar duplicatas
+# - Logs incluem IP do dispositivo
+# - CORREÇÃO: Encoding URL para nomes com espaços
+# =====================================================
+
+# Remove scripts e schedulers antigos
+/system script remove [find name~"GoogleSheets-"]
+/system script remove [find name~"UsuariosComMemoria"]
+/system script remove [find name~"LogsFinal"]
+/system script remove [find name~"TesteUsuarios"]
+/system script remove [find name~"UsuariosPorContador"]
+/system script remove [find name~"LogsRapido"]
+/system scheduler remove [find name~"SHEETS_"]
+
+`;
+
+            if (cadastros) {
+                script += `# ================================================
+# SCRIPT USUÁRIOS - ANTI-DUPLICATAS POR CONTADOR
+# ================================================
+/system script add name=GoogleSheets-UsuariosFinal source={
+    :global totalUsuariosEnviados
+    :if ([:typeof $totalUsuariosEnviados] = "nothing") do={
+        :set totalUsuariosEnviados 0
+    }
+    
+    :local url "${url}"
+    
+    # Função para encoding URL (caracteres especiais)
+    :local urlEncode do={
+        :local input $1
+        :local output ""
+        :local length [:len $input]
+        
+        :for i from=0 to=($length - 1) do={
+            :local char [:pick $input $i ($i + 1)]
+            
+            :if ($char = " ") do={
+                :set output ($output . "%20")
+            } else={
+                :if ($char = "&") do={
+                    :set output ($output . "%26")
+                } else={
+                    :if ($char = "=") do={
+                        :set output ($output . "%3D")
+                    } else={
+                        :if ($char = "+") do={
+                            :set output ($output . "%2B")
+                        } else={
+                            :if ($char = "#") do={
+                                :set output ($output . "%23")
+                            } else={
+                                :if ($char = "?") do={
+                                    :set output ($output . "%3F")
+                                } else={
+                                    :if ($char = "%") do={
+                                        :set output ($output . "%25")
+                                    } else={
+                                        :set output ($output . $char)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        :return $output
+    }
+    
+    # Conta usuarios validos AGORA
+    :local totalAtual 0
+    :foreach user in=[/ip hotspot user find where !default] do={
+        :local telefone [/ip hotspot user get $user name]
+        :if ([:find $telefone "default"] < 0 && [:find $telefone "trial"] < 0) do={
+            :set totalAtual ($totalAtual + 1)
+        }
+    }
+    
+    # Se tem usuarios novos
+    :if ($totalAtual > $totalUsuariosEnviados) do={
+        # Envia so os ultimos (novos)
+        :local count 0
+        :foreach user in=[/ip hotspot user find where !default] do={
+            :local telefone [/ip hotspot user get $user name]
+            :local nome [/ip hotspot user get $user comment]
+            
+            :if ([:find $telefone "default"] < 0 && [:find $telefone "trial"] < 0) do={
+                :set count ($count + 1)
+                
+                # So envia se for dos ultimos (novos)
+                :if ($count > $totalUsuariosEnviados) do={
+                    :if ([:len $nome] = 0) do={ :set nome $telefone }
+                    
+                    # Aplica encoding URL nos parâmetros
+                    :local nomeEncoded [$urlEncode $nome]
+                    :local telefoneEncoded [$urlEncode $telefone]
+                    
+                    :do {
+                        /tool fetch url=($url . "?sheet=USUARIOS&NOME=" . $nomeEncoded . "&TELEFONE=" . $telefoneEncoded) keep-result=no
+                        :log info ("Usuario enviado: " . $telefone . " - " . $nome)
+                    } on-error={
+                        :log error ("Erro ao enviar usuario: " . $telefone)
+                    }
+                    :delay 1s
+                }
+            }
+        }
+        
+        # Atualiza contador
+        :set totalUsuariosEnviados $totalAtual
+    }
+}
+
+/system scheduler add interval=${intervalo} name=SHEETS_USUARIOS_FINAL on-event="GoogleSheets-UsuariosFinal" start-time=startup
+
+`;
+            }
+
+            if (logs) {
+                script += `# ================================================
+# SCRIPT LOGS - ANTI-DUPLICATAS COM IP
+# ================================================
+/system script add name=GoogleSheets-LogsFinal source={
+    :global ultimoLogProcessado
+    :if ([:typeof $ultimoLogProcessado] = "nothing") do={
+        :set ultimoLogProcessado ""
+    }
+    
+    :local url "${url}"
+    
+    # Função para encoding URL (caracteres especiais)
+    :local urlEncode do={
+        :local input $1
+        :local output ""
+        :local length [:len $input]
+        
+        :for i from=0 to=($length - 1) do={
+            :local char [:pick $input $i ($i + 1)]
+            
+            :if ($char = " ") do={
+                :set output ($output . "%20")
+            } else={
+                :if ($char = "&") do={
+                    :set output ($output . "%26")
+                } else={
+                    :if ($char = "=") do={
+                        :set output ($output . "%3D")
+                    } else={
+                        :if ($char = "+") do={
+                            :set output ($output . "%2B")
+                        } else={
+                            :if ($char = "#") do={
+                                :set output ($output . "%23")
+                            } else={
+                                :if ($char = "?") do={
+                                    :set output ($output . "%3F")
+                                } else={
+                                    :if ($char = "%") do={
+                                        :set output ($output . "%25")
+                                    } else={
+                                        :set output ($output . $char)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        :return $output
+    }
+    
+    :local todosLogs [/log find where topics~"hotspot" and (message~"logged in" or message~"logged out")]
+    :local totalLogs [:len $todosLogs]
+    
+    :if ($totalLogs > 0) do={
+        :local ultimoLog [:pick $todosLogs ($totalLogs - 1)]
+        :local logEntry [/log get $ultimoLog]
+        :local message ($logEntry->"message")
+        :local time ($logEntry->"time")
+        :local logId ($message . "-" . [:tostr $time])
+        
+        :if ($ultimoLogProcessado = $logId) do={
+            # Ja processado - nao faz nada
+        } else={
+            # Extrai telefone e IP
+            :local userEndPos [:find $message " ("]
+            :local ipStartPos [:find $message "("]
+            :local ipEndPos [:find $message "):"]
+            
+            :if ($userEndPos >= 0 && $ipStartPos >= 0 && $ipEndPos >= 0) do={
+                :local telefone [:pick $message 0 $userEndPos]
+                :local ip [:pick $message ($ipStartPos + 1) $ipEndPos]
+                
+                :local status "conectou"
+                :if ([:find $message "logged out"] >= 0) do={ :set status "desconectou" }
+                
+                # Status com IP (formato simples)
+                :local statusComIP ($status . "-" . $ip)
+                
+                # SALVA PRIMEIRO
+                :set ultimoLogProcessado $logId
+                
+                # Aplica encoding URL nos parâmetros
+                :local telefoneEncoded [$urlEncode $telefone]
+                :local statusEncoded [$urlEncode $statusComIP]
+                
+                # ENVIA
+                :do {
+                    /tool fetch url=($url . "?sheet=LOGS&TELEFONE=" . $telefoneEncoded . "&STATUS=" . $statusEncoded) keep-result=no
+                    :log info ($telefone . " " . $statusComIP)
+                } on-error={
+                    :log error ("Erro ao enviar log: " . $telefone . " " . $statusComIP)
+                }
+            }
+        }
+    }
+}
+
+/system scheduler add interval=${intervalo} name=SHEETS_LOGS_FINAL on-event="GoogleSheets-LogsFinal" start-time=startup
+
+`;
+
+            // Script Pós-Reboot (NOVO)
+            script += `# ================================================
+# SCRIPT PÓS-REBOOT - SINCRONIZAÇÃO DE CONTADORES
+# ================================================
+/system script add name=GoogleSheets-PosReboot source={
+    :log info "=== INICIANDO SINCRONIZAÇÃO PÓS-REBOOT ==="
+    
+    # SINCRONIZAÇÃO USUÁRIOS`;
+            if (cadastros) {
+                script += `
+    :global totalUsuariosEnviados
+    
+    # Conta usuarios válidos atuais
+    :local usuariosAtuais 0
+    :foreach user in=[/ip hotspot user find where !default] do={
+        :local telefone [/ip hotspot user get $user name]
+        :if ([:find $telefone "default"] < 0 && [:find $telefone "trial"] < 0) do={
+            :set usuariosAtuais ($usuariosAtuais + 1)
+        }
+    }
+    
+    # Atualiza contador com quantidade real
+    :set totalUsuariosEnviados $usuariosAtuais
+    :log info ("Usuários sincronizados: " . $usuariosAtuais)`;
+            }
+            
+            if (logs) {
+                script += `
+    
+    # SINCRONIZAÇÃO LOGS
+    :global ultimoLogProcessado
+    
+    # Pega timestamp atual como referência (evita reprocessar logs antigos)
+    :local agora [/system clock get time]
+    :local hoje [/system clock get date]
+    :set ultimoLogProcessado ("reboot-" . $hoje . "-" . $agora)
+    :log info ("Referência logs definida: " . $ultimoLogProcessado)`;
+            }
+            
+            script += `
+    
+    :log info "=== SINCRONIZAÇÃO PÓS-REBOOT CONCLUÍDA ==="
+}
+
+# Scheduler que roda APENAS no startup (evita duplicatas pós-reboot)
+/system scheduler add name=SHEETS_POS_REBOOT on-event="GoogleSheets-PosReboot" start-time=startup interval=0s
+
+`;
+
+            // Limpeza semanal das variáveis (SEM SCHEDULER - só manual)
+            script += `# ================================================
+# LIMPEZA MANUAL DAS VARIÁVEIS GLOBAIS
+# ================================================
+/system script add name=GoogleSheets-Limpeza source={`;
+            if (cadastros) script += `\n    :global totalUsuariosEnviados`;
+            if (logs) script += `\n    :global ultimoLogProcessado`;
+            script += `\n    `;
+            if (cadastros) script += `\n    :set totalUsuariosEnviados 0`;
+            if (logs) script += `\n    :set ultimoLogProcessado ""`;
+            script += `\n    \n    :log info "Variáveis globais limpas (execução manual)"
+    :put "RESET MANUAL EXECUTADO - Sistema vai reenviar todos os dados"
+}
+
+# NOTA: Script de limpeza SEM scheduler automático
+# Para executar manualmente: /system script run GoogleSheets-Limpeza
+
+`;
+
+            // Comandos de teste
+            script += `# ================================================
+# COMANDOS DE TESTE E CONTROLE
+# ================================================`;
+            if (cadastros) script += `\n:global testeUsuarios do={ /system script run GoogleSheets-UsuariosFinal }`;
+            if (logs) script += `\n:global testeLogs do={ /system script run GoogleSheets-LogsFinal }`;
+            
+            script += `\n:global verVariaveis do={`;
+            if (cadastros) script += `\n    :global totalUsuariosEnviados`;
+            if (logs) script += `\n    :global ultimoLogProcessado`;
+            if (cadastros) script += `\n    :put ("Total usuarios enviados: " . $totalUsuariosEnviados)`;
+            if (logs) script += `\n    :put ("Ultimo log: " . $ultimoLogProcessado)`;
+            script += `\n}
+
+:global limpezaManual do={
+    /system script run GoogleSheets-Limpeza
+}
+
+:global resetTeste do={`;
+            if (cadastros) script += `\n    :global totalUsuariosEnviados; :set totalUsuariosEnviados 0`;
+            if (logs) script += `\n    :global ultimoLogProcessado; :set ultimoLogProcessado ""`;
+            script += `\n    :put "Variáveis resetadas para teste"
+}
+
+:global pararIntegracao do={
+    /system scheduler disable [find name~"SHEETS_"]
+    :put "Integração pausada"
+}
+
+:global ativarIntegracao do={
+    /system scheduler enable [find name~"SHEETS_"]
+    :put "Integração ativada"
+}
+
+:global verSchedulers do={
+    /system scheduler print where name~"SHEETS_"
+}
+
+# ================================================
+# INSTALAÇÃO CONCLUÍDA!
+# ================================================
+:put "INTEGRAÇÃO GOOGLE SHEETS 100% FUNCIONANDO!"
+:put "Sistema anti-duplicatas e backup automático ativados!"`;
+            if (logs) script += `\n:put "Logs incluem IP do dispositivo!"`;
+            script += `\n:put "NOVO: Script pós-reboot evita duplicatas após reinicialização!"
+:put "CORREÇÃO: Nomes com espaços agora funcionam perfeitamente!"
+:put ""
+:put "COMANDOS DISPONÍVEIS:"`;
+            if (cadastros) script += `\n:put "• Teste usuarios: :global testeUsuarios; \\$testeUsuarios"`;
+            if (logs) script += `\n:put "• Teste logs: :global testeLogs; \\$testeLogs"`;
+            script += `\n:put "• Ver variáveis: :global verVariaveis; \\$verVariaveis"
+:put "• Limpeza manual: :global limpezaManual; \\$limpezaManual"
+:put "• Reset teste: :global resetTeste; \\$resetTeste"
+:put "• Pausar: :global pararIntegracao; \\$pararIntegracao"
+:put "• Ativar: :global ativarIntegracao; \\$ativarIntegracao"
+:put "• Ver schedulers: :global verSchedulers; \\$verSchedulers"
+:put ""
+:put "IMPORTANTE: Sistema pós-reboot evita duplicatas!"
+:put "Schedulers rodando a cada ${intervalo}"
+:put "Script de limpeza agora é MANUAL (sem scheduler automático)"
+
+# =====================================================
+# INTEGRAÇÃO PRONTA E 100% FUNCIONANDO!
+# =====================================================`;
+
+            }
+
+            return script;
+        }
+        
+        function copiarScript() {
+            const textarea = document.getElementById('scriptOutput');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                alert('✅ Script copiado!');
+            } catch (err) {
+                navigator.clipboard.writeText(textarea.value).then(function() {
+                    alert('✅ Script copiado!');
+                }).catch(function() {
+                    alert('❌ Use Ctrl+C para copiar.');
+                });
+            }
+        }
+        
+        function baixarScript() {
+            const script = document.getElementById('scriptOutput').value;
+            const agora = new Date();
+            const timestamp = agora.toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `integracao-google-sheets-${timestamp}.rsc`;
+            
+            // Cria blob com o conteúdo do script
+            const blob = new Blob([script], { type: 'text/plain' });
+            
+            // Cria link temporário para download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            
+            // Adiciona ao DOM, clica e remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Limpa o objeto URL
+            URL.revokeObjectURL(link.href);
+            
+            alert('✅ Arquivo .rsc baixado!');
+        }
+    </script>
+</body>
+</html>

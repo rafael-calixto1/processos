@@ -98,14 +98,14 @@ const Users = () => {
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir este usuário?')) return;
+    if (!window.confirm('Tem certeza que deseja inativar este usuário?')) return;
     try {
       await authAPI.deleteUser(id);
-      setSuccess('Usuário excluído!');
+      setSuccess('Usuário inativado!');
       loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Erro ao excluir usuário: ' + err.message);
+      setError('Erro ao inativar usuário: ' + err.message);
     }
   };
 
@@ -337,7 +337,7 @@ const Users = () => {
                         <button 
                           onClick={() => handleDeleteUser(user.id)}
                           className={styles.deleteBtn}
-                          title="Excluir"
+                          title="Inativar"
                         >
                           <FiTrash2 />
                         </button>

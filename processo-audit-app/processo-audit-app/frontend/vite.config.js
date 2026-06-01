@@ -30,6 +30,11 @@ export default defineConfig({
     port: 3004,
     host: '0.0.0.0',
     proxy: {
+      '/api/fleet': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/fleet/, '/api'),
+      },
       '/api': {
         target: 'http://localhost:5002',
         changeOrigin: true,
