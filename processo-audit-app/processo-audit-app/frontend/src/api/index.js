@@ -367,6 +367,12 @@ export const executionAPI = {
 
 // ======== TICKETS ========
 export const ticketAPI = {
+  listAssignable: async () => {
+    const res = await fetch(`${API_URL}/tickets/users`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   list: async ({ status, priority, filter, page = 1, limit = 20 } = {}) => {
     const params = new URLSearchParams({ page, limit });
     if (status)   params.append('status', status);
