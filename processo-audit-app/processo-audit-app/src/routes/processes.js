@@ -129,6 +129,8 @@ router.get(['/processes', '/process'], verifyToken, async (req, res) => {
     if (status) {
       baseQuery += ' AND p.status = ?';
       params.push(status);
+    } else {
+      baseQuery += " AND p.status != 'archived'";
     }
 
     if (search) {
@@ -285,12 +287,12 @@ router.delete(['/processes/:id', '/process/:id'], verifyToken, checkRole(['admin
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
-    await pool.execute('DELETE FROM processes WHERE id = ?', [processId]);
+    await pool.execute("UPDATE processes SET status = 'archived' WHERE id = ?", [processId]);
 
     // Registrar na auditoria
     await logAudit(processId, req.userId, 'DELETE', oldProcess[0], null, req);
 
-    res.json({ message: 'Processo deletado com sucesso' });
+    res.json({ message: 'Processo inativado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

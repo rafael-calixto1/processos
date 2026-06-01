@@ -30,7 +30,7 @@ router.post(['/departments', '/department'], verifyToken, checkRole(['admin']), 
 // Listar departamentos
 router.get(['/departments', '/department'], verifyToken, async (req, res) => {
   try {
-    let query = 'SELECT * FROM departments';
+    let query = "SELECT * FROM departments WHERE status = 'active'";
     const params = [];
 
     // Filtro por departamentos do usuário (se não for admin)
@@ -40,13 +40,13 @@ router.get(['/departments', '/department'], verifyToken, async (req, res) => {
         [req.userId]
       );
       const depIds = userDeps.map(ud => ud.department_id);
-      
+
       if (depIds.length === 0) {
         return res.json([]); // Sem acesso a nenhum departamento
       }
-      
+
       const placeholders = depIds.map(() => '?').join(',');
-      query += ` WHERE id IN (${placeholders})`;
+      query += ` AND id IN (${placeholders})`;
       params.push(...depIds);
     }
 
@@ -115,21 +115,11 @@ router.put(['/departments/:id', '/department/:id'], verifyToken, checkRole(['adm
   }
 });
 
-// Deletar departamento
+// Inativar departamento
 router.delete(['/departments/:id', '/department/:id'], verifyToken, checkRole(['admin']), async (req, res) => {
   try {
-    const [processes] = await pool.execute(
-      'SELECT COUNT(*) as count FROM processes WHERE department_id = ?',
-      [req.params.id]
-    );
-
-    if (processes[0].count > 0) {
-      return res.status(400).json({ error: 'Não é possível deletar um departamento com processos' });
-    }
-
-    await pool.execute('DELETE FROM departments WHERE id = ?', [req.params.id]);
-
-    res.json({ message: 'Departamento deletado com sucesso' });
+    await pool.execute("UPDATE departments SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'Departamento inativado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

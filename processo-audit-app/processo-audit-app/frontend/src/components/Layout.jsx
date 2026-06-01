@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -16,11 +16,17 @@ const menuItems = [
   { label: 'Departamentos', path: '/departamentos', Icon: Building2 },
   { label: 'Minhas Execuções', path: '/execucoes', Icon: CheckSquare },
   { label: 'Minha Conta', path: '/configuracoes', Icon: Settings },
+  { label: 'Frota', path: '/frota', Icon: Truck },
 ];
 
 const adminItems = [
   { label: 'Branding', path: '/branding', Icon: Palette },
   { label: 'Usuários', path: '/users', Icon: Users },
+];
+
+const toolItems = [
+  { label: 'Integração Hotspot Google Sheet', path: '/ferramentas/hotspot-google-sheets', Icon: Wrench },
+  { label: 'Criar Config do Hotspot', path: '/ferramentas/criar-config-hotspot', Icon: Wrench },
 ];
 
 const Layout = ({ children }) => {
@@ -93,6 +99,25 @@ const Layout = ({ children }) => {
           <nav className={styles.nav}>
             <div className={styles.navSection}>
               {allItems.map(({ label, path, Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
+                  onClick={() => setSidebarOpen(false)}
+                  style={isActive(path) ? { color: primary } : {}}
+                >
+                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                    <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
+                  </span>
+                  <span className={styles.navLabel}>{label}</span>
+                  {isActive(path) && <ChevronRight size={14} className={styles.activeArrow} />}
+                </Link>
+              ))}
+            </div>
+
+            <div className={styles.navSectionLabel}>Ferramentas</div>
+            <div className={styles.navSection}>
+              {toolItems.map(({ label, path, Icon }) => (
                 <Link
                   key={path}
                   to={path}

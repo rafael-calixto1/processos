@@ -201,6 +201,16 @@
   gap: 2px;
 }
 
+.navSectionLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-light);
+  opacity: 0.55;
+  padding: 0.75rem 0.875rem 0.25rem;
+}
+
 .navItem {
   display: flex;
   align-items: center;

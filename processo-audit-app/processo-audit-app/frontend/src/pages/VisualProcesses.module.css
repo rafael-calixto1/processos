@@ -197,7 +197,135 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Panel (inside React Flow) ───────────────────────────── */
+/* ── Horizontal toolbar (desktop) ───────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.875rem;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+
+.tbGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.tbDivider {
+  width: 1px;
+  height: 22px;
+  background: var(--border-color);
+  margin: 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.tbSpacer { flex: 1; min-width: 0.5rem; }
+
+/* Base styles shared by all toolbar buttons */
+.tbNode, .tbTool, .tbSave, .tbDelete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius);
+  font-size: 0.79rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  line-height: 1;
+}
+
+/* Node-add buttons */
+.tbNodeStart  { background: var(--primary-light); color: var(--primary-color); border-color: rgba(11,165,43,0.3); }
+.tbNodeStart:hover  { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
+.tbNodeStep   { background: #dbeafe; color: #1d4ed8; border-color: rgba(37,99,235,0.25); }
+.tbNodeStep:hover   { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+.tbNodeGateway { background: #fef3c7; color: #b45309; border-color: rgba(180,83,9,0.25); }
+.tbNodeGateway:hover { background: #d97706; color: #fff; border-color: #d97706; }
+
+.tbNodeEnd    { background: var(--error-light); color: var(--error); border-color: rgba(220,38,38,0.25); }
+.tbNodeEnd:hover    { background: var(--error); color: #fff; border-color: var(--error); }
+
+.tbNodeSub    { background: #ede9fe; color: #5b21b6; border-color: rgba(124,58,237,0.25); }
+.tbNodeSub:hover    { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+
+.tbNodeLinked { background: #cffafe; color: #0e7490; border-color: rgba(8,145,178,0.25); }
+.tbNodeLinked:hover { background: #0891b2; color: #fff; border-color: #0891b2; }
+
+/* Tool buttons (undo/redo/snap/layout) */
+.tbTool {
+  background: transparent;
+  color: var(--text-medium);
+  border-color: transparent;
+}
+.tbTool:hover:not(:disabled) {
+  background: var(--background-color);
+  border-color: var(--border-color);
+  color: var(--text-dark);
+}
+.tbTool:disabled { opacity: 0.35; cursor: not-allowed; }
+.tbToolActive {
+  background: var(--primary-light) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-dark) !important;
+}
+
+/* Save button */
+.tbSave {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+  padding: 0.3rem 1rem;
+}
+.tbSave:hover:not(:disabled) { background: var(--primary-dark); border-color: var(--primary-dark); }
+.tbSave:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* Delete button */
+.tbDelete {
+  background: transparent;
+  color: var(--error);
+  border-color: transparent;
+}
+.tbDelete:hover {
+  background: var(--error-light);
+  border-color: rgba(220,38,38,0.3);
+}
+
+/* Keyboard hints */
+.tbHints {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex-shrink: 0;
+}
+.tbHints span {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.tbHints kbd {
+  display: inline-block;
+  padding: 0.05rem 0.3rem;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-family: monospace;
+}
+
+/* ── Panel (inside React Flow — mobile only) ───────────────── */
 .panel {
   display: flex;
   flex-direction: column;
@@ -205,9 +333,9 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  overflow: hidden;
+  overflow-y: auto;
   width: 176px;
-  transition: max-height 0.3s ease-in-out;
+  max-height: calc(100vh - 160px);
 }
 
 .panelHeader {

@@ -13,7 +13,7 @@ import {
 import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
-  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2, Menu,
+  GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2, Menu, MoveRight,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
 import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
@@ -159,6 +159,59 @@ export default function VisualProcesses() {
       return { ...n, position: { x: BASE_X - ((total - 1) * NODE_W) / 2 + i * NODE_W, y: BASE_Y + l * LEVEL_H } };
     }));
     showToast('Fluxo organizado!', 'info');
+  }, [nodes, edges, setNodes, takeSnapshot, showToast]);
+
+  // ── Auto-layout lateral (left → right) ──────────────────
+  const autoLayoutLR = useCallback(() => {
+    takeSnapshot();
+    const layoutNodes = nodes.filter(n => !n.parentId && n.type !== 'subFlowNode');
+    const layoutIds   = new Set(layoutNodes.map(n => n.id));
+    const inDegree = {};
+    const adjacency = {};
+    layoutNodes.forEach(n => { inDegree[n.id] = 0; adjacency[n.id] = []; });
+    edges.forEach(e => {
+      if (!layoutIds.has(e.source) || !layoutIds.has(e.target)) return;
+      if (inDegree[e.target] !== undefined) inDegree[e.target]++;
+      if (adjacency[e.source] !== undefined) adjacency[e.source].push(e.target);
+    });
+    const levels = {};
+    const nodeLevel = {};
+    const visited = new Set();
+    let queue = layoutNodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
+    let lvl = 0;
+    while (queue.length > 0) {
+      levels[lvl] = queue;
+      queue.forEach(id => { nodeLevel[id] = lvl; visited.add(id); });
+      const nextSet = new Set();
+      const next = [];
+      queue.forEach(id => {
+        (adjacency[id] || []).forEach(tgt => {
+          if (!visited.has(tgt)) {
+            inDegree[tgt]--;
+            if (inDegree[tgt] <= 0 && !nextSet.has(tgt)) { next.push(tgt); nextSet.add(tgt); }
+          }
+        });
+      });
+      queue = next;
+      lvl++;
+    }
+    layoutNodes.forEach(n => {
+      if (!visited.has(n.id)) {
+        if (!levels[lvl]) levels[lvl] = [];
+        levels[lvl].push(n.id);
+        nodeLevel[n.id] = lvl++;
+      }
+    });
+    const LEVEL_W = 280, NODE_H = 160, BASE_X = 60, BASE_Y = 280;
+    setNodes(nds => nds.map(n => {
+      if (n.parentId || n.type === 'subFlowNode') return n;
+      const l = nodeLevel[n.id] ?? 0;
+      const row = levels[l] || [n.id];
+      const i = row.indexOf(n.id);
+      const total = row.length;
+      return { ...n, position: { x: BASE_X + l * LEVEL_W, y: BASE_Y - ((total - 1) * NODE_H) / 2 + i * NODE_H } };
+    }));
+    showToast('Fluxo organizado lateralmente!', 'info');
   }, [nodes, edges, setNodes, takeSnapshot, showToast]);
 
   // ── Delete element ───────────────────────────────────────
@@ -570,14 +623,14 @@ export default function VisualProcesses() {
 
   const onDeleteFlow = async () => {
     if (!selectedFlowId) return;
-    if (!window.confirm(`Excluir "${title}"? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Inativar "${title}"?`)) return;
     try {
       await visualProcessAPI.delete(selectedFlowId);
-      showToast('Fluxo excluído.');
+      showToast('Fluxo inativado.');
       loadFlow(null);
       loadFlows();
     } catch {
-      showToast('Erro ao excluir o fluxo.', 'error');
+      showToast('Erro ao inativar o fluxo.', 'error');
     }
   };
 
@@ -636,6 +689,81 @@ export default function VisualProcesses() {
         </div>
       </div>
 
+      {/* ── Toolbar (desktop) ── */}
+      {!isMobile && (
+        <div className={styles.toolbar}>
+          <div className={styles.tbGroup}>
+            <button className={`${styles.tbNode} ${styles.tbNodeStart}`} onClick={() => onAddNode('startNode')} title="Adicionar nó Início">
+              <PlayCircle size={13} /> Início
+            </button>
+            <button className={`${styles.tbNode} ${styles.tbNodeStep}`} onClick={() => onAddNode('processNode')} title="Adicionar etapa">
+              <Box size={13} /> Etapa
+            </button>
+            <button className={`${styles.tbNode} ${styles.tbNodeGateway}`} onClick={() => onAddNode('gatewayNode')} title="Adicionar decisão">
+              <GitBranch size={13} /> Decisão
+            </button>
+            <button className={`${styles.tbNode} ${styles.tbNodeEnd}`} onClick={() => onAddNode('endNode')} title="Adicionar nó Fim">
+              <StopCircle size={13} /> Fim
+            </button>
+            <button className={`${styles.tbNode} ${styles.tbNodeSub}`} onClick={() => onAddNode('subFlowNode')} title="Adicionar sub-fluxo (contêiner)">
+              <Layers size={13} /> Sub-fluxo
+            </button>
+            <button className={`${styles.tbNode} ${styles.tbNodeLinked}`} onClick={() => onAddNode('linkedFlowNode')} title="Chamar outro fluxo">
+              <ExternalLink size={13} /> Chamar Fluxo
+            </button>
+          </div>
+
+          <div className={styles.tbDivider} />
+
+          <div className={styles.tbGroup}>
+            <button className={styles.tbTool} onClick={undo} disabled={!past.length} title="Desfazer (Ctrl+Z)">
+              <Undo2 size={13} /> Desfazer
+            </button>
+            <button className={styles.tbTool} onClick={redo} disabled={!future.length} title="Refazer (Ctrl+Y)">
+              <Redo2 size={13} /> Refazer
+            </button>
+          </div>
+
+          <div className={styles.tbDivider} />
+
+          <div className={styles.tbGroup}>
+            <button
+              className={`${styles.tbTool} ${snapToGrid ? styles.tbToolActive : ''}`}
+              onClick={() => setSnapToGrid(v => !v)}
+              title="Encaixar ao grid durante arraste"
+            >
+              <Magnet size={13} /> Snap
+            </button>
+            <button className={styles.tbTool} onClick={autoLayout} title="Organizar nós de cima para baixo">
+              <LayoutGrid size={13} /> Vertical
+            </button>
+            <button className={styles.tbTool} onClick={autoLayoutLR} title="Organizar nós da esquerda para direita">
+              <MoveRight size={13} /> Lateral
+            </button>
+          </div>
+
+          <div className={styles.tbDivider} />
+
+          <div className={styles.tbGroup}>
+            <button className={styles.tbSave} onClick={onSave} disabled={saving}>
+              <Save size={13} /> {saving ? 'Salvando…' : 'Salvar'}
+            </button>
+            {selectedFlowId && (
+              <button className={styles.tbDelete} onClick={onDeleteFlow}>
+                <Trash2 size={13} /> Inativar
+              </button>
+            )}
+          </div>
+
+          <div className={styles.tbSpacer} />
+
+          <div className={styles.tbHints}>
+            <span><kbd>Del</kbd> remover</span>
+            <span><kbd>Ctrl+Z/Y</kbd> desfazer/refazer</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Canvas area ── */}
       <div className={styles.mainArea}>
         <div className={styles.flowWrapper}>
@@ -676,19 +804,19 @@ export default function VisualProcesses() {
               )}
               <Background variant="dots" gap={18} size={1} color="#d1d5db" />
 
-              {/* ── Side panel ── */}
-              <Panel position="top-right">
-                {!panelOpen ? (
-                  <button
-                    className={styles.panelFab}
-                    onClick={() => setPanelOpen(true)}
-                    title="Abrir menu"
-                  >
-                    <Menu size={20} />
-                  </button>
-                ) : (
-                  <div className={styles.panel}>
-                    {isMobile && (
+              {/* ── Side panel (mobile only) ── */}
+              {isMobile && (
+                <Panel position="top-right">
+                  {!panelOpen ? (
+                    <button
+                      className={styles.panelFab}
+                      onClick={() => setPanelOpen(true)}
+                      title="Abrir menu"
+                    >
+                      <Menu size={20} />
+                    </button>
+                  ) : (
+                    <div className={styles.panel}>
                       <div className={styles.panelMobileHeader}>
                         <span className={styles.panelMobileTitle}>Menu</span>
                         <button
@@ -699,101 +827,61 @@ export default function VisualProcesses() {
                           <X size={14} />
                         </button>
                       </div>
-                    )}
 
-                    <div className={styles.panelSection}>
-                      <p className={styles.panelLabel}>Histórico</p>
-                      <div className={styles.row}>
-                        <button
-                          className={styles.toolBtn}
-                          onClick={undo}
-                          disabled={!past.length}
-                          title="Desfazer (Ctrl+Z)"
-                        >
-                          <Undo2 size={13} />
-                          Desfazer
+                      <div className={styles.panelSection}>
+                        <p className={styles.panelLabel}>Histórico</p>
+                        <div className={styles.row}>
+                          <button className={styles.toolBtn} onClick={undo} disabled={!past.length} title="Desfazer (Ctrl+Z)">
+                            <Undo2 size={13} /> Desfazer
+                          </button>
+                          <button className={styles.toolBtn} onClick={redo} disabled={!future.length} title="Refazer (Ctrl+Y)">
+                            Refazer <Redo2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.panelDivider} />
+
+                      <div className={styles.panelSection}>
+                        <p className={styles.panelLabel}>Adicionar nó</p>
+                        <button className={styles.addStartBtn} onClick={() => onAddNode('startNode')}><PlayCircle size={13} /> Início</button>
+                        <button className={styles.addBtn} onClick={() => onAddNode('processNode')}><Box size={13} /> Etapa</button>
+                        <button className={styles.addGatewayBtn} onClick={() => onAddNode('gatewayNode')}><GitBranch size={13} /> Decisão</button>
+                        <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}><StopCircle size={13} /> Fim</button>
+                        <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}><Layers size={13} /> Sub-fluxo</button>
+                        <button className={styles.addLinkedFlowBtn} onClick={() => onAddNode('linkedFlowNode')}><ExternalLink size={13} /> Chamar Fluxo</button>
+                      </div>
+
+                      <div className={styles.panelDivider} />
+
+                      <div className={styles.panelSection}>
+                        <p className={styles.panelLabel}>Canvas</p>
+                        <button className={`${styles.toolBtn} ${snapToGrid ? styles.toolBtnActive : ''}`} onClick={() => setSnapToGrid(v => !v)}>
+                          <Magnet size={13} /> Snap ao Grid
                         </button>
-                        <button
-                          className={styles.toolBtn}
-                          onClick={redo}
-                          disabled={!future.length}
-                          title="Refazer (Ctrl+Y)"
-                        >
-                          Refazer
-                          <Redo2 size={13} />
-                        </button>
+                        <button className={styles.toolBtn} onClick={autoLayout}><LayoutGrid size={13} /> Organizar Vertical</button>
+                        <button className={styles.toolBtn} onClick={autoLayoutLR}><MoveRight size={13} /> Organizar Lateral</button>
+                      </div>
+
+                      <div className={styles.panelDivider} />
+
+                      <div className={styles.panelSection}>
+                        <p className={styles.panelLabel}>Fluxo</p>
+                        <button className={styles.saveBtn} onClick={onSave} disabled={saving}><Save size={13} /> {saving ? 'Salvando...' : 'Salvar Fluxo'}</button>
+                        {selectedFlowId && (
+                          <button className={styles.deletePanelBtn} onClick={onDeleteFlow}><Trash2 size={13} /> Inativar Fluxo</button>
+                        )}
+                      </div>
+
+                      <div className={styles.panelDivider} />
+                      <div className={styles.panelHints}>
+                        <span><kbd>Del</kbd> remover selecionado</span>
+                        <span><kbd>Ctrl+Z / Y</kbd> desfazer/refazer</span>
                       </div>
                     </div>
-
-                    <div className={styles.panelDivider} />
-
-                    <div className={styles.panelSection}>
-                      <p className={styles.panelLabel}>Adicionar nó</p>
-                      <button className={styles.addStartBtn} onClick={() => onAddNode('startNode')}>
-                        <PlayCircle size={13} /> Início
-                      </button>
-                      <button className={styles.addBtn} onClick={() => onAddNode('processNode')}>
-                        <Box size={13} /> Etapa
-                      </button>
-                      <button className={styles.addGatewayBtn} onClick={() => onAddNode('gatewayNode')}>
-                        <GitBranch size={13} /> Decisão
-                      </button>
-                      <button className={styles.addEndBtn} onClick={() => onAddNode('endNode')}>
-                        <StopCircle size={13} /> Fim
-                      </button>
-                      <button className={styles.addSubFlowBtn} onClick={() => onAddNode('subFlowNode')}>
-                        <Layers size={13} /> Sub-fluxo
-                      </button>
-                      <button className={styles.addLinkedFlowBtn} onClick={() => onAddNode('linkedFlowNode')}>
-                        <ExternalLink size={13} /> Chamar Fluxo
-                      </button>
-                    </div>
-
-                    <div className={styles.panelDivider} />
-
-                    <div className={styles.panelSection}>
-                      <p className={styles.panelLabel}>Canvas</p>
-                      <button
-                        className={`${styles.toolBtn} ${snapToGrid ? styles.toolBtnActive : ''}`}
-                        onClick={() => setSnapToGrid(v => !v)}
-                        title="Alinhar nós ao grid durante arraste"
-                      >
-                        <Magnet size={13} />
-                        Snap ao Grid
-                      </button>
-                      <button
-                        className={styles.toolBtn}
-                        onClick={autoLayout}
-                        title="Organizar nós automaticamente por camadas"
-                      >
-                        <LayoutGrid size={13} />
-                        Organizar Fluxo
-                      </button>
-                    </div>
-
-                    <div className={styles.panelDivider} />
-
-                    <div className={styles.panelSection}>
-                      <p className={styles.panelLabel}>Fluxo</p>
-                      <button className={styles.saveBtn} onClick={onSave} disabled={saving}>
-                        <Save size={13} />
-                        {saving ? 'Salvando...' : 'Salvar Fluxo'}
-                      </button>
-                      {selectedFlowId && (
-                        <button className={styles.deletePanelBtn} onClick={onDeleteFlow}>
-                          <Trash2 size={13} /> Excluir Fluxo
-                        </button>
-                      )}
-                    </div>
-
-                    <div className={styles.panelDivider} />
-                    <div className={styles.panelHints}>
-                      <span><kbd>Del</kbd> remover selecionado</span>
-                      <span><kbd>Ctrl+Z / Y</kbd> desfazer/refazer</span>
-                    </div>
-                  </div>
-                )}
-              </Panel>
+                  )}
+                </Panel>
+              )}
             </ReactFlow>
           )}
         </div>

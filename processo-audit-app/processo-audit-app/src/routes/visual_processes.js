@@ -49,7 +49,7 @@ router.post('/visual-processes/upload', verifyToken, checkRole(['admin', 'manage
 router.get('/visual-processes', verifyToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT id, title, created_at, updated_at FROM visual_processes ORDER BY updated_at DESC'
+      "SELECT id, title, created_at, updated_at FROM visual_processes WHERE status = 'active' ORDER BY updated_at DESC"
     );
     res.json(rows);
   } catch (error) {
@@ -101,11 +101,11 @@ router.put('/visual-processes/:id', verifyToken, checkRole(['admin', 'manager'])
   }
 });
 
-// Excluir fluxo visual
+// Inativar fluxo visual
 router.delete('/visual-processes/:id', verifyToken, checkRole(['admin']), async (req, res) => {
   try {
-    await pool.execute('DELETE FROM visual_processes WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Fluxo excluído com sucesso' });
+    await pool.execute("UPDATE visual_processes SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'Fluxo inativado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
