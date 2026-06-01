@@ -9,6 +9,7 @@ import visualProcessRoutes from './src/routes/visual_processes.js';
 import executionRoutes from './src/routes/executions.js';
 import fileRoutes from './src/routes/files.js';
 import fleetRoutes from './src/routes/fleet.js';
+import ticketRoutes from './src/routes/tickets.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use('/api', visualProcessRoutes);
 app.use('/api', executionRoutes);
 app.use('/api', fileRoutes);
 app.use('/api/fleet', fleetRoutes);
+app.use('/api', ticketRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

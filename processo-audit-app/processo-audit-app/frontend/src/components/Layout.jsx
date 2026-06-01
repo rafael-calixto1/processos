@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -17,6 +17,7 @@ const menuItems = [
   { label: 'Minhas Execuções', path: '/execucoes', Icon: CheckSquare },
   { label: 'Minha Conta', path: '/configuracoes', Icon: Settings },
   { label: 'Frota', path: '/frota', Icon: Truck },
+  { label: 'Tickets', path: '/tickets', Icon: TicketCheck },
 ];
 
 const adminItems = [
