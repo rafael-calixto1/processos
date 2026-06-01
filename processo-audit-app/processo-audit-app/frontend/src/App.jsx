@@ -18,6 +18,7 @@ import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
 import Files from './pages/Files';
 import Fleet from './pages/Fleet';
+import Tickets from './pages/Tickets';
 import HotspotGoogleSheets from './pages/HotspotGoogleSheets';
 import HotspotMikrotikConfig from './pages/HotspotMikrotikConfig';
 import './styles/global.css';
@@ -238,6 +239,17 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <Fleet />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tickets"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Tickets />
             </Layout>
           </ProtectedRoute>
         }
