@@ -4,6 +4,18 @@ import { verifyToken, checkRole } from '../middlewares/auth.js';
 
 const router = express.Router();
 
+/* ── Users list for assignment (any authenticated user) ── */
+router.get('/tickets/users', verifyToken, async (req, res) => {
+  try {
+    const [users] = await pool.execute(
+      "SELECT id, name, email FROM users WHERE status = 'active' ORDER BY name"
+    );
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const ticketWithUsers = `
   SELECT
     t.*,

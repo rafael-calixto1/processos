@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, X, Trash2, MessageSquare, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ticketAPI, authAPI } from '../api/index.js';
+import { ticketAPI } from '../api/index.js';
 import styles from './Tickets.module.css';
 
 const PRIORITY_LABELS = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' };
@@ -78,7 +78,7 @@ export default function Tickets() {
 
   /* fetch users once */
   useEffect(() => {
-    authAPI.listUsers('', 1, 500).then(d => setUsers(d.users || [])).catch(() => {});
+    ticketAPI.listAssignable().then(d => setUsers(d.users || [])).catch(() => {});
   }, []);
 
   const fetchTickets = useCallback(async () => {
