@@ -365,6 +365,73 @@ export const executionAPI = {
   }
 };
 
+// ======== TICKETS ========
+export const ticketAPI = {
+  list: async ({ status, priority, filter, page = 1, limit = 20 } = {}) => {
+    const params = new URLSearchParams({ page, limit });
+    if (status)   params.append('status', status);
+    if (priority) params.append('priority', priority);
+    if (filter)   params.append('filter', filter);
+    const res = await fetch(`${API_URL}/tickets?${params}`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  get: async (id) => {
+    const res = await fetch(`${API_URL}/tickets/${id}`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  create: async (data) => {
+    const res = await fetch(`${API_URL}/tickets`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  update: async (id, data) => {
+    const res = await fetch(`${API_URL}/tickets/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  delete: async (id) => {
+    const res = await fetch(`${API_URL}/tickets/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  addComment: async (id, comment) => {
+    const res = await fetch(`${API_URL}/tickets/${id}/comments`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ comment }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  deleteComment: async (ticketId, commentId) => {
+    const res = await fetch(`${API_URL}/tickets/${ticketId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+};
+
 // ======== ARQUIVOS ========
 export const fileAPI = {
   list: async (folderId = null) => {
