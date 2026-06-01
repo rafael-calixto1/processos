@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/tickets/users', verifyToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      "SELECT id, name, email FROM users WHERE status = 'active' ORDER BY name"
+      'SELECT id, name, email FROM users ORDER BY name'
     );
     res.json({ users });
   } catch (err) {
