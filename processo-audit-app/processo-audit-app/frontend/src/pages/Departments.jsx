@@ -59,7 +59,7 @@ const Departments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja deletar este departamento?')) {
+    if (window.confirm('Tem certeza que deseja inativar este departamento?')) {
       try {
         await departmentAPI.delete(id);
         loadDepartments();
@@ -124,7 +124,7 @@ const Departments = () => {
                     <button
                       className="btn btn-danger btn-small"
                       onClick={() => handleDelete(dept.id)}
-                      title="Deletar"
+                      title="Inativar"
                     >
                       <FiTrash2 />
                     </button>

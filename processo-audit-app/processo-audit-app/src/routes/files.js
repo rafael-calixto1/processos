@@ -35,20 +35,20 @@ router.get(['/files', '/file'], verifyToken, async (req, res) => {
 
     // Get folders
     const [folders] = await pool.execute(
-      `SELECT f.*, u.name as user_name 
-       FROM folders f 
-       JOIN users u ON f.user_id = u.id 
-       WHERE f.parent_id ${parentId ? '= ?' : 'IS NULL'} 
+      `SELECT f.*, u.name as user_name
+       FROM folders f
+       JOIN users u ON f.user_id = u.id
+       WHERE f.status = 'active' AND f.parent_id ${parentId ? '= ?' : 'IS NULL'}
        ORDER BY f.name`,
       parentId ? [parentId] : []
     );
 
     // Get files
     const [files] = await pool.execute(
-      `SELECT f.*, u.name as user_name 
-       FROM files f 
-       JOIN users u ON f.user_id = u.id 
-       WHERE f.folder_id ${parentId ? '= ?' : 'IS NULL'} 
+      `SELECT f.*, u.name as user_name
+       FROM files f
+       JOIN users u ON f.user_id = u.id
+       WHERE f.status = 'active' AND f.folder_id ${parentId ? '= ?' : 'IS NULL'}
        ORDER BY f.name`,
       parentId ? [parentId] : []
     );
@@ -356,33 +356,21 @@ router.post(['/files/copy', '/file/copy'], verifyToken, async (req, res) => {
   }
 });
 
-// Delete folder
+// Inativar pasta
 router.delete(['/files/folders/:id', '/file/folders/:id'], verifyToken, async (req, res) => {
   try {
-    // Note: cascade delete in DB handles children, but we should delete files from disk
-    // For a simple implementation, let's just delete the folder entry and depend on ON DELETE CASCADE for DB
-    // A robust implementation would recursively delete files from disk.
-    await pool.execute('DELETE FROM folders WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Pasta removida' });
+    await pool.execute("UPDATE folders SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'Pasta inativada' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Delete file
+// Inativar arquivo
 router.delete(['/files/:id', '/file/:id'], verifyToken, async (req, res) => {
   try {
-    const [file] = await pool.execute('SELECT * FROM files WHERE id = ?', [req.params.id]);
-    if (file.length === 0) return res.status(404).json({ error: 'Arquivo não encontrado' });
-
-    // Physical delete
-    const filePath = path.join(process.cwd(), file[0].file_path);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    await pool.execute('DELETE FROM files WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Arquivo removido' });
+    await pool.execute("UPDATE files SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'Arquivo inativado' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

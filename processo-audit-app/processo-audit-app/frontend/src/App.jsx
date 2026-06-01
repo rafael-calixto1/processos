@@ -17,6 +17,9 @@ import VisualProcesses from './pages/VisualProcesses';
 import ProcessExecution from './pages/ProcessExecution';
 import MyExecutions from './pages/MyExecutions';
 import Files from './pages/Files';
+import Fleet from './pages/Fleet';
+import HotspotGoogleSheets from './pages/HotspotGoogleSheets';
+import HotspotMikrotikConfig from './pages/HotspotMikrotikConfig';
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -226,6 +229,39 @@ function AppContent() {
               <Users />
             </Layout>
           </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/frota"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Fleet />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/ferramentas/hotspot-google-sheets"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HotspotGoogleSheets />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/ferramentas/criar-config-hotspot"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HotspotMikrotikConfig />
+            </Layout>
+          </ProtectedRoute>
         }
       />
 

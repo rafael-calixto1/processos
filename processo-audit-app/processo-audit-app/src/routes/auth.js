@@ -142,14 +142,14 @@ router.get(['/users', '/user'], verifyToken, async (req, res) => {
     const { search, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, email, name, role, created_at FROM users';
-    let countQuery = 'SELECT COUNT(*) as total FROM users';
+    let query = "SELECT id, email, name, role, created_at FROM users WHERE status = 'active'";
+    let countQuery = "SELECT COUNT(*) as total FROM users WHERE status = 'active'";
     let params = [];
     let countParams = [];
 
     if (search) {
-      query += ' WHERE name LIKE ? OR email LIKE ?';
-      countQuery += ' WHERE name LIKE ? OR email LIKE ?';
+      query += ' AND (name LIKE ? OR email LIKE ?)';
+      countQuery += ' AND (name LIKE ? OR email LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
       countParams.push(`%${search}%`, `%${search}%`);
     }
@@ -285,14 +285,14 @@ router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    // Não permitir que o admin se exclua
+    // Não permitir que o admin inative a si mesmo
     if (parseInt(req.params.id) === req.userId) {
-      return res.status(400).json({ error: 'Você não pode excluir seu próprio usuário' });
+      return res.status(400).json({ error: 'Você não pode inativar seu próprio usuário' });
     }
 
-    await pool.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
+    await pool.execute("UPDATE users SET status = 'inactive' WHERE id = ?", [req.params.id]);
 
-    res.json({ message: 'Usuário excluído com sucesso' });
+    res.json({ message: 'Usuário inativado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

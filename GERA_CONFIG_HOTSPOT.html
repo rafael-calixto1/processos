@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurador Hotspot MikroTik - Clube de Rede</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #3b82f6 100%);
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px 16px 0 0;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+        }
+        
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .brand-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e40af;
+        }
+        
+        .brand-link {
+            font-size: 11px;
+            color: #3b82f6;
+            font-weight: 500;
+            text-decoration: none;
+            margin-top: 2px;
+        }
+        
+        .brand-link:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+        
+        .header .subtitle {
+            font-size: 13px;
+            color: #64748b;
+        }
+        
+        .form-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 0 0 16px 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .section:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+        
+        .section h3 {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: white;
+            color: #374151;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+        }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .conditional-fields {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .conditional-fields h4 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            padding: 12px 20px;
+            font-size: 13px;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+            padding: 8px 12px;
+            font-size: 11px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .result {
+            margin-top: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            display: none;
+        }
+        
+        .result h3 {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .result textarea {
+            width: 100%;
+            height: 320px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Cascadia Code', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+        
+        .copy-btn {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+            margin-top: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .small-text {
+            font-size: 10px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
+                        <circle cx="12" cy="8" r="3"/>
+                        <path d="M12 14c-2.5 0-4.71 1.28-6 3.22.65.44 1.39.78 2.2.78 1.6 0 2.8-1.2 2.8-2.8V14h2v1.2c0 1.6 1.2 2.8 2.8 2.8.81 0 1.55-.34 2.2-.78C16.71 15.28 14.5 14 12 14z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-name">CLUBE DE REDE</div>
+                    <a href="https://linktr.ee/clubederede" target="_blank" class="brand-link">linktr.ee/clubederede</a>
+                </div>
+            </div>
+            <h1>Configurador Hotspot MikroTik</h1>
+            <div class="subtitle">Importa default.rsc automaticamente + configurações personalizadas</div>
+        </div>
+        
+        <div class="form-content">
+            <form id="configForm">
+                <!-- Identificação -->
+                <div class="section">
+                    <h3><div class="section-icon">🏢</div> Identificação do Sistema</h3>
+                    <div class="form-group">
+                        <label for="identificacao">Nome do Sistema:</label>
+                        <input type="text" id="identificacao" placeholder="Ex: HOTSPOT CLUBE DE REDE" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="localizacao">Localização (opcional):</label>
+                        <input type="text" id="localizacao" placeholder="Ex: Centro - São Paulo/SP">
+                    </div>
+                </div>
+                
+                <!-- Conexão WAN -->
+                <div class="section">
+                    <h3><div class="section-icon">🌐</div> Conexão WAN</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="interfaceWan">Interface WAN:</label>
+                            <input type="text" id="interfaceWan" value="ether1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tipoWan">Tipo de Conexão:</label>
+                            <select id="tipoWan" required onchange="toggleWanFields(this.value)">
+                                <option value="">Selecione...</option>
+                                <option value="dhcp">DHCP</option>
+                                <option value="pppoe">PPPoE</option>
+                                <option value="static">IP Fixo</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- PPPoE -->
+                    <div id="pppoeFields" class="conditional-fields">
+                        <h4>⚡ Configurações PPPoE</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="usuarioPppoe">Usuário:</label>
+                                <input type="text" id="usuarioPppoe" placeholder="usuario@provedor.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="senhaPppoe">Senha:</label>
+                                <input type="password" id="senhaPppoe" placeholder="•••••••">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- IP Fixo -->
+                    <div id="staticFields" class="conditional-fields">
+                        <h4>🔧 Configurações IP Fixo</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ipStatic">IP/Máscara:</label>
+                                <input type="text" id="ipStatic" placeholder="192.168.1.10/24">
+                            </div>
+                            <div class="form-group">
+                                <label for="gatewayStatic">Gateway:</label>
+                                <input type="text" id="gatewayStatic" placeholder="192.168.1.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controle de Banda -->
+                <div class="section">
+                    <h3><div class="section-icon">⚡</div> Controle de Banda</h3>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="habilitarBanda" onchange="toggleBandaFields(this.checked)">
+                        <label for="habilitarBanda">✅ Habilitar controle de banda PCQ</label>
+                    </div>
+                    
+                    <div id="bandaFields" class="conditional-fields">
+                        <h4>🚀 Configurações PCQ</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="velocidadeDown">Download (Mbps):</label>
+                                <input type="number" id="velocidadeDown" placeholder="100" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="velocidadeUp">Upload (Mbps):</label>
+                                <input type="number" id="velocidadeUp" placeholder="50" min="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Relatórios -->
+                <div class="section">
+                    <h3><div class="section-icon">📊</div> Relatórios Automáticos</h3>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="habilitarRelatorio" checked onchange="toggleRelatorioFields(this.checked)">
+                        <label for="habilitarRelatorio">✅ Gerar relatórios automáticos (chama GeraRelatorio)</label>
+                    </div>
+                    
+                    <div id="relatorioFields" class="conditional-fields" style="display: block;">
+                        <h4>⏰ Intervalo do Relatório</h4>
+                        <div class="form-group">
+                            <label for="intervaloRelatorio">Frequência:</label>
+                            <select id="intervaloRelatorio">
+                                <option value="5m" selected>5 minutos</option>
+                                <option value="10m">10 minutos</option>
+                                <option value="30m">30 minutos</option>
+                                <option value="1h">1 hora</option>
+                                <option value="6h">6 horas</option>
+                                <option value="12h">12 horas</option>
+                                <option value="24h">24 horas</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Limpeza -->
+                <div class="section">
+                    <h3><div class="section-icon">🗑️</div> Limpeza Automática de Usuários</h3>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="habilitarLimpeza" onchange="toggleLimpezaFields(this.checked)">
+                        <label for="habilitarLimpeza">✅ Limpeza automática (chama LimpaUsuarios)</label>
+                    </div>
+                    
+                    <div id="limpezaFields" class="conditional-fields">
+                        <h4>🕒 Intervalo da Limpeza</h4>
+                        <div class="form-group">
+                            <label for="intervaloLimpeza">Frequência:</label>
+                            <select id="intervaloLimpeza">
+                                <option value="1d">1 dia</option>
+                                <option value="3d">3 dias</option>
+                                <option value="7d" selected>7 dias</option>
+                                <option value="15d">15 dias</option>
+                                <option value="30d">30 dias</option>
+                                <option value="90d">90 dias</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sistema -->
+                <div class="section">
+                    <h3><div class="section-icon">🕒</div> Sistema</h3>
+                    <div class="form-group">
+                        <label for="fusoHorario">Fuso Horário:</label>
+                        <select id="fusoHorario">
+                            <option value="America/Fortaleza" selected>America/Fortaleza (CE, MA, PI)</option>
+                            <option value="America/Recife">America/Recife (PE, AL, SE)</option>
+                            <option value="America/Bahia">America/Bahia (BA)</option>
+                            <option value="America/Sao_Paulo">America/Sao_Paulo (SP, RJ, MG, Sul)</option>
+                            <option value="America/Campo_Grande">America/Campo_Grande (MS)</option>
+                            <option value="America/Cuiaba">America/Cuiaba (MT)</option>
+                            <option value="America/Porto_Velho">America/Porto_Velho (RO, AC)</option>
+                            <option value="America/Manaus">America/Manaus (AM)</option>
+                        </select>
+                    </div>
+                    <div class="small-text">O nome do equipamento será o mesmo do "Nome do Sistema"</div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">
+                        ⚙️ Gerar Configurações
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="previewBtn" disabled onclick="togglePreview()">
+                        🔍 Ocultar
+                    </button>
+                </div>
+            </form>
+            
+            <div class="result" id="result">
+                <h3>⚙️ Configurações Personalizadas Geradas</h3>
+                <textarea id="configOutput" readonly></textarea>
+                <button class="copy-btn" onclick="copyConfig()">📋 Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var configGerada = '';
+        
+        function toggleWanFields(tipo) {
+            var pppoeFields = document.getElementById('pppoeFields');
+            var staticFields = document.getElementById('staticFields');
+            
+            pppoeFields.style.display = 'none';
+            staticFields.style.display = 'none';
+            
+            if (tipo === 'pppoe') {
+                pppoeFields.style.display = 'block';
+            } else if (tipo === 'static') {
+                staticFields.style.display = 'block';
+            }
+        }
+        
+        function toggleBandaFields(enabled) {
+            var bandaFields = document.getElementById('bandaFields');
+            bandaFields.style.display = enabled ? 'block' : 'none';
+        }
+        
+        function toggleRelatorioFields(enabled) {
+            var relatorioFields = document.getElementById('relatorioFields');
+            relatorioFields.style.display = enabled ? 'block' : 'none';
+        }
+        
+        function toggleLimpezaFields(enabled) {
+            var limpezaFields = document.getElementById('limpezaFields');
+            limpezaFields.style.display = enabled ? 'block' : 'none';
+        }
+        
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            try {
+                // Validações básicas
+                var identificacao = document.getElementById('identificacao').value;
+                var tipoWan = document.getElementById('tipoWan').value;
+                
+                if (!identificacao) {
+                    alert('❌ Nome do sistema é obrigatório!');
+                    return;
+                }
+                
+                if (!tipoWan) {
+                    alert('❌ Selecione o tipo de conexão WAN!');
+                    return;
+                }
+                
+                // Gerar configuração
+                configGerada = gerarConfiguracao();
+                document.getElementById('configOutput').value = configGerada;
+                
+                // Mostrar preview automaticamente
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('previewBtn').disabled = false;
+                document.getElementById('previewBtn').textContent = '🔍 Ocultar';
+                
+                // Scroll para o preview
+                document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+                
+                alert('✅ Configuração completa gerada!\n\n📋 INSTRUÇÕES:\n1. Faça upload do default.rsc no MikroTik\n2. Cole o script abaixo no terminal\n3. Aguarde a execução automática');
+                
+            } catch (error) {
+                console.error('Erro ao gerar configuração:', error);
+                alert('❌ Erro ao gerar configuração. Verifique o console do navegador.');
+            }
+        });
+        
+        function gerarConfiguracao() {
+            // Coletar dados do formulário
+            var identificacao = document.getElementById('identificacao').value;
+            var localizacao = document.getElementById('localizacao').value;
+            var interfaceWan = document.getElementById('interfaceWan').value;
+            var tipoWan = document.getElementById('tipoWan').value;
+            var fusoHorario = document.getElementById('fusoHorario').value;
+            
+            // CORREÇÃO: Remover referência ao elemento inexistente
+            var nomeRouter = identificacao; // Usar o mesmo nome da identificação
+            
+            var habilitarBanda = document.getElementById('habilitarBanda').checked;
+            var velocidadeDown = document.getElementById('velocidadeDown').value;
+            var velocidadeUp = document.getElementById('velocidadeUp').value;
+            
+            var habilitarRelatorio = document.getElementById('habilitarRelatorio').checked;
+            var intervaloRelatorio = document.getElementById('intervaloRelatorio').value;
+            
+            var habilitarLimpeza = document.getElementById('habilitarLimpeza').checked;
+            var intervaloLimpeza = document.getElementById('intervaloLimpeza').value;
+            
+            var agora = new Date();
+            var data = agora.toLocaleDateString('pt-BR');
+            var hora = agora.toLocaleTimeString('pt-BR');
+            
+            var config = '';
+            config += '# =====================================================\n';
+            config += '# Configuração Completa Hotspot MikroTik\n';
+            config += '# Gerado por: CLUBE DE REDE - linktr.ee/clubederede\n';
+            config += '# Data: ' + data + ', ' + hora + '\n';
+            config += '# Sistema: ' + identificacao + '\n';
+            if (localizacao) config += '# Localização: ' + localizacao + '\n';
+            config += '# =====================================================\n';
+            config += '# INSTRUÇÕES:\n';
+            config += '# 1. Faça upload do arquivo default.rsc no MikroTik\n';
+            config += '# 2. Cole este script completo no terminal\n';
+            config += '# 3. Aguarde a execução automática\n';
+            config += '# =====================================================\n\n';
+            
+            // PASSO 1: Importar default.rsc automaticamente
+            config += '# PASSO 1: Importando scripts base (default.rsc)\n';
+            config += ':log info "Iniciando importacao do default.rsc..."\n';
+            config += '/import default.rsc\n';
+            config += ':delay 3s\n';
+            config += ':log info "Scripts base importados com sucesso!"\n\n';
+            
+            // PASSO 2: Configurações personalizadas
+            config += '# PASSO 2: Aplicando configurações personalizadas\n';
+            config += ':log info "Aplicando configuracoes personalizadas..."\n\n';
+            
+            config += '# Configuração WAN\n';
+            config += ':log info "Configurando conexao WAN..."\n';
+            if (tipoWan === 'dhcp') {
+                config += '/ip dhcp-client\n';
+                config += 'add interface=' + interfaceWan + '\n';
+                config += ':log info "DHCP configurado na interface ' + interfaceWan + '"\n';
+            } else if (tipoWan === 'pppoe') {
+                var usuario = document.getElementById('usuarioPppoe').value;
+                var senha = document.getElementById('senhaPppoe').value;
+                if (usuario && senha) {
+                    config += '/interface pppoe-client\n';
+                    config += 'add add-default-route=yes disabled=no interface=' + interfaceWan + ' name=pppoe-out1 password=' + senha + ' user=' + usuario + '\n';
+                    config += ':log info "PPPoE configurado - Usuario: ' + usuario + '"\n';
+                }
+            } else if (tipoWan === 'static') {
+                var ipStatic = document.getElementById('ipStatic').value;
+                var gatewayStatic = document.getElementById('gatewayStatic').value;
+                if (ipStatic && gatewayStatic) {
+                    config += '/ip address\n';
+                    config += 'add address=' + ipStatic + ' interface=' + interfaceWan + '\n';
+                    config += '/ip route\n';
+                    config += 'add distance=1 gateway=' + gatewayStatic + '\n';
+                    config += ':log info "IP Fixo configurado: ' + ipStatic + '"\n';
+                }
+            }
+            config += '\n';
+            
+            // Controle de banda (se habilitado)
+            if (habilitarBanda && velocidadeDown && velocidadeUp) {
+                config += '# Controle de Banda PCQ\n';
+                config += ':log info "Configurando controle de banda..."\n';
+                config += '/queue type\n';
+                config += 'add kind=pcq name=Download pcq-classifier=dst-address pcq-rate=' + velocidadeDown + 'M\n';
+                config += 'add kind=pcq name=Upload pcq-classifier=src-address pcq-rate=' + velocidadeUp + 'M\n';
+                config += '/queue simple\n';
+                config += 'add name=CONTROLE-HS queue=Upload/Download target=LAN\n';
+                config += ':log info "Controle de banda configurado: ' + velocidadeDown + 'M/' + velocidadeUp + 'M"\n\n';
+            }
+            
+            // Schedulers para scripts existentes
+            config += '# Schedulers (chamam scripts do default.rsc)\n';
+            config += ':log info "Configurando schedulers automaticos..."\n';
+            config += '/system scheduler\n';
+            
+            if (habilitarRelatorio) {
+                config += 'add interval=' + intervaloRelatorio + ' name=RELATORIO on-event=GeraRelatorio policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-time=startup\n';
+                config += ':log info "Scheduler de relatorios configurado: ' + intervaloRelatorio + '"\n';
+            }
+            
+            if (habilitarLimpeza) {
+                config += 'add interval=' + intervaloLimpeza + ' name=LIMPEZA_USUARIOS on-event=LimpaUsuarios policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-time=startup\n';
+                config += ':log info "Scheduler de limpeza configurado: ' + intervaloLimpeza + '"\n';
+            }
+            config += '\n';
+            
+            // Configurações do sistema
+            config += '# Sistema\n';
+            config += ':log info "Configurando sistema..."\n';
+            config += '/system identity\n';
+            config += 'set name="' + nomeRouter + '"\n';
+            config += '/system clock\n';
+            config += 'set time-zone-name=' + fusoHorario + '\n';
+            config += ':log info "Sistema configurado - Nome: ' + nomeRouter + '"\n\n';
+            
+            // Mensagem final
+            config += '# CONFIGURAÇÃO CONCLUÍDA\n';
+            config += ':delay 2s\n';
+            config += ':log info "================================================"\n';
+            config += ':log info "HOTSPOT MIKROTIK CONFIGURADO COM SUCESSO!"\n';
+            config += ':log info "Sistema: ' + identificacao + '"\n';
+            config += ':log info "Scripts base + configuracoes personalizadas aplicados"\n';
+            config += ':log info "Proximo passo: /ip hotspot setup"\n';
+            config += ':log info "================================================"\n';
+            config += ':put "✅ CONFIGURAÇÃO CONCLUÍDA! Execute: /ip hotspot setup"\n\n';
+            
+            config += '# =====================================================\n';
+            config += '# RESUMO DA CONFIGURAÇÃO APLICADA\n';
+            config += '# =====================================================\n';
+            config += '# ✅ Scripts base importados automaticamente\n';
+            config += '# ✅ Conexão WAN configurada (' + tipoWan.toUpperCase() + ')\n';
+            if (habilitarBanda) config += '# ✅ Controle de banda ativo (' + velocidadeDown + 'M/' + velocidadeUp + 'M)\n';
+            if (habilitarRelatorio) config += '# ✅ Relatórios automáticos (' + intervaloRelatorio + ')\n';
+            if (habilitarLimpeza) config += '# ✅ Limpeza automática (' + intervaloLimpeza + ')\n';
+            config += '# ✅ Sistema configurado (' + nomeRouter + ')\n';
+            config += '# =====================================================\n';
+            config += '# PRÓXIMOS PASSOS:\n';
+            config += '# 1. Execute: /ip hotspot setup\n';
+            config += '# 2. Adicione interfaces à bridge LAN\n';
+            config += '# 3. Configure página de login (opcional)\n';
+            config += '# =====================================================\n';
+            
+            return config;
+        }
+        
+        function togglePreview() {
+            var result = document.getElementById('result');
+            var btn = document.getElementById('previewBtn');
+            
+            if (result.style.display === 'block') {
+                result.style.display = 'none';
+                btn.textContent = '👁️ Mostrar';
+            } else {
+                result.style.display = 'block';
+                btn.textContent = '🔍 Ocultar';
+                result.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        function copyConfig() {
+            var textarea = document.getElementById('configOutput');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // Para dispositivos móveis
+            
+            try {
+                document.execCommand('copy');
+                alert('✅ Script copiado! Cole no terminal do MikroTik.');
+            } catch (err) {
+                // Fallback para navegadores mais novos
+                navigator.clipboard.writeText(textarea.value).then(function() {
+                    alert('✅ Script copiado! Cole no terminal do MikroTik.');
+                }).catch(function() {
+                    alert('❌ Erro ao copiar. Use Ctrl+C para copiar manualmente.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

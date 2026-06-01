@@ -94,22 +94,22 @@ const Files = () => {
   };
 
   const handleDeleteFolder = async (id, name) => {
-    if (!window.confirm(`Tem certeza que deseja excluir a pasta "${name}" e todo seu conteúdo?`)) return;
+    if (!window.confirm(`Tem certeza que deseja inativar a pasta "${name}"?`)) return;
     try {
       await fileAPI.deleteFolder(id);
       loadContents();
     } catch (err) {
-      setError('Erro ao excluir pasta: ' + err.message);
+      setError('Erro ao inativar pasta: ' + err.message);
     }
   };
 
   const handleDeleteFile = async (id, name) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o arquivo "${name}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja inativar o arquivo "${name}"?`)) return;
     try {
       await fileAPI.deleteFile(id);
       loadContents();
     } catch (err) {
-      setError('Erro ao excluir arquivo: ' + err.message);
+      setError('Erro ao inativar arquivo: ' + err.message);
     }
   };
 
@@ -415,7 +415,7 @@ const Files = () => {
                         <FiEdit2 /> Renomear
                       </button>
                       <button onClick={() => { handleDeleteFolder(folder.id, folder.name); setActiveMenu(null); }} className={styles.deleteOption}>
-                        <FiTrash2 /> Excluir
+                        <FiTrash2 /> Inativar
                       </button>
                     </div>
                   )}
@@ -470,7 +470,7 @@ const Files = () => {
                         <FiEdit2 /> Renomear
                       </button>
                       <button onClick={() => { handleDeleteFile(file.id, file.name); setActiveMenu(null); }} className={styles.deleteOption}>
-                        <FiTrash2 /> Excluir
+                        <FiTrash2 /> Inativar
                       </button>
                     </div>
                   )}
