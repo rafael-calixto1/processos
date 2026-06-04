@@ -104,6 +104,29 @@ const ProcessExecution = () => {
     return url;
   };
 
+  const groupStepsBySection = (steps) => {
+    if (!steps) return [];
+    const groups = [];
+    let currentGroup = { section: null, steps: [] };
+
+    steps.forEach((step) => {
+      if (step.section !== currentGroup.section) {
+        if (currentGroup.steps.length > 0 || currentGroup.section !== null) {
+          groups.push(currentGroup);
+        }
+        currentGroup = { section: step.section, steps: [step] };
+      } else {
+        currentGroup.steps.push(step);
+      }
+    });
+
+    if (currentGroup.steps.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  };
+
   const handleFinalize = async () => {
     if (window.confirm('Tem certeza que deseja finalizar este processo? Todos os passos devem estar completos.')) {
       try {
@@ -200,161 +223,172 @@ const ProcessExecution = () => {
       <div className={styles.checklistContainer}>
         {execution.steps && execution.steps.length > 0 ? (
           <div className={styles.stepsList}>
-            {execution.steps.map((stepExec, idx) => {
-              const isCompleted = !!stepExec.completed_at;
-              return (
-                <div
-                  key={stepExec.id}
-                  className={`${styles.stepItem} ${isCompleted ? styles.completed : ''}`}
-                >
-                  {/* Step Header */}
-                  <div
-                    className={styles.stepHeader}
-                    onClick={() =>
-                      setExpandedStep(expandedStep === stepExec.id ? null : stepExec.id)
-                    }
-                  >
-                    <div className={styles.stepNumber}>
-                      {isCompleted ? (
-                        <FiCheckCircle size={24} color="var(--success)" />
-                      ) : (
-                        <div className={styles.number}>{idx + 1}</div>
-                      )}
-                    </div>
-
-                    <div className={styles.stepInfo}>
-                      <h3 className={isCompleted ? styles.completedText : ''}>
-                        {stepExec.title}
-                      </h3>
-                      {stepExec.description && (
-                        <p className={styles.stepDesc}>{stepExec.description}</p>
-                      )}
-                      {isCompleted && stepExec.completed_at && (
-                        <p className={styles.completedInfo}>
-                          ✓ Completo em {new Date(stepExec.completed_at).toLocaleString('pt-BR')}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className={styles.expandIcon}>
-                      {expandedStep === stepExec.id ? '▼' : '▶'}
-                    </div>
+            {groupStepsBySection(execution.steps).map((group, gIdx) => (
+              <div key={gIdx} className={styles.sectionGroup}>
+                {group.section && (
+                  <div className={styles.sectionHeader}>
+                    <h3>{group.section}</h3>
                   </div>
-
-                  {/* Step Content */}
-                  {expandedStep === stepExec.id && (
-                    <div className={styles.stepContent}>
-                      {/* Documentation */}
-                      {(stepExec.documentation_markdown || stepExec.photo_url) && (
-                        <div className={styles.documentation}>
-                          <h4>Instruções</h4>
-                          {stepExec.documentation_markdown && (
-                            <div className={styles.markdown}>
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {stepExec.documentation_markdown}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                          {stepExec.photo_url && (
-                            <img 
-                              src={getFullUrl(stepExec.photo_url)} 
-                              alt="Instrução visual" 
-                              className={styles.instructionPhoto}
-                              onClick={() => openImage(stepExec.photo_url)}
-                            />
+                )}
+                {group.steps.map((stepExec) => {
+                  const isCompleted = !!stepExec.completed_at;
+                  // Encontrar o índice global para a numeração
+                  const globalIdx = execution.steps.findIndex(s => s.id === stepExec.id);
+                  return (
+                    <div
+                      key={stepExec.id}
+                      className={`${styles.stepItem} ${isCompleted ? styles.completed : ''}`}
+                    >
+                      {/* Step Header */}
+                      <div
+                        className={styles.stepHeader}
+                        onClick={() =>
+                          setExpandedStep(expandedStep === stepExec.id ? null : stepExec.id)
+                        }
+                      >
+                        <div className={styles.stepNumber}>
+                          {isCompleted ? (
+                            <FiCheckCircle size={24} color="var(--success)" />
+                          ) : (
+                            <div className={styles.number}>{globalIdx + 1}</div>
                           )}
                         </div>
-                      )}
 
-                      {/* Notes and Photo Upload */}
-                      {!isCompleted && (
-                        <div className={styles.notesSection}>
-                          <label htmlFor={`notes-${stepExec.id}`}>
-                            Anotações (opcional)
-                          </label>
-                          <textarea
-                            id={`notes-${stepExec.id}`}
-                            value={stepNotes[stepExec.id] || ''}
-                            onChange={(e) =>
-                              setStepNotes({
-                                ...stepNotes,
-                                [stepExec.id]: e.target.value
-                              })
-                            }
-                            placeholder="Adicione anotações sobre este passo..."
-                            rows={3}
-                          />
+                        <div className={styles.stepInfo}>
+                          <h3 className={isCompleted ? styles.completedText : ''}>
+                            {stepExec.title}
+                          </h3>
+                          {stepExec.description && (
+                            <p className={styles.stepDesc}>{stepExec.description}</p>
+                          )}
+                          {isCompleted && stepExec.completed_at && (
+                            <p className={styles.completedInfo}>
+                              ✓ Completo em {new Date(stepExec.completed_at).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
 
-                          {/* Photo Upload */}
-                          <div className={styles.photoSection}>
-                            <label>
-                              <FiCamera /> Evidência Fotográfica
-                            </label>
-                            
-                            <label htmlFor={`photo-${stepExec.id}`} className={styles.photoButton}>
-                              {stepPhotos[stepExec.id] ? '📸 Alterar Foto' : '➕ Adicionar Foto'}
-                            </label>
-                            
-                            <input
-                              type="file"
-                              id={`photo-${stepExec.id}`}
-                              accept="image/*"
-                              className={styles.photoInput}
-                              onChange={(e) => handlePhotoChange(stepExec.id, e.target.files[0])}
-                            />
-                            
-                            {stepPhotos[stepExec.id] && (
-                              <div className={styles.photoPreview}>
+                        <div className={styles.expandIcon}>
+                          {expandedStep === stepExec.id ? '▼' : '▶'}
+                        </div>
+                      </div>
+
+                      {/* Step Content */}
+                      {expandedStep === stepExec.id && (
+                        <div className={styles.stepContent}>
+                          {/* Documentation */}
+                          {(stepExec.documentation_markdown || stepExec.photo_url) && (
+                            <div className={styles.documentation}>
+                              <h4>Instruções</h4>
+                              {stepExec.documentation_markdown && (
+                                <div className={styles.markdown}>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {stepExec.documentation_markdown}
+                                  </ReactMarkdown>
+                                </div>
+                              )}
+                              {stepExec.photo_url && (
                                 <img 
-                                  src={URL.createObjectURL(stepPhotos[stepExec.id])} 
-                                  alt="Preview" 
-                                  onClick={() => openImage(URL.createObjectURL(stepPhotos[stepExec.id]))}
-                                  style={{ cursor: 'pointer' }}
+                                  src={getFullUrl(stepExec.photo_url)} 
+                                  alt="Instrução visual" 
+                                  className={styles.instructionPhoto}
+                                  onClick={() => openImage(stepExec.photo_url)}
                                 />
-                                <p style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '0.5rem' }}>
-                                  ✓ Foto selecionada: {stepPhotos[stepExec.id].name}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={() => handleCompleteStep(stepExec.id)}
-                            disabled={saving}
-                            className={`btn btn-primary btn-small`}
-                          >
-                            {saving ? 'Salvando...' : 'Marcar como Completo'}
-                          </button>
-                        </div>
-                      )}
-
-                      {isCompleted && (
-                        <>
-                          {stepExec.notes && (
-                            <div className={styles.notesDisplay}>
-                              <h4>Anotações</h4>
-                              <p>{stepExec.notes}</p>
+                              )}
                             </div>
                           )}
-                          
-                          {stepExec.photo_url && (
-                            <div className={styles.photoDisplay}>
-                              <h4><FiImage /> Evidência</h4>
-                              <img 
-                                src={getFullUrl(stepExec.photo_url)} 
-                                alt="Evidência do passo" 
-                                className={styles.photoImg}
-                                onClick={() => openImage(stepExec.photo_url)}
+
+                          {/* Notes and Photo Upload */}
+                          {!isCompleted && (
+                            <div className={styles.notesSection}>
+                              <label htmlFor={`notes-${stepExec.id}`}>
+                                Anotações (opcional)
+                              </label>
+                              <textarea
+                                id={`notes-${stepExec.id}`}
+                                value={stepNotes[stepExec.id] || ''}
+                                onChange={(e) =>
+                                  setStepNotes({
+                                    ...stepNotes,
+                                    [stepExec.id]: e.target.value
+                                  })
+                                }
+                                placeholder="Adicione anotações sobre este passo..."
+                                rows={3}
                               />
+
+                              {/* Photo Upload */}
+                              <div className={styles.photoSection}>
+                                <label>
+                                  <FiCamera /> Evidência Fotográfica
+                                </label>
+                                
+                                <label htmlFor={`photo-${stepExec.id}`} className={styles.photoButton}>
+                                  {stepPhotos[stepExec.id] ? '📸 Alterar Foto' : '➕ Adicionar Foto'}
+                                </label>
+                                
+                                <input
+                                  type="file"
+                                  id={`photo-${stepExec.id}`}
+                                  accept="image/*"
+                                  className={styles.photoInput}
+                                  onChange={(e) => handlePhotoChange(stepExec.id, e.target.files[0])}
+                                />
+                                
+                                {stepPhotos[stepExec.id] && (
+                                  <div className={styles.photoPreview}>
+                                    <img 
+                                      src={URL.createObjectURL(stepPhotos[stepExec.id])} 
+                                      alt="Preview" 
+                                      onClick={() => openImage(URL.createObjectURL(stepPhotos[stepExec.id]))}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--success)', marginTop: '0.5rem' }}>
+                                      ✓ Foto selecionada: {stepPhotos[stepExec.id].name}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              <button
+                                onClick={() => handleCompleteStep(stepExec.id)}
+                                disabled={saving}
+                                className={`btn btn-primary btn-small`}
+                              >
+                                {saving ? 'Salvando...' : 'Marcar como Completo'}
+                              </button>
                             </div>
                           )}
-                        </>
+
+                          {isCompleted && (
+                            <>
+                              {stepExec.notes && (
+                                <div className={styles.notesDisplay}>
+                                  <h4>Anotações</h4>
+                                  <p>{stepExec.notes}</p>
+                                </div>
+                              )}
+                              
+                              {stepExec.photo_url && (
+                                <div className={styles.photoDisplay}>
+                                  <h4><FiImage /> Evidência</h4>
+                                  <img 
+                                    src={getFullUrl(stepExec.photo_url)} 
+                                    alt="Evidência do passo" 
+                                    className={styles.photoImg}
+                                    onClick={() => openImage(stepExec.photo_url)}
+                                  />
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ))}
           </div>
         ) : (
           <div className={styles.empty}>
