@@ -1,7 +1,38 @@
 import express from 'express';
 import pool from '../config/database.js';
+import { parseFuelReceipt } from '../services/receiptService.js';
 
 const router = express.Router();
+
+/* ──────────────────────────────────────────
+   RECEIPT PARSING
+   ────────────────────────────────────────── */
+
+router.post('/fueling/parse-receipt', async (req, res) => {
+  try {
+    let { html, url } = req.body;
+    
+    if (!html && !url) {
+      return res.status(400).json({ error: 'O HTML ou a URL do cupom é obrigatório' });
+    }
+
+    if (url) {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      if (!response.ok) throw new Error('Falha ao buscar a URL da Sefaz');
+      html = await response.text();
+    }
+
+    const data = parseFuelReceipt(html);
+    res.json(data);
+  } catch (err) {
+    console.error('Erro no parse-receipt:', err);
+    res.status(500).json({ error: 'Erro ao processar o cupom: ' + err.message });
+  }
+});
 
 /* ──────────────────────────────────────────
    DRIVERS

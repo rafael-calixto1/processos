@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, Fuel } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Pencil, Trash2, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
+import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import styles from './Fleet.module.css';
 
 const LIMIT = 15;
@@ -25,6 +26,16 @@ const FleetFueling = () => {
   const [saving,       setSaving]       = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  /* QR Code Import States */
+  const [showImport,   setShowImport]   = useState(false);
+  const [importMode,   setImportMode]   = useState('camera'); // 'camera', 'paste', 'file'
+  const [importHtml,   setImportHtml]   = useState('');
+  const [importing,    setImporting]    = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  
+  const qrRef = useRef(null);
+  const scannerRef = useRef(null);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
@@ -52,6 +63,58 @@ const FleetFueling = () => {
   }, [page]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
+
+  // Handle Scanner
+  useEffect(() => {
+    let html5QrCode;
+    
+    const initScanner = async () => {
+      if (showImport && importMode === 'camera') {
+        // Small delay to ensure React has rendered the #qr-reader div
+        await new Promise(r => setTimeout(r, 300));
+        
+        const element = document.getElementById("qr-reader");
+        if (!element) return;
+
+        // Check for secure context (required for camera)
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+          setError('A câmera requer uma conexão segura (HTTPS). Por favor, use o modo "Colar HTML" ou "Imagem".');
+          setImportMode('paste');
+          return;
+        }
+
+        try {
+          html5QrCode = new Html5Qrcode("qr-reader");
+          scannerRef.current = html5QrCode;
+          
+          await html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+              handleImport({ url: decodedText });
+              if (html5QrCode.isScanning) {
+                html5QrCode.stop().catch(e => console.error("Stop error", e));
+              }
+            },
+            () => {} // ignore scan failures
+          );
+        } catch (err) {
+          console.error("Camera error:", err);
+          setError("Não foi possível acessar a câmera. Verifique as permissões.");
+          setImportMode('paste');
+        }
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(err => console.error("Cleanup error", err));
+      }
+      scannerRef.current = null;
+    };
+  }, [showImport, importMode]);
 
   /* Auto-calculate total_cost */
   const handleFormChange = (field, value) => {
@@ -129,6 +192,86 @@ const FleetFueling = () => {
     }
   };
 
+  const handleImport = async (payload) => {
+    if (!payload.url && !payload.html) return;
+    setImporting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/fleet/fueling/parse-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Falha ao processar cupom');
+      }
+      const data = await res.json();
+      
+      // Auto-map car by plate
+      let mappedCarId = '';
+      if (data.fleet.licensePlate) {
+        const p = data.fleet.licensePlate.replace('-', '').toUpperCase();
+        const car = cars.find(c => c.license_plate.replace('-', '').toUpperCase() === p);
+        if (car) mappedCarId = car.id;
+      }
+
+      const fuelingDate = data.transaction.date 
+        ? data.transaction.date.split(' ')[0].split('/').reverse().join('-') 
+        : new Date().toISOString().slice(0, 10);
+
+      // Map fuel type
+      const p = (data.transaction.product || '').toUpperCase();
+      let fType = 'Gasolina';
+      if (p.includes('ETANOL')) fType = 'Etanol';
+      else if (p.includes('DIESEL')) fType = 'Diesel';
+      else if (p.includes('GNV')) fType = 'GNV';
+
+      setForm({
+        ...emptyForm,
+        car_id: mappedCarId,
+        fuel_date: fuelingDate,
+        fueling_kilometers: data.fleet.mileage || '',
+        liters_quantity: data.transaction.quantity || '',
+        price_per_liter: data.transaction.unitPrice || '',
+        total_cost: data.transaction.totalValue || '',
+        fuel_type: fType,
+        observation: `Importado via QR Code. Posto: ${data.issuer.name}. Motorista: ${data.fleet.driver || 'Não informado'}`,
+      });
+
+      setImportResult({
+        success: true,
+        carFound: !!mappedCarId,
+        plate: data.fleet.licensePlate,
+        issuer: data.issuer.name
+      });
+      
+      setShowImport(false);
+      setShowForm(true);
+    } catch (e) {
+      console.error(e);
+      setError('Erro ao processar cupom: ' + e.message);
+    } finally {
+      setImporting(false);
+      setImportHtml('');
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const html5QrCode = new Html5Qrcode("qr-reader-hidden");
+    html5QrCode.scanFile(file, true)
+      .then(decodedText => {
+        handleImport({ url: decodedText });
+      })
+      .catch(err => {
+        setError("Não foi possível ler um QR Code nesta imagem.");
+        console.error(err);
+      });
+  };
+
   const getCarLabel = id => {
     const c = cars.find(x => String(x.id) === String(id));
     return c ? `${c.make} ${c.model} (${c.license_plate})` : '—';
@@ -145,10 +288,102 @@ const FleetFueling = () => {
 
       <div className={styles.filterRow}>
         <div style={{ flex: 1 }} />
-        <button className={styles.btnPrimary} onClick={openAdd}>
-          <Plus size={16} /> Novo Abastecimento
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className={styles.btnSecondary} onClick={() => { setShowImport(true); setImportMode('camera'); }}>
+            <QrCode size={16} /> Ler QR Code
+          </button>
+          <button className={styles.btnPrimary} onClick={openAdd}>
+            <Plus size={16} /> Novo Abastecimento
+          </button>
+        </div>
       </div>
+
+      {/* QR Import Modal */}
+      {showImport && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal} style={{ maxWidth: '600px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Importar Cupom Fiscal (NFC-e)</h3>
+              <button onClick={() => setShowImport(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <button 
+                className={importMode === 'camera' ? styles.btnPrimary : styles.btnSecondary} 
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                onClick={() => setImportMode('camera')}
+              >
+                <Camera size={14} style={{ marginRight: '4px' }} /> Câmera
+              </button>
+              <button 
+                className={importMode === 'file' ? styles.btnPrimary : styles.btnSecondary} 
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                onClick={() => setImportMode('file')}
+              >
+                <Upload size={14} style={{ marginRight: '4px' }} /> Imagem
+              </button>
+              <button 
+                className={importMode === 'paste' ? styles.btnPrimary : styles.btnSecondary} 
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                onClick={() => setImportMode('paste')}
+              >
+                <ClipboardPaste size={14} style={{ marginRight: '4px' }} /> Colar HTML
+              </button>
+            </div>
+
+            {importMode === 'camera' && (
+              <div style={{ textAlign: 'center' }}>
+                <div id="qr-reader" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden', border: 'none' }}></div>
+                <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-medium)' }}>
+                  Aponte a câmera para o QR Code do cupom fiscal.
+                </p>
+              </div>
+            )}
+
+            {importMode === 'file' && (
+              <div style={{ textAlign: 'center', padding: '2rem', border: '2px dashed var(--border-color)', borderRadius: '12px' }}>
+                <input type="file" id="qr-file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+                <label htmlFor="qr-file" style={{ cursor: 'pointer' }}>
+                  <Upload size={40} color="var(--text-light)" style={{ marginBottom: '1rem' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>Clique para selecionar a foto do QR Code</p>
+                  <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-light)' }}>Ou tire uma foto agora</p>
+                </label>
+                <div id="qr-reader-hidden" style={{ display: 'none' }}></div>
+              </div>
+            )}
+
+            {importMode === 'paste' && (
+              <>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-medium)', marginBottom: '1rem' }}>
+                  Cole o conteúdo HTML da página de consulta da Sefaz-SP abaixo.
+                </p>
+                <textarea
+                  className={styles.textarea}
+                  placeholder="Cole o HTML aqui..."
+                  rows={8}
+                  value={importHtml}
+                  onChange={e => setImportHtml(e.target.value)}
+                  style={{ marginBottom: '1.25rem', fontFamily: 'monospace', fontSize: '0.75rem' }}
+                />
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button className={styles.btnPrimary} onClick={() => handleImport({ html: importHtml })} disabled={importing || !importHtml.trim()}>
+                    {importing ? 'Processando...' : 'Processar e Preencher'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {importing && (
+              <div style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--primary-color)', fontWeight: 600 }}>
+                <div className="spinner" style={{ margin: '0 auto 0.5rem' }} />
+                Buscando dados na Sefaz...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Inline Form */}
       {showForm && (
@@ -159,6 +394,32 @@ const FleetFueling = () => {
               <X size={18} />
             </button>
           </div>
+
+          {importResult && (
+            <div style={{ 
+              marginBottom: '1.5rem', 
+              padding: '0.75rem', 
+              borderRadius: '8px', 
+              background: importResult.carFound ? 'rgba(11, 165, 43, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              fontSize: '0.875rem',
+              color: importResult.carFound ? 'var(--primary-color)' : '#854d0e',
+              border: `1px solid ${importResult.carFound ? 'var(--primary-color)' : '#ca8a04'}33`
+            }}>
+              {importResult.carFound ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <div>
+                <strong>Cupom lido com sucesso!</strong><br />
+                Posto: {importResult.issuer} | Placa: {importResult.plate || 'Não identificada'}<br />
+                {!importResult.carFound && "O veículo desta placa não foi encontrado no sistema. Por favor, selecione-o manualmente."}
+              </div>
+              <button onClick={() => setImportResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSave}>
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
