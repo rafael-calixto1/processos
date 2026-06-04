@@ -251,6 +251,18 @@
   transform: scale(1.05);
 }
 
+.sectionBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
 .loadingContainer,
 .errorContainer {
   display: flex;

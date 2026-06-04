@@ -216,6 +216,29 @@ const ProcessDetail = () => {
     return url;
   };
 
+  const groupStepsBySection = (steps) => {
+    if (!steps) return [];
+    const groups = [];
+    let currentGroup = { section: null, steps: [] };
+
+    steps.forEach((step) => {
+      if (step.section !== currentGroup.section) {
+        if (currentGroup.steps.length > 0 || currentGroup.section !== null) {
+          groups.push(currentGroup);
+        }
+        currentGroup = { section: step.section, steps: [step] };
+      } else {
+        currentGroup.steps.push(step);
+      }
+    });
+
+    if (currentGroup.steps.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  };
+
   const formatStatus = (status) => {
     switch (status) {
       case 'active': return 'Ativo';
@@ -484,47 +507,60 @@ const ProcessDetail = () => {
           <div className={styles.stepsSection}>
             {process.steps && process.steps.length > 0 ? (
               <div className={styles.stepsList}>
-                {process.steps.map((step, idx) => (
-                  <div key={step.id} className={styles.stepCard}>
-                    <div
-                      className={styles.stepHeader}
-                      onClick={() => 
-                        setExpandedStep(expandedStep === step.id ? null : step.id)
-                      }
-                    >
-                      <div className={styles.stepNumber}>{idx + 1}</div>
-                      <div className={styles.stepTitle}>
-                        <h3>{step.title}</h3>
-                        {step.description && (
-                          <p className={styles.stepDesc}>{step.description}</p>
-                        )}
-                      </div>
-                      <div className={styles.expandIcon}>
-                        {expandedStep === step.id ? '▼' : '▶'}
-                      </div>
-                    </div>
-
-                    {(expandedStep === step.id && (step.documentation_markdown || step.photo_url)) && (
-                      <div className={styles.stepContent}>
-                        {step.documentation_markdown && (
-                          <div className={styles.markdown}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {step.documentation_markdown}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-                        {step.photo_url && (
-                          <div className={styles.photoContainer}>
-                            <img 
-                              src={getFullUrl(step.photo_url)} 
-                              alt="Instrução visual" 
-                              className={styles.instructionPhoto}
-                              onClick={() => openImage(step.photo_url)}
-                            />
-                          </div>
-                        )}
+                {groupStepsBySection(process.steps).map((group, gIdx) => (
+                  <div key={gIdx} className={styles.sectionGroup}>
+                    {group.section && (
+                      <div className={styles.sectionHeader}>
+                        <h3>{group.section}</h3>
                       </div>
                     )}
+                    {group.steps.map((step, idx) => {
+                      // Encontrar o índice global do passo para manter a numeração correta
+                      const globalIdx = process.steps.findIndex(s => s.id === step.id);
+                      return (
+                        <div key={step.id} className={styles.stepCard}>
+                          <div
+                            className={styles.stepHeader}
+                            onClick={() => 
+                              setExpandedStep(expandedStep === step.id ? null : step.id)
+                            }
+                          >
+                            <div className={styles.stepNumber}>{globalIdx + 1}</div>
+                            <div className={styles.stepTitle}>
+                              <h3>{step.title}</h3>
+                              {step.description && (
+                                <p className={styles.stepDesc}>{step.description}</p>
+                              )}
+                            </div>
+                            <div className={styles.expandIcon}>
+                              {expandedStep === step.id ? '▼' : '▶'}
+                            </div>
+                          </div>
+
+                          {(expandedStep === step.id && (step.documentation_markdown || step.photo_url)) && (
+                            <div className={styles.stepContent}>
+                              {step.documentation_markdown && (
+                                <div className={styles.markdown}>
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {step.documentation_markdown}
+                                  </ReactMarkdown>
+                                </div>
+                              )}
+                              {step.photo_url && (
+                                <div className={styles.photoContainer}>
+                                  <img 
+                                    src={getFullUrl(step.photo_url)} 
+                                    alt="Instrução visual" 
+                                    className={styles.instructionPhoto}
+                                    onClick={() => openImage(step.photo_url)}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>

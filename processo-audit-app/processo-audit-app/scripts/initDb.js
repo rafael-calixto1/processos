@@ -70,6 +70,7 @@ const initDb = async () => {
         step_number INT NOT NULL,
         title VARCHAR(255) NOT NULL,
         description TEXT,
+        section VARCHAR(255),
         documentation_link VARCHAR(255),
         documentation_markdown LONGTEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

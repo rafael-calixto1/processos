@@ -19,9 +19,9 @@ const ProcessEdit = () => {
     status: 'active',
     steps: []
   });
-  const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
+  const [newStep, setNewStep] = useState({ title: '', description: '', section: '', photo_url: '' });
   const [editingIndex, setEditingIndex] = useState(null);
-  const [editStepData, setEditStepData] = useState({ title: '', description: '', photo_url: '' });
+  const [editStepData, setEditStepData] = useState({ title: '', description: '', section: '', photo_url: '' });
 
   useEffect(() => {
     loadData();
@@ -82,12 +82,12 @@ const ProcessEdit = () => {
         ...formData,
         steps: [...formData.steps, { ...newStep, documentation_markdown: '' }]
       });
-      setNewStep({ title: '', description: '', photo_url: '' });
+      setNewStep({ title: '', description: '', section: '', photo_url: '' });
     }
   };
 
   const handleInsertStep = (index) => {
-    const newEmptyStep = { title: '', description: '', photo_url: '', documentation_markdown: '' };
+    const newEmptyStep = { title: '', description: '', section: '', photo_url: '', documentation_markdown: '' };
     const updatedSteps = [...formData.steps];
     updatedSteps.splice(index, 0, newEmptyStep);
     
@@ -96,7 +96,7 @@ const ProcessEdit = () => {
       steps: updatedSteps
     });
     setEditingIndex(index);
-    setEditStepData({ title: '', description: '', photo_url: '' });
+    setEditStepData({ title: '', description: '', section: '', photo_url: '' });
   };
 
   const handleRemoveStep = (index) => {
@@ -125,6 +125,7 @@ const ProcessEdit = () => {
     setEditStepData({
       title: formData.steps[index].title,
       description: formData.steps[index].description || '',
+      section: formData.steps[index].section || '',
       photo_url: formData.steps[index].photo_url || ''
     });
   };
@@ -135,6 +136,7 @@ const ProcessEdit = () => {
       ...updatedSteps[index],
       title: editStepData.title,
       description: editStepData.description,
+      section: editStepData.section,
       photo_url: editStepData.photo_url
     };
     setFormData({ ...formData, steps: updatedSteps });
@@ -268,6 +270,14 @@ const ProcessEdit = () => {
                       className={styles.editInput}
                       style={{ width: '100%', marginBottom: '0.5rem' }}
                     />
+                    <input
+                      type="text"
+                      value={editStepData.section}
+                      onChange={(e) => setEditStepData({ ...editStepData, section: e.target.value })}
+                      placeholder="Seção (ex: Preparação)"
+                      className={styles.editInput}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
                     
                     <div className={styles.stepPhotoSection} style={{ marginBottom: '1rem' }}>
                       <label htmlFor={`edit-photo-${idx}`} className={styles.photoBtn}>
@@ -311,6 +321,7 @@ const ProcessEdit = () => {
                   <>
                     <div className={styles.stepInfo}>
                       <h4>{idx + 1}. {step.title}</h4>
+                      {step.section && <span className={styles.sectionBadge}>{step.section}</span>}
                       {step.description && <p>{step.description}</p>}
                       {step.photo_url && (
                         <img 
@@ -392,6 +403,14 @@ const ProcessEdit = () => {
                 placeholder="Descrição (opcional)"
                 value={newStep.description}
                 onChange={(e) => setNewStep({ ...newStep, description: e.target.value })}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <input
+                type="text"
+                placeholder="Seção (ex: Preparação)"
+                value={newStep.section}
+                onChange={(e) => setNewStep({ ...newStep, section: e.target.value })}
               />
             </div>
 

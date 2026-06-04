@@ -21,6 +21,9 @@ import Fleet from './pages/Fleet';
 import Tickets from './pages/Tickets';
 import HotspotGoogleSheets from './pages/HotspotGoogleSheets';
 import HotspotMikrotikConfig from './pages/HotspotMikrotikConfig';
+import HubsoftTecnicos from './pages/HubsoftTecnicos';
+import HubsoftExplorer from './pages/HubsoftExplorer';
+import HubsoftLoginSearch from './pages/HubsoftLoginSearch';
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -274,6 +277,39 @@ function AppContent() {
               <HotspotMikrotikConfig />
             </Layout>
           </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/ferramentas/hubsoft-login-search"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HubsoftLoginSearch />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/hubsoft/tecnicos"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HubsoftTecnicos />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/hubsoft/explorer"
+        element={
+          <AdminRoute>
+            <Layout>
+              <HubsoftExplorer />
+            </Layout>
+          </AdminRoute>
         }
       />
 

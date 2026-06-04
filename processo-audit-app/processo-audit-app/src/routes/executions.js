@@ -97,7 +97,7 @@ router.get(['/executions/:executionId', '/execution/:executionId'], verifyToken,
 
     // Obter passos com status de conclusão
     const [stepExecutions] = await pool.execute(
-      `SELECT se.*, s.title, s.description, s.documentation_markdown
+      `SELECT se.*, s.title, s.description, s.section, s.documentation_markdown
        FROM step_executions se
        JOIN steps s ON se.step_id = s.id
        WHERE se.execution_id = ?

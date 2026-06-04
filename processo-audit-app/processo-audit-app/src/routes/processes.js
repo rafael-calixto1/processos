@@ -71,9 +71,9 @@ router.post(['/processes', '/process'], verifyToken, checkRole(['admin', 'manage
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await pool.execute(
-          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown, photo_url) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '', step.photo_url || null]
+          `INSERT INTO steps (process_id, step_number, title, description, section, documentation_markdown, photo_url) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [processId, i + 1, step.title, step.description || '', step.section || null, step.documentation_markdown || '', step.photo_url || null]
         );
       }
     }
@@ -257,9 +257,9 @@ router.put(['/processes/:id', '/process/:id'], verifyToken, checkRole(['admin', 
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await pool.execute(
-          `INSERT INTO steps (process_id, step_number, title, description, documentation_markdown, photo_url) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [processId, i + 1, step.title, step.description || '', step.documentation_markdown || '', step.photo_url || null]
+          `INSERT INTO steps (process_id, step_number, title, description, section, documentation_markdown, photo_url) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [processId, i + 1, step.title, step.description || '', step.section || null, step.documentation_markdown || '', step.photo_url || null]
         );
       }
     }

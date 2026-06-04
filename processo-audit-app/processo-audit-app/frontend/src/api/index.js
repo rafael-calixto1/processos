@@ -373,10 +373,11 @@ export const ticketAPI = {
     return res.json();
   },
 
-  list: async ({ status, priority, filter, page = 1, limit = 20 } = {}) => {
+  list: async ({ status, priority, type, filter, page = 1, limit = 20 } = {}) => {
     const params = new URLSearchParams({ page, limit });
     if (status)   params.append('status', status);
     if (priority) params.append('priority', priority);
+    if (type)     params.append('type', type);
     if (filter)   params.append('filter', filter);
     const res = await fetch(`${API_URL}/tickets?${params}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
@@ -430,6 +431,77 @@ export const ticketAPI = {
 
   deleteComment: async (ticketId, commentId) => {
     const res = await fetch(`${API_URL}/tickets/${ticketId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+};
+
+// ======== HUBSOFT ========
+export const hubsoftAPI = {
+  graphql: async (query, variables) => {
+    const res = await fetch(`${API_URL}/hubsoft/graphql`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ query, variables }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  listTecnicos: async (params = {}) => {
+    const searchParams = new URLSearchParams(params);
+    const url = `${API_URL}/hubsoft/tecnicos${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const res = await fetch(url, {
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  get: async (path, params = {}) => {
+    const searchParams = new URLSearchParams(params);
+    const url = `${API_URL}/hubsoft/proxy/${path}${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const res = await fetch(url, {
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+};
+
+// ======== LABELS ========
+export const labelAPI = {
+  list: async () => {
+    const res = await fetch(`${API_URL}/labels`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  create: async ({ name, color }) => {
+    const res = await fetch(`${API_URL}/labels`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ name, color }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  update: async (id, { name, color }) => {
+    const res = await fetch(`${API_URL}/labels/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify({ name, color }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  delete: async (id) => {
+    const res = await fetch(`${API_URL}/labels/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
     });

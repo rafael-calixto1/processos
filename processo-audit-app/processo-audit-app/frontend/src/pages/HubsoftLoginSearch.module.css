@@ -1,0 +1,273 @@
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.iconBox {
+  width: 50px;
+  height: 50px;
+  background-color: #f0f7ff;
+  color: #3b82f6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #1a202c;
+}
+
+.header p {
+  margin: 0.25rem 0 0;
+  color: #718096;
+}
+
+.searchCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.searchForm {
+  display: flex;
+  gap: 1rem;
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a0aec0;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8rem 1rem 0.8rem 3rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.searchButton {
+  padding: 0 2rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.searchButton:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.searchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorBox {
+  background-color: #fff5f5;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #f56565;
+  margin-bottom: 2rem;
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.statusCard {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem;
+  border-left: 6px solid #cbd5e0;
+}
+
+.statusCard.online {
+  border-color: #48bb78;
+  background-color: #f0fff4;
+}
+
+.statusCard.offline {
+  border-color: #f56565;
+  background-color: #fff5f5;
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.online .statusHeader { color: #2f855a; }
+.offline .statusHeader { color: #c53030; }
+
+.statusLabel {
+  display: block;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.statusValue {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.mainDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  color: #4a5568;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #edf2f7;
+  color: #2d3748;
+}
+
+.cardHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+}
+
+.infoRow:not(:last-child) {
+  border-bottom: 1px dashed #edf2f7;
+}
+
+.infoLabel {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.infoValue {
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.addressBody {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.addressText {
+  margin: 0;
+  color: #4a5568;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.mapLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #ebf8ff;
+  color: #3182ce;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.mapLink:hover {
+  background-color: #bee3f8;
+}
+
+@media (max-width: 768px) {
+  .addressBody {
+    flex-direction: column;
+    text-align: center;
+  }
+}

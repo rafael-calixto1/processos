@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -23,9 +23,12 @@ const menuItems = [
 const adminItems = [
   { label: 'Branding', path: '/branding', Icon: Palette },
   { label: 'Usuários', path: '/users', Icon: Users },
+  { label: 'HubSoft Explorer', path: '/hubsoft/explorer', Icon: Database },
 ];
 
 const toolItems = [
+  { label: 'Consulta Login PPPoE', path: '/ferramentas/hubsoft-login-search', Icon: UserCheck },
+  { label: 'Técnicos HubSoft', path: '/hubsoft/tecnicos', Icon: UserCheck },
   { label: 'Integração Hotspot Google Sheet', path: '/ferramentas/hotspot-google-sheets', Icon: Wrench },
   { label: 'Criar Config do Hotspot', path: '/ferramentas/criar-config-hotspot', Icon: Wrench },
 ];
