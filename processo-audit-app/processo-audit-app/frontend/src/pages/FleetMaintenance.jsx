@@ -261,7 +261,50 @@ const MaintenanceHistory = ({ cars, types }) => {
 /* ════════════════════════════════════════════════════════
    Types sub-component
    ════════════════════════════════════════════════════════ */
-const emptyTypeForm = { name: '', recurrency: '', recurrency_date: '', status: 'active' };
+const emptyTypeForm = { name: '', recurrence_mode: '', recurrency: '', recurrency_date_value: '', recurrency_date_unit: 'days', status: 'active' };
+
+const RECURRENCE_MODES = [
+  { value: '',     label: 'Sem recorrência' },
+  { value: 'km',   label: 'Por Km' },
+  { value: 'date', label: 'Por Data' },
+  { value: 'both', label: 'Ambos (o que ocorrer primeiro)' },
+];
+
+const DATE_UNITS = [
+  { value: 'days',   label: 'Dias',   mult: 1   },
+  { value: 'weeks',  label: 'Semanas', mult: 7   },
+  { value: 'months', label: 'Meses',   mult: 30  },
+];
+
+// Convert stored days → best display unit + value
+const daysToUnit = days => {
+  if (!days) return { value: '', unit: 'days' };
+  if (days % 30 === 0) return { value: days / 30, unit: 'months' };
+  if (days % 7  === 0) return { value: days / 7,  unit: 'weeks'  };
+  return { value: days, unit: 'days' };
+};
+
+const unitToDays = (value, unit) => {
+  const mult = DATE_UNITS.find(u => u.value === unit)?.mult ?? 1;
+  return value !== '' ? Number(value) * mult : null;
+};
+
+const formatDays = days => {
+  if (!days) return null;
+  if (days % 30 === 0) { const n = days / 30; return `${n} ${n === 1 ? 'mês' : 'meses'}`; }
+  if (days % 7  === 0) { const n = days / 7;  return `${n} ${n === 1 ? 'semana' : 'semanas'}`; }
+  return `${days} ${days === 1 ? 'dia' : 'dias'}`;
+};
+
+const recurrenceLabel = t => {
+  if (!t.recurrence_mode) return '—';
+  const parts = [];
+  if ((t.recurrence_mode === 'km' || t.recurrence_mode === 'both') && t.recurrency)
+    parts.push(`a cada ${Number(t.recurrency).toLocaleString('pt-BR')} km`);
+  if ((t.recurrence_mode === 'date' || t.recurrence_mode === 'both') && t.recurrency_date)
+    parts.push(`a cada ${formatDays(t.recurrency_date)}`);
+  return parts.join(' ou ') || '—';
+};
 
 const MaintenanceTypes = ({ types, onRefresh }) => {
   const [showForm,     setShowForm]     = useState(false);
@@ -274,25 +317,41 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
   const openAdd  = () => { setEditId(null); setForm(emptyTypeForm); setShowForm(true); };
   const openEdit = t => {
     setEditId(t.id);
+    const { value: dateVal, unit: dateUnit } = daysToUnit(t.recurrency_date);
     setForm({
-      name:           t.name || '',
-      recurrency:     t.recurrency ?? '',
-      recurrency_date: t.recurrency_date ?? '',
-      status:         t.status || 'active',
+      name:                  t.name || '',
+      recurrence_mode:       t.recurrence_mode || '',
+      recurrency:            t.recurrency ?? '',
+      recurrency_date_value: dateVal,
+      recurrency_date_unit:  dateUnit,
+      status:                t.status || 'active',
     });
     setShowForm(true);
   };
   const closeForm = () => { setShowForm(false); setEditId(null); setForm(emptyTypeForm); };
+
+  const setMode = mode => {
+    setForm(f => ({
+      ...f,
+      recurrence_mode: mode,
+      recurrency:      mode === 'date' ? '' : f.recurrency,
+      recurrency_date: mode === 'km'   ? '' : f.recurrency_date,
+    }));
+  };
 
   const handleSave = async e => {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
+      const usesDate = form.recurrence_mode === 'date' || form.recurrence_mode === 'both';
       const payload = {
-        ...form,
-        recurrency:      form.recurrency      !== '' ? Number(form.recurrency)      : undefined,
-        recurrency_date: form.recurrency_date !== '' ? Number(form.recurrency_date) : undefined,
+        name:            form.name,
+        status:          form.status,
+        recurrence_mode: form.recurrence_mode || null,
+        recurrency:      (form.recurrence_mode === 'km' || form.recurrence_mode === 'both') && form.recurrency !== ''
+          ? Number(form.recurrency) : null,
+        recurrency_date: usesDate ? unitToDays(form.recurrency_date_value, form.recurrency_date_unit) : null,
       };
       if (editId) {
         await fetch(`/api/fleet/maintenance/types/${editId}`, {
@@ -327,6 +386,9 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
     }
   };
 
+  const showKm   = form.recurrence_mode === 'km'   || form.recurrence_mode === 'both';
+  const showDate = form.recurrence_mode === 'date'  || form.recurrence_mode === 'both';
+
   return (
     <div>
       {error && <div className={styles.errorState}>{error}</div>}
@@ -348,18 +410,76 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
           </div>
           <form onSubmit={handleSave}>
             <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
                 <label className={styles.label}>Nome *</label>
                 <input className={styles.input} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Recorrência (km)</label>
-                <input type="number" min="0" className={styles.input} value={form.recurrency} onChange={e => setForm({ ...form, recurrency: e.target.value })} />
+
+              <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                <label className={styles.label}>Recorrência</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {RECURRENCE_MODES.map(m => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setMode(m.value)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        border: `1.5px solid ${form.recurrence_mode === m.value ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                        background: form.recurrence_mode === m.value ? 'var(--primary-color)' : 'transparent',
+                        color: form.recurrence_mode === m.value ? '#fff' : 'var(--text-medium)',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        fontWeight: form.recurrence_mode === m.value ? 600 : 400,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Recorrência (dias)</label>
-                <input type="number" min="0" className={styles.input} value={form.recurrency_date} onChange={e => setForm({ ...form, recurrency_date: e.target.value })} />
-              </div>
+
+              {showKm && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Intervalo em Km</label>
+                  <input
+                    type="number" min="1" className={styles.input}
+                    placeholder="ex: 10000"
+                    value={form.recurrency}
+                    onChange={e => setForm({ ...form, recurrency: e.target.value })}
+                    required={showKm}
+                  />
+                </div>
+              )}
+
+              {showDate && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Intervalo de Tempo</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="number" min="1" className={styles.input}
+                      placeholder="ex: 6"
+                      value={form.recurrency_date_value}
+                      onChange={e => setForm({ ...form, recurrency_date_value: e.target.value })}
+                      required={showDate}
+                      style={{ flex: 1 }}
+                    />
+                    <select
+                      className={styles.select}
+                      value={form.recurrency_date_unit}
+                      onChange={e => setForm({ ...form, recurrency_date_unit: e.target.value })}
+                      style={{ width: 'auto' }}
+                    >
+                      {DATE_UNITS.map(u => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div className={styles.formGroup}>
                 <label className={styles.label}>Status</label>
                 <select className={styles.select} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
@@ -389,8 +509,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Recorrência (km)</th>
-                <th>Recorrência (dias)</th>
+                <th>Recorrência</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -399,8 +518,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
               {types.map(t => (
                 <tr key={t.id}>
                   <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t.name}</td>
-                  <td>{t.recurrency != null ? Number(t.recurrency).toLocaleString('pt-BR') : '—'}</td>
-                  <td>{t.recurrency_date != null ? `${t.recurrency_date} dias` : '—'}</td>
+                  <td style={{ color: 'var(--text-medium)', fontSize: '0.875rem' }}>{recurrenceLabel(t)}</td>
                   <td>
                     <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
                       {t.status === 'active' ? 'Ativo' : 'Inativo'}
