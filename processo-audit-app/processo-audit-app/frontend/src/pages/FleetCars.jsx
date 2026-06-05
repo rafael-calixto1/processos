@@ -1,13 +1,219 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye, CheckCircle2, AlertTriangle, AlertCircle, Clock } from 'lucide-react';
 import styles from './Fleet.module.css';
+
+/* ─── Maintenance status helpers ─── */
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+
+const calcStatus = (item, currentKm) => {
+  if (!item.recurrence_mode) return 'none';
+  const now = today();
+  let worst = 'green';
+
+  const worse = (a, b) => {
+    const rank = { red: 3, yellow: 2, green: 1, none: 0 };
+    return rank[a] >= rank[b] ? a : b;
+  };
+
+  if (item.recurrence_mode === 'km' || item.recurrence_mode === 'both') {
+    if (item.recurrency) {
+      if (item.last_km == null) {
+        worst = worse(worst, 'yellow');
+      } else {
+        const rem = (Number(item.last_km) + Number(item.recurrency)) - Number(currentKm || 0);
+        if (rem <= 0)    worst = worse(worst, 'red');
+        else if (rem <= 1000) worst = worse(worst, 'yellow');
+      }
+    }
+  }
+
+  if (item.recurrence_mode === 'date' || item.recurrence_mode === 'both') {
+    if (item.recurrency_date) {
+      if (!item.last_date) {
+        worst = worse(worst, 'yellow');
+      } else {
+        const next = new Date(item.last_date);
+        next.setDate(next.getDate() + Number(item.recurrency_date));
+        const days = Math.floor((next - now) / 86400000);
+        if (days <= 0)  worst = worse(worst, 'red');
+        else if (days <= 30) worst = worse(worst, 'yellow');
+      }
+    }
+  }
+
+  return worst;
+};
+
+const STATUS_STYLE = {
+  red:    { bg: 'rgba(220,38,38,0.08)',   border: 'rgba(220,38,38,0.35)',   color: '#b91c1c',  icon: AlertCircle   },
+  yellow: { bg: 'rgba(234,179,8,0.10)',   border: 'rgba(234,179,8,0.40)',   color: '#92400e',  icon: AlertTriangle },
+  green:  { bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.30)',   color: '#15803d',  icon: CheckCircle2  },
+  none:   { bg: 'var(--bg-card)',          border: 'var(--border-color)',    color: 'var(--text-medium)', icon: Clock },
+};
+
+const fmtDays = days => {
+  if (!days) return null;
+  if (days % 30 === 0) { const n = days/30; return `${n} ${n===1?'mês':'meses'}`; }
+  if (days % 7  === 0) { const n = days/7;  return `${n} ${n===1?'semana':'semanas'}`; }
+  return `${days} ${days===1?'dia':'dias'}`;
+};
+
+const nextDueText = (item, currentKm) => {
+  const lines = [];
+  if ((item.recurrence_mode==='km'||item.recurrence_mode==='both') && item.recurrency) {
+    const base = item.last_km != null ? Number(item.last_km) : 0;
+    const next = base + Number(item.recurrency);
+    const rem  = next - Number(currentKm || 0);
+    lines.push(rem > 0
+      ? `Km: faltam ${Number(rem).toLocaleString('pt-BR')} km (próx. aos ${Number(next).toLocaleString('pt-BR')} km)`
+      : `Km: vencido há ${Math.abs(rem).toLocaleString('pt-BR')} km`);
+  }
+  if ((item.recurrence_mode==='date'||item.recurrence_mode==='both') && item.recurrency_date) {
+    if (!item.last_date) {
+      lines.push(`Data: nunca realizado (a cada ${fmtDays(item.recurrency_date)})`);
+    } else {
+      const next = new Date(item.last_date);
+      next.setDate(next.getDate() + Number(item.recurrency_date));
+      const days = Math.floor((next - today()) / 86400000);
+      lines.push(days > 0
+        ? `Data: faltam ${days} dias (${next.toLocaleDateString('pt-BR')})`
+        : `Data: vencido há ${Math.abs(days)} dias`);
+    }
+  }
+  return lines;
+};
+
+/* ─── Car Detail Modal ─── */
+const CarDetailModal = ({ carId, onClose }) => {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/fleet/cars/${carId}/detail`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, [carId]);
+
+  const fmtDate = v => {
+    if (!v) return '—';
+    try { return new Date(v).toLocaleDateString('pt-BR'); } catch { return '—'; }
+  };
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div
+        className={styles.modal}
+        style={{ maxWidth: 720, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.25rem' }}>
+          <h3 style={{ margin:0 }}>Detalhes do Veículo</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-light)' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading && <div className={styles.loadingState}><div className="spinner"/><span>Carregando...</span></div>}
+        {error   && <div className={styles.errorState}>{error}</div>}
+
+        {data && (
+          <>
+            {/* Car info */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'0.75rem', marginBottom:'1.75rem', padding:'1rem', background:'var(--bg-subtle,#f8f9fa)', borderRadius:10 }}>
+              {[
+                ['Veículo',   `${data.car.make} ${data.car.model}`],
+                ['Placa',     data.car.license_plate],
+                ['Km Atual',  data.car.current_kilometers != null ? Number(data.car.current_kilometers).toLocaleString('pt-BR') : '—'],
+                ['Motorista', data.car.driver_name || '—'],
+                ['Status',    data.car.status === 'active' ? 'Ativo' : 'Inativo'],
+              ].map(([label, val]) => (
+                <div key={label}>
+                  <div style={{ fontSize:'0.72rem', fontWeight:600, color:'var(--text-light)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2 }}>{label}</div>
+                  <div style={{ fontWeight:600, color:'var(--text-dark)' }}>{val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Maintenance status */}
+            <h4 style={{ margin:'0 0 0.75rem', color:'var(--text-dark)' }}>Status das Manutenções</h4>
+            {data.maintenanceStatus.length === 0 ? (
+              <p style={{ color:'var(--text-light)', fontSize:'0.875rem' }}>Nenhum tipo de manutenção cadastrado.</p>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem', marginBottom:'1.75rem' }}>
+                {data.maintenanceStatus.map(item => {
+                  const st = calcStatus(item, data.car.current_kilometers);
+                  const { bg, border, color, icon: Icon } = STATUS_STYLE[st];
+                  const lines = nextDueText(item, data.car.current_kilometers);
+                  return (
+                    <div key={item.id} style={{ display:'flex', gap:'0.75rem', alignItems:'flex-start', padding:'0.75rem 1rem', borderRadius:8, background:bg, border:`1px solid ${border}` }}>
+                      <Icon size={18} style={{ color, flexShrink:0, marginTop:2 }} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:600, color:'var(--text-dark)', marginBottom: lines.length ? 2 : 0 }}>{item.name}</div>
+                        {lines.map((l,i) => <div key={i} style={{ fontSize:'0.82rem', color }}>{l}</div>)}
+                        {!item.recurrence_mode && (
+                          <div style={{ fontSize:'0.82rem', color:'var(--text-light)' }}>Sem recorrência configurada</div>
+                        )}
+                        {item.last_date && (
+                          <div style={{ fontSize:'0.78rem', color:'var(--text-light)', marginTop:2 }}>
+                            Última: {fmtDate(item.last_date)}{item.last_km != null ? ` · ${Number(item.last_km).toLocaleString('pt-BR')} km` : ''}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* History */}
+            <h4 style={{ margin:'0 0 0.75rem', color:'var(--text-dark)' }}>Histórico Recente</h4>
+            {data.history.length === 0 ? (
+              <p style={{ color:'var(--text-light)', fontSize:'0.875rem' }}>Nenhuma manutenção registrada.</p>
+            ) : (
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Data</th>
+                      <th>Km</th>
+                      <th>Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.history.map(h => (
+                      <tr key={h.id}>
+                        <td>
+                          <span className={styles.statusBadge} style={{ background:'var(--primary-light)', color:'var(--primary-color)' }}>
+                            {h.type_name || '—'}
+                          </span>
+                        </td>
+                        <td>{fmtDate(h.maintenance_date)}</td>
+                        <td>{h.maintenance_kilometers != null ? Number(h.maintenance_kilometers).toLocaleString('pt-BR') : '—'}</td>
+                        <td style={{ maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text-medium)' }}>
+                          {h.observation || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const LIMIT = 15;
 
 const emptyForm = {
   make: '', model: '', license_plate: '',
-  current_kilometers: '', next_tire_change: '', next_oil_change: '',
-  driver_id: '', status: 'active',
+  current_kilometers: '', driver_id: '', status: 'active',
 };
 
 const FleetCars = () => {
@@ -27,6 +233,7 @@ const FleetCars = () => {
   const [saving,      setSaving]      = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewId,       setViewId]       = useState(null);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
@@ -86,8 +293,6 @@ const FleetCars = () => {
       model:              car.model || '',
       license_plate:      car.license_plate || '',
       current_kilometers: car.current_kilometers ?? '',
-      next_tire_change:   car.next_tire_change ?? '',
-      next_oil_change:    car.next_oil_change ?? '',
       driver_id:          car.driver_id ?? '',
       status:             car.status || 'active',
     });
@@ -104,8 +309,6 @@ const FleetCars = () => {
       const payload = {
         ...form,
         current_kilometers: form.current_kilometers !== '' ? Number(form.current_kilometers) : undefined,
-        next_tire_change:   form.next_tire_change   !== '' ? Number(form.next_tire_change)   : undefined,
-        next_oil_change:    form.next_oil_change    !== '' ? Number(form.next_oil_change)     : undefined,
         driver_id:          form.driver_id !== '' ? Number(form.driver_id) : null,
       };
       if (editId) {
@@ -197,14 +400,6 @@ const FleetCars = () => {
                 <input className={styles.input} type="number" min="0" value={form.current_kilometers} onChange={e => setForm({ ...form, current_kilometers: e.target.value })} />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Próx. Troca de Pneu (km)</label>
-                <input className={styles.input} type="number" min="0" value={form.next_tire_change} onChange={e => setForm({ ...form, next_tire_change: e.target.value })} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Próx. Troca de Óleo (km)</label>
-                <input className={styles.input} type="number" min="0" value={form.next_oil_change} onChange={e => setForm({ ...form, next_oil_change: e.target.value })} />
-              </div>
-              <div className={styles.formGroup}>
                 <label className={styles.label}>Motorista</label>
                 <select className={styles.select} value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })}>
                   <option value="">— Nenhum —</option>
@@ -254,8 +449,6 @@ const FleetCars = () => {
                   </span>
                 </th>
                 <th>Km Atual</th>
-                <th>Próx. Pneu (km)</th>
-                <th>Próx. Óleo (km)</th>
                 <th>Motorista</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -269,8 +462,6 @@ const FleetCars = () => {
                   </td>
                   <td>{car.license_plate}</td>
                   <td>{car.current_kilometers != null ? Number(car.current_kilometers).toLocaleString('pt-BR') : '—'}</td>
-                  <td>{car.next_tire_change != null ? Number(car.next_tire_change).toLocaleString('pt-BR') : '—'}</td>
-                  <td>{car.next_oil_change  != null ? Number(car.next_oil_change).toLocaleString('pt-BR')  : '—'}</td>
                   <td>{getDriverName(car.driver_id)}</td>
                   <td>
                     <span className={`${styles.statusBadge} ${car.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
@@ -279,12 +470,9 @@ const FleetCars = () => {
                   </td>
                   <td>
                     <div className={styles.actionBtns}>
-                      <button className="primary" onClick={() => openEdit(car)} title="Editar">
-                        <Pencil size={15} />
-                      </button>
-                      <button className="danger" onClick={() => setDeleteTarget(car)} title="Excluir">
-                        <Trash2 size={15} />
-                      </button>
+                      <button onClick={() => setViewId(car.id)} title="Visualizar"><Eye size={15} /></button>
+                      <button className="primary" onClick={() => openEdit(car)} title="Editar"><Pencil size={15} /></button>
+                      <button className="danger" onClick={() => setDeleteTarget(car)} title="Excluir"><Trash2 size={15} /></button>
                     </div>
                   </td>
                 </tr>
@@ -313,6 +501,9 @@ const FleetCars = () => {
           )}
         </div>
       )}
+
+      {/* Car Detail Modal */}
+      {viewId && <CarDetailModal carId={viewId} onClose={() => setViewId(null)} />}
 
       {/* Delete Modal */}
       {deleteTarget && (
