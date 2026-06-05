@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs'
+import path from 'path'
 
 export default defineConfig({
   plugins: [
@@ -29,6 +31,10 @@ export default defineConfig({
   server: {
     port: 3004,
     host: '0.0.0.0',
+    https: {
+      key: fs.readFileSync(path.resolve('../certs/key.pem')),
+      cert: fs.readFileSync(path.resolve('../certs/cert.pem')),
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5002',

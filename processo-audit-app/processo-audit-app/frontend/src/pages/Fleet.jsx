@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Truck, Gauge, Car, Users, Fuel, Wrench, Layers, ClipboardList } from 'lucide-react';
+import { Truck, Gauge, Car, Users, Fuel, ClipboardList } from 'lucide-react';
 import styles from './Fleet.module.css';
 import FleetDashboard     from './FleetDashboard';
 import FleetVehicleStatus from './FleetVehicleStatus';
 import FleetCars          from './FleetCars';
 import FleetDrivers       from './FleetDrivers';
 import FleetFueling       from './FleetFueling';
-import FleetOilChanges    from './FleetOilChanges';
-import FleetTireChanges   from './FleetTireChanges';
 import FleetMaintenance   from './FleetMaintenance';
 
 const TABS = [
@@ -16,8 +14,6 @@ const TABS = [
   { id: 'cars',         label: 'Veículos',          Icon: Car            },
   { id: 'drivers',      label: 'Motoristas',        Icon: Users          },
   { id: 'fueling',      label: 'Abastecimento',     Icon: Fuel           },
-  { id: 'oil',          label: 'Trocas de Óleo',    Icon: Wrench         },
-  { id: 'tires',        label: 'Trocas de Pneus',   Icon: Layers         },
   { id: 'maintenance',  label: 'Manutenção',        Icon: ClipboardList  },
 ];
 
@@ -31,8 +27,6 @@ const Fleet = () => {
       case 'cars':        return <FleetCars />;
       case 'drivers':     return <FleetDrivers />;
       case 'fueling':     return <FleetFueling />;
-      case 'oil':         return <FleetOilChanges />;
-      case 'tires':       return <FleetTireChanges />;
       case 'maintenance': return <FleetMaintenance />;
       default:            return <FleetDashboard />;
     }

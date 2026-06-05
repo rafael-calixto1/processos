@@ -131,6 +131,51 @@ router.get('/cars', async (req, res) => {
   }
 });
 
+router.get('/cars/:id/detail', async (req, res) => {
+  try {
+    const [[car]] = await pool.execute(
+      `SELECT c.*, d.name AS driver_name
+       FROM fleet_cars c
+       LEFT JOIN fleet_drivers d ON d.id = c.driver_id
+       WHERE c.id = ?`,
+      [req.params.id]
+    );
+    if (!car) return res.status(404).json({ error: 'Veículo não encontrado' });
+
+    // Last maintenance per type for this car
+    const [maintenanceStatus] = await pool.execute(
+      `SELECT
+         mt.id, mt.name, mt.recurrence_mode, mt.recurrency, mt.recurrency_date,
+         lm.maintenance_date  AS last_date,
+         lm.maintenance_kilometers AS last_km
+       FROM fleet_maintenance_types mt
+       LEFT JOIN fleet_maintenance_history lm ON lm.id = (
+         SELECT id FROM fleet_maintenance_history
+         WHERE maintenance_type_id = mt.id AND car_id = ?
+         ORDER BY maintenance_date DESC, id DESC LIMIT 1
+       )
+       WHERE mt.status = 'active'
+       ORDER BY mt.name`,
+      [req.params.id]
+    );
+
+    // Recent history
+    const [history] = await pool.execute(
+      `SELECT mh.*, mt.name AS type_name
+       FROM fleet_maintenance_history mh
+       LEFT JOIN fleet_maintenance_types mt ON mt.id = mh.maintenance_type_id
+       WHERE mh.car_id = ?
+       ORDER BY mh.maintenance_date DESC, mh.id DESC
+       LIMIT 30`,
+      [req.params.id]
+    );
+
+    res.json({ car, maintenanceStatus, history });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/cars', async (req, res) => {
   try {
     const { make, model, license_plate, current_kilometers, next_tire_change, next_oil_change, driver_id, status } = req.body;
@@ -484,11 +529,11 @@ router.get('/maintenance/types', async (req, res) => {
 
 router.post('/maintenance/types', async (req, res) => {
   try {
-    const { name, recurrency, recurrency_date, status } = req.body;
+    const { name, recurrency, recurrency_date, recurrence_mode, status } = req.body;
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
     const [result] = await pool.execute(
-      'INSERT INTO fleet_maintenance_types (name, recurrency, recurrency_date, status) VALUES (?, ?, ?, ?)',
-      [name, recurrency ?? null, recurrency_date ?? null, status || 'active']
+      'INSERT INTO fleet_maintenance_types (name, recurrency, recurrency_date, recurrence_mode, status) VALUES (?, ?, ?, ?, ?)',
+      [name, recurrency ?? null, recurrency_date ?? null, recurrence_mode || null, status || 'active']
     );
     res.status(201).json({ id: result.insertId, message: 'Tipo criado' });
   } catch (err) {
@@ -498,10 +543,10 @@ router.post('/maintenance/types', async (req, res) => {
 
 router.put('/maintenance/types/:id', async (req, res) => {
   try {
-    const { name, recurrency, recurrency_date, status } = req.body;
+    const { name, recurrency, recurrency_date, recurrence_mode, status } = req.body;
     await pool.execute(
-      'UPDATE fleet_maintenance_types SET name = ?, recurrency = ?, recurrency_date = ?, status = ? WHERE id = ?',
-      [name, recurrency ?? null, recurrency_date ?? null, status || 'active', req.params.id]
+      'UPDATE fleet_maintenance_types SET name = ?, recurrency = ?, recurrency_date = ?, recurrence_mode = ?, status = ? WHERE id = ?',
+      [name, recurrency ?? null, recurrency_date ?? null, recurrence_mode || null, status || 'active', req.params.id]
     );
     res.json({ message: 'Tipo atualizado' });
   } catch (err) {

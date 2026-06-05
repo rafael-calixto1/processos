@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
-import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import styles from './Fleet.module.css';
 
 const LIMIT = 15;
@@ -33,8 +33,9 @@ const FleetFueling = () => {
   const [importHtml,   setImportHtml]   = useState('');
   const [importing,    setImporting]    = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [cameraError,  setCameraError]  = useState('');
+  const [scanStatus,   setScanStatus]   = useState('scanning'); // 'scanning' | 'processing' | 'error'
   
-  const qrRef = useRef(null);
   const scannerRef = useRef(null);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
@@ -66,52 +67,53 @@ const FleetFueling = () => {
 
   // Handle Scanner
   useEffect(() => {
-    let html5QrCode;
-    
-    const initScanner = async () => {
-      if (showImport && importMode === 'camera') {
-        // Small delay to ensure React has rendered the #qr-reader div
-        await new Promise(r => setTimeout(r, 300));
-        
-        const element = document.getElementById("qr-reader");
-        if (!element) return;
+    if (!showImport || importMode !== 'camera') return;
 
-        // Check for secure context (required for camera)
-        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-          setError('A câmera requer uma conexão segura (HTTPS). Por favor, use o modo "Colar HTML" ou "Imagem".');
-          setImportMode('paste');
-          return;
-        }
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setCameraError('A câmera requer HTTPS. Acesse via https://10.100.100.130:3004 e aceite o certificado.');
+      setScanStatus('error');
+      return;
+    }
 
-        try {
-          html5QrCode = new Html5Qrcode("qr-reader");
-          scannerRef.current = html5QrCode;
-          
-          await html5QrCode.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText) => {
-              handleImport({ url: decodedText });
-              if (html5QrCode.isScanning) {
-                html5QrCode.stop().catch(e => console.error("Stop error", e));
-              }
-            },
-            () => {} // ignore scan failures
-          );
-        } catch (err) {
-          console.error("Camera error:", err);
-          setError("Não foi possível acessar a câmera. Verifique as permissões.");
-          setImportMode('paste');
-        }
+    let scanner;
+    const timer = setTimeout(() => {
+      try {
+        scanner = new Html5QrcodeScanner(
+          "qr-reader",
+          {
+            fps: 15,
+            qrbox: { width: 280, height: 280 },
+            videoConstraints: { facingMode: { exact: "environment" } },
+            rememberLastUsedCamera: false,
+            showTorchButtonIfSupported: false,
+          },
+          false
+        );
+        scanner.render(
+          async (decodedText) => {
+            scanner.clear().catch(() => {});
+            setScanStatus('processing');
+            try {
+              await handleImportInModal(decodedText);
+            } catch (err) {
+              setCameraError('Erro ao processar cupom: ' + err.message);
+              setScanStatus('error');
+            }
+          },
+          () => {}
+        );
+        setScanStatus('scanning');
+        scannerRef.current = scanner;
+      } catch (err) {
+        console.error("Scanner error:", err);
+        setCameraError("Não foi possível iniciar o scanner. Verifique as permissões do navegador.");
+        setScanStatus('error');
       }
-    };
-
-    initScanner();
+    }, 300);
 
     return () => {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(err => console.error("Cleanup error", err));
-      }
+      clearTimeout(timer);
+      if (scanner) scanner.clear().catch(() => {});
       scannerRef.current = null;
     };
   }, [showImport, importMode]);
@@ -192,62 +194,71 @@ const FleetFueling = () => {
     }
   };
 
+  // Shared logic: fetch + parse + fill form. Throws on error.
+  const parseAndFill = async (payload) => {
+    const res = await fetch('/api/fleet/fueling/parse-receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || 'Falha ao processar cupom');
+    }
+    const data = await res.json();
+
+    let mappedCarId = '';
+    if (data.fleet.licensePlate) {
+      const p = data.fleet.licensePlate.replace('-', '').toUpperCase();
+      const car = cars.find(c => c.license_plate.replace('-', '').toUpperCase() === p);
+      if (car) mappedCarId = car.id;
+    }
+
+    const fuelingDate = data.transaction.date
+      ? data.transaction.date.split(' ')[0].split('/').reverse().join('-')
+      : new Date().toISOString().slice(0, 10);
+
+    const p = (data.transaction.product || '').toUpperCase();
+    let fType = 'Gasolina';
+    if (p.includes('ETANOL')) fType = 'Etanol';
+    else if (p.includes('DIESEL')) fType = 'Diesel';
+    else if (p.includes('GNV')) fType = 'GNV';
+
+    setForm({
+      ...emptyForm,
+      car_id: mappedCarId,
+      fuel_date: fuelingDate,
+      fueling_kilometers: data.fleet.mileage || '',
+      liters_quantity: data.transaction.quantity || '',
+      price_per_liter: data.transaction.unitPrice || '',
+      total_cost: data.transaction.totalValue || '',
+      fuel_type: fType,
+      observation: `Importado via QR Code. Posto: ${data.issuer.name}. Motorista: ${data.fleet.driver || 'Não informado'}`,
+    });
+
+    setImportResult({
+      success: true,
+      carFound: !!mappedCarId,
+      plate: data.fleet.licensePlate,
+      issuer: data.issuer.name,
+    });
+
+    setShowImport(false);
+    setShowForm(true);
+  };
+
+  // Called from camera scan callback — errors surfaced inside modal via cameraError
+  const handleImportInModal = async (url) => {
+    await parseAndFill({ url });
+  };
+
+  // Called from paste/file modes — errors surfaced at top via setError
   const handleImport = async (payload) => {
     if (!payload.url && !payload.html) return;
     setImporting(true);
     setError('');
     try {
-      const res = await fetch('/api/fleet/fueling/parse-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || 'Falha ao processar cupom');
-      }
-      const data = await res.json();
-      
-      // Auto-map car by plate
-      let mappedCarId = '';
-      if (data.fleet.licensePlate) {
-        const p = data.fleet.licensePlate.replace('-', '').toUpperCase();
-        const car = cars.find(c => c.license_plate.replace('-', '').toUpperCase() === p);
-        if (car) mappedCarId = car.id;
-      }
-
-      const fuelingDate = data.transaction.date 
-        ? data.transaction.date.split(' ')[0].split('/').reverse().join('-') 
-        : new Date().toISOString().slice(0, 10);
-
-      // Map fuel type
-      const p = (data.transaction.product || '').toUpperCase();
-      let fType = 'Gasolina';
-      if (p.includes('ETANOL')) fType = 'Etanol';
-      else if (p.includes('DIESEL')) fType = 'Diesel';
-      else if (p.includes('GNV')) fType = 'GNV';
-
-      setForm({
-        ...emptyForm,
-        car_id: mappedCarId,
-        fuel_date: fuelingDate,
-        fueling_kilometers: data.fleet.mileage || '',
-        liters_quantity: data.transaction.quantity || '',
-        price_per_liter: data.transaction.unitPrice || '',
-        total_cost: data.transaction.totalValue || '',
-        fuel_type: fType,
-        observation: `Importado via QR Code. Posto: ${data.issuer.name}. Motorista: ${data.fleet.driver || 'Não informado'}`,
-      });
-
-      setImportResult({
-        success: true,
-        carFound: !!mappedCarId,
-        plate: data.fleet.licensePlate,
-        issuer: data.issuer.name
-      });
-      
-      setShowImport(false);
-      setShowForm(true);
+      await parseAndFill(payload);
     } catch (e) {
       console.error(e);
       setError('Erro ao processar cupom: ' + e.message);
@@ -257,19 +268,22 @@ const FleetFueling = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    const html5QrCode = new Html5Qrcode("qr-reader-hidden");
-    html5QrCode.scanFile(file, true)
-      .then(decodedText => {
-        handleImport({ url: decodedText });
-      })
-      .catch(err => {
-        setError("Não foi possível ler um QR Code nesta imagem.");
-        console.error(err);
-      });
+    setImporting(true);
+    setError('');
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode("qr-reader-hidden");
+      const decodedText = await scanner.scanFile(file, true);
+      await parseAndFill({ url: decodedText });
+    } catch (err) {
+      console.error(err);
+      setError("Não foi possível ler um QR Code nesta imagem.");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const getCarLabel = id => {
@@ -289,7 +303,7 @@ const FleetFueling = () => {
       <div className={styles.filterRow}>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className={styles.btnSecondary} onClick={() => { setShowImport(true); setImportMode('camera'); }}>
+          <button className={styles.btnSecondary} onClick={() => { setCameraError(''); setScanStatus('scanning'); setShowImport(true); setImportMode('camera'); }}>
             <QrCode size={16} /> Ler QR Code
           </button>
           <button className={styles.btnPrimary} onClick={openAdd}>
@@ -310,24 +324,24 @@ const FleetFueling = () => {
             </div>
             
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-              <button 
-                className={importMode === 'camera' ? styles.btnPrimary : styles.btnSecondary} 
+              <button
+                className={importMode === 'camera' ? styles.btnPrimary : styles.btnSecondary}
                 style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                onClick={() => setImportMode('camera')}
+                onClick={() => { setCameraError(''); setImportMode('camera'); }}
               >
                 <Camera size={14} style={{ marginRight: '4px' }} /> Câmera
               </button>
-              <button 
-                className={importMode === 'file' ? styles.btnPrimary : styles.btnSecondary} 
+              <button
+                className={importMode === 'file' ? styles.btnPrimary : styles.btnSecondary}
                 style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                onClick={() => setImportMode('file')}
+                onClick={() => { setCameraError(''); setImportMode('file'); }}
               >
                 <Upload size={14} style={{ marginRight: '4px' }} /> Imagem
               </button>
-              <button 
-                className={importMode === 'paste' ? styles.btnPrimary : styles.btnSecondary} 
+              <button
+                className={importMode === 'paste' ? styles.btnPrimary : styles.btnSecondary}
                 style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                onClick={() => setImportMode('paste')}
+                onClick={() => { setCameraError(''); setImportMode('paste'); }}
               >
                 <ClipboardPaste size={14} style={{ marginRight: '4px' }} /> Colar HTML
               </button>
@@ -335,10 +349,31 @@ const FleetFueling = () => {
 
             {importMode === 'camera' && (
               <div style={{ textAlign: 'center' }}>
-                <div id="qr-reader" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden', border: 'none' }}></div>
-                <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-medium)' }}>
-                  Aponte a câmera para o QR Code do cupom fiscal.
-                </p>
+                {cameraError ? (
+                  <div style={{ padding: '1.25rem', borderRadius: '10px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)', color: '#991b1b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <AlertCircle size={20} style={{ marginBottom: '0.5rem' }} /><br />
+                    {cameraError}
+                    <br />
+                    <button
+                      style={{ marginTop: '0.75rem', padding: '4px 14px', borderRadius: '6px', border: '1px solid #991b1b', background: 'none', color: '#991b1b', cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => { setCameraError(''); setScanStatus('scanning'); setImportMode('camera'); }}
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : scanStatus === 'processing' ? (
+                  <div style={{ padding: '2rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                    <div className="spinner" style={{ margin: '0 auto 0.75rem' }} />
+                    QR detectado! Buscando dados na Sefaz...
+                  </div>
+                ) : (
+                  <>
+                    <div id="qr-reader" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden', border: 'none' }}></div>
+                    <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--text-medium)' }}>
+                      Aponte a câmera para o QR Code do cupom fiscal. Centralize o código no quadro verde.
+                    </p>
+                  </>
+                )}
               </div>
             )}
 

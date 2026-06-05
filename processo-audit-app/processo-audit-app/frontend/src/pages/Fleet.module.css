@@ -652,3 +652,33 @@
     justify-content: center;
   }
 }
+
+/* ── QR Scanner overrides (html5-qrcode default UI) ────────── */
+:global(#qr-reader) {
+  border: none !important;
+  width: 100% !important;
+}
+:global(#qr-reader video) {
+  border-radius: 10px;
+  width: 100% !important;
+  max-width: 400px !important;
+}
+:global(#qr-reader__scan_region) {
+  border-radius: 10px;
+  overflow: hidden;
+}
+:global(#qr-reader__dashboard_section_csr button) {
+  background: var(--primary-color) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 6px 14px !important;
+  cursor: pointer !important;
+  font-size: 0.85rem !important;
+}
+:global(#qr-reader__camera_selection) {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-size: 0.85rem !important;
+}
