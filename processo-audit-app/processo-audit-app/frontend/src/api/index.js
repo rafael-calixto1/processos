@@ -711,12 +711,15 @@ export const referralAPI = {
   },
 
   createProspect: async (data) => {
-    const res = await fetch(`${API_URL}/referral/prospectos`, {
+    const res = await fetch(`${API_URL}/hubsoft/prospecto`, {
       method: 'POST',
       headers: headers(getToken()),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const error = await res.json().catch(async () => ({ error: await res.text() }));
+      throw new Error(error.message || error.error || 'Failed to create prospect');
+    }
     return res.json();
   },
   getProspecto: async (id) => {
