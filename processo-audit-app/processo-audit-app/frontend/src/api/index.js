@@ -709,6 +709,16 @@ export const referralAPI = {
     if (!res.ok) throw new Error(data.error || 'Erro ao enviar lead para o CRM');
     return data;
   },
+
+  createProspect: async (data) => {
+    const res = await fetch(`${API_URL}/referral/prospectos`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
   getProspecto: async (id) => {
     const res = await fetch(`${API_URL}/referral/prospecto/${id}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
