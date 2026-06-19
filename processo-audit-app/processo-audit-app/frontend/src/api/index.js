@@ -373,12 +373,13 @@ export const ticketAPI = {
     return res.json();
   },
 
-  list: async ({ status, priority, type, filter, page = 1, limit = 20 } = {}) => {
+  list: async ({ status, priority, type, department_id, filter, page = 1, limit = 20 } = {}) => {
     const params = new URLSearchParams({ page, limit });
-    if (status)   params.append('status', status);
-    if (priority) params.append('priority', priority);
-    if (type)     params.append('type', type);
-    if (filter)   params.append('filter', filter);
+    if (status)        params.append('status', status);
+    if (priority)      params.append('priority', priority);
+    if (type)          params.append('type', type);
+    if (department_id) params.append('department_id', department_id);
+    if (filter)        params.append('filter', filter);
     const res = await fetch(`${API_URL}/tickets?${params}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
@@ -621,4 +622,112 @@ export const fileAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.blob();
   }
+};
+
+// ======== INDIQUE E GANHE ========
+export const referralAPI = {
+  list: async (status) => {
+    let url = `${API_URL}/referral/indicacoes`;
+    if (status) url += `?status=${encodeURIComponent(status)}`;
+    const res = await fetch(url, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  create: async (data) => {
+    const res = await fetch(`${API_URL}/referral/indicacao`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  cancel: async (id) => {
+    const res = await fetch(`${API_URL}/referral/indicacao/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  descontoManual: async (data) => {
+    const res = await fetch(`${API_URL}/referral/desconto-manual`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  getCliente: async (id) => {
+    const res = await fetch(`${API_URL}/referral/cliente/${id}`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  getReferrerInfo: async (cpf) => {
+    const res = await fetch(`${API_URL}/referral/public/referrer-info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao buscar indicador');
+    return data;
+  },
+  registerIndication: async (formData) => {
+    const res = await fetch(`${API_URL}/referral/public/register-indication`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao registrar indicação');
+    return data;
+  },
+  getLeads: async () => {
+    const res = await fetch(`${API_URL}/referral/leads`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  getHubsoftCRMs: async () => {
+    const res = await fetch(`${API_URL}/referral/hubsoft/crms`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  sendLeadToCRM: async (formData) => {
+    const res = await fetch(`${API_URL}/referral/leads/send-to-crm`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao enviar lead para o CRM');
+    return data;
+  },
+  getProspecto: async (id) => {
+    const res = await fetch(`${API_URL}/referral/prospecto/${id}`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  getConfig: async () => {
+    const res = await fetch(`${API_URL}/referral/config`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  saveConfig: async (data) => {
+    const res = await fetch(`${API_URL}/referral/config`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
 };
