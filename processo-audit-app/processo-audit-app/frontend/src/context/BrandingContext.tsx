@@ -1,9 +1,24 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 
-const BrandingContext = createContext();
+export interface Branding {
+  company_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  favicon_url: string | null;
+}
 
-export const BrandingProvider = ({ children }) => {
-  const [branding, setBranding] = useState({
+interface BrandingContextValue {
+  branding: Branding;
+  fetchBranding: () => Promise<void>;
+}
+
+const BrandingContext = createContext<BrandingContextValue | undefined>(undefined);
+
+export const BrandingProvider = ({ children }: { children: ReactNode }) => {
+  const [branding, setBranding] = useState<Branding>({
     company_name: 'Minha Empresa',
     logo_url: null,
     primary_color: '#0ba52b',
@@ -21,7 +36,7 @@ export const BrandingProvider = ({ children }) => {
 
   useEffect(() => {
     if (branding.favicon_url) {
-      let link = document.querySelector("link[rel~='icon']");
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
       if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
@@ -50,7 +65,7 @@ export const BrandingProvider = ({ children }) => {
   );
 };
 
-export const useBranding = () => {
+export const useBranding = (): BrandingContextValue => {
   const context = useContext(BrandingContext);
   if (!context) {
     throw new Error('useBranding deve ser usado dentro de BrandingProvider');

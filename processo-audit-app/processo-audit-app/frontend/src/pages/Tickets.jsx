@@ -4,7 +4,7 @@ import {
   Bug, CheckSquare2, BookOpen, Zap, Calendar, Clock, Tag, Pencil, Check,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ticketAPI, labelAPI, departmentAPI } from '../api/index.js';
+import { ticketAPI, labelAPI, departmentAPI } from '../api';
 import styles from './Tickets.module.css';
 
 /* ── Constants ── */

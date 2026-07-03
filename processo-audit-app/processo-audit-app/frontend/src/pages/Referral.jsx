@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Gift, Plus, X, Search, CheckCircle2, Clock, XCircle, AlertCircle, RefreshCw, Settings, FlaskConical, Pencil, Trash2 } from 'lucide-react';
-import { referralAPI } from '../api/index.js';
+import { referralAPI } from '../api';
 import styles from './Referral.module.css';
 
 const STATUS_LABELS = {

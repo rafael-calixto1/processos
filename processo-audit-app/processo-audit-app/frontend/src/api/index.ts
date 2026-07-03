@@ -1,15 +1,20 @@
 const API_URL = '/api';
 
-const getToken = () => localStorage.getItem('token');
+// The backend has no shared type contracts yet, so request/response bodies
+// stay loosely typed here. Tightening these is a follow-up once the backend
+// is typed too.
+type JSONValue = Record<string, unknown> | unknown[];
 
-const headers = (token) => ({
+const getToken = (): string | null => localStorage.getItem('token');
+
+const headers = (token?: string | null): Record<string, string> => ({
   'Content-Type': 'application/json',
   ...(token && { 'Authorization': `Bearer ${token}` })
 });
 
 // ======== AUTENTICAÇÃO ========
 export const authAPI = {
-  login: async (email, password) => {
+  login: async (email: string, password: string) => {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: headers(),
@@ -19,7 +24,7 @@ export const authAPI = {
     return res.json();
   },
 
-  register: async (email, password, name) => {
+  register: async (email: string, password: string, name: string) => {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: headers(),
@@ -32,7 +37,7 @@ export const authAPI = {
   listUsers: async (search = '', page = 1, limit = 10) => {
     let url = `${API_URL}/auth/users?page=${page}&limit=${limit}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
-    
+
     const res = await fetch(url, {
       headers: headers(getToken())
     });
@@ -40,7 +45,7 @@ export const authAPI = {
     return res.json();
   },
 
-  createUser: async (data) => {
+  createUser: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/auth/users`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -50,7 +55,7 @@ export const authAPI = {
     return res.json();
   },
 
-  updateUser: async (id, data) => {
+  updateUser: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/auth/users/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -60,7 +65,7 @@ export const authAPI = {
     return res.json();
   },
 
-  deleteUser: async (id) => {
+  deleteUser: async (id: string | number) => {
     const res = await fetch(`${API_URL}/auth/users/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -69,7 +74,7 @@ export const authAPI = {
     return res.json();
   },
 
-  changePassword: async (currentPassword, newPassword) => {
+  changePassword: async (currentPassword: string, newPassword: string) => {
     const res = await fetch(`${API_URL}/auth/change-password`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -82,15 +87,15 @@ export const authAPI = {
 
 // ======== PROCESSOS ========
 export const processAPI = {
-  list: async (departmentId = null, status = null, search = '', page = 1, limit = 10) => {
+  list: async (departmentId: string | number | null = null, status: string | null = null, search = '', page = 1, limit = 10) => {
     let url = `${API_URL}/processes`;
     const params = new URLSearchParams();
-    if (departmentId) params.append('department_id', departmentId);
+    if (departmentId) params.append('department_id', String(departmentId));
     if (status) params.append('status', status);
     if (search) params.append('search', search);
-    params.append('page', page);
-    params.append('limit', limit);
-    
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+
     if (params.toString()) url += '?' + params.toString();
 
     const res = await fetch(url, {
@@ -100,7 +105,7 @@ export const processAPI = {
     return res.json();
   },
 
-  get: async (id) => {
+  get: async (id: string | number) => {
     const res = await fetch(`${API_URL}/processes/${id}`, {
       headers: headers(getToken())
     });
@@ -108,7 +113,7 @@ export const processAPI = {
     return res.json();
   },
 
-  create: async (data) => {
+  create: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/processes`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -118,7 +123,7 @@ export const processAPI = {
     return res.json();
   },
 
-  update: async (id, data) => {
+  update: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/processes/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -128,7 +133,7 @@ export const processAPI = {
     return res.json();
   },
 
-  delete: async (id) => {
+  delete: async (id: string | number) => {
     const res = await fetch(`${API_URL}/processes/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -137,7 +142,7 @@ export const processAPI = {
     return res.json();
   },
 
-  getAudit: async (id) => {
+  getAudit: async (id: string | number) => {
     const res = await fetch(`${API_URL}/processes/${id}/audit`, {
       headers: headers(getToken())
     });
@@ -145,7 +150,7 @@ export const processAPI = {
     return res.json();
   },
 
-  uploadStepPhoto: async (formData) => {
+  uploadStepPhoto: async (formData: FormData) => {
     const res = await fetch(`${API_URL}/processes/upload-step-photo`, {
       method: 'POST',
       headers: {
@@ -168,7 +173,7 @@ export const departmentAPI = {
     return res.json();
   },
 
-  get: async (id) => {
+  get: async (id: string | number) => {
     const res = await fetch(`${API_URL}/departments/${id}`, {
       headers: headers(getToken())
     });
@@ -176,7 +181,7 @@ export const departmentAPI = {
     return res.json();
   },
 
-  create: async (data) => {
+  create: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/departments`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -186,7 +191,7 @@ export const departmentAPI = {
     return res.json();
   },
 
-  update: async (id, data) => {
+  update: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/departments/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -196,7 +201,7 @@ export const departmentAPI = {
     return res.json();
   },
 
-  delete: async (id) => {
+  delete: async (id: string | number) => {
     const res = await fetch(`${API_URL}/departments/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -214,7 +219,7 @@ export const brandingAPI = {
     return res.json();
   },
 
-  update: async (data) => {
+  update: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/branding`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -232,7 +237,7 @@ export const brandingAPI = {
     return res.json();
   },
 
-  uploadImage: async (formData) => {
+  uploadImage: async (formData: FormData) => {
     const res = await fetch(`${API_URL}/branding/upload`, {
       method: 'POST',
       headers: {
@@ -255,7 +260,7 @@ export const visualProcessAPI = {
     return res.json();
   },
 
-  get: async (id) => {
+  get: async (id: string | number) => {
     const res = await fetch(`${API_URL}/visual-processes/${id}`, {
       headers: headers(getToken())
     });
@@ -263,7 +268,7 @@ export const visualProcessAPI = {
     return res.json();
   },
 
-  create: async (data) => {
+  create: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/visual-processes`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -273,7 +278,7 @@ export const visualProcessAPI = {
     return res.json();
   },
 
-  update: async (id, data) => {
+  update: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/visual-processes/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -283,7 +288,7 @@ export const visualProcessAPI = {
     return res.json();
   },
 
-  delete: async (id) => {
+  delete: async (id: string | number) => {
     const res = await fetch(`${API_URL}/visual-processes/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -292,7 +297,7 @@ export const visualProcessAPI = {
     return res.json();
   },
 
-  uploadStageImage: async (formData) => {
+  uploadStageImage: async (formData: FormData) => {
     const res = await fetch(`${API_URL}/visual-processes/upload`, {
       method: 'POST',
       headers: {
@@ -307,7 +312,7 @@ export const visualProcessAPI = {
 
 // ======== EXECUÇÕES ========
 export const executionAPI = {
-  start: async (processId) => {
+  start: async (processId: string | number) => {
     const res = await fetch(`${API_URL}/executions/start/${processId}`, {
       method: 'POST',
       headers: headers(getToken())
@@ -316,7 +321,7 @@ export const executionAPI = {
     return res.json();
   },
 
-  get: async (executionId) => {
+  get: async (executionId: string | number) => {
     const res = await fetch(`${API_URL}/executions/${executionId}`, {
       headers: headers(getToken())
     });
@@ -324,7 +329,7 @@ export const executionAPI = {
     return res.json();
   },
 
-  completeStep: async (stepExecutionId, data) => {
+  completeStep: async (stepExecutionId: string | number, data: FormData | JSONValue) => {
     const isFormData = data instanceof FormData;
     const res = await fetch(`${API_URL}/step-executions/${stepExecutionId}/complete`, {
       method: 'PUT',
@@ -338,7 +343,7 @@ export const executionAPI = {
     return res.json();
   },
 
-  complete: async (executionId) => {
+  complete: async (executionId: string | number) => {
     const res = await fetch(`${API_URL}/executions/${executionId}/complete`, {
       method: 'PUT',
       headers: headers(getToken())
@@ -347,7 +352,7 @@ export const executionAPI = {
     return res.json();
   },
 
-  cancel: async (executionId) => {
+  cancel: async (executionId: string | number) => {
     const res = await fetch(`${API_URL}/executions/${executionId}/cancel`, {
       method: 'PUT',
       headers: headers(getToken())
@@ -366,6 +371,16 @@ export const executionAPI = {
 };
 
 // ======== TICKETS ========
+interface TicketListParams {
+  status?: string;
+  priority?: string;
+  type?: string;
+  department_id?: string | number;
+  filter?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const ticketAPI = {
   listAssignable: async () => {
     const res = await fetch(`${API_URL}/tickets/users`, { headers: headers(getToken()) });
@@ -373,25 +388,25 @@ export const ticketAPI = {
     return res.json();
   },
 
-  list: async ({ status, priority, type, department_id, filter, page = 1, limit = 20 } = {}) => {
-    const params = new URLSearchParams({ page, limit });
+  list: async ({ status, priority, type, department_id, filter, page = 1, limit = 20 }: TicketListParams = {}) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status)        params.append('status', status);
     if (priority)      params.append('priority', priority);
     if (type)          params.append('type', type);
-    if (department_id) params.append('department_id', department_id);
+    if (department_id) params.append('department_id', String(department_id));
     if (filter)        params.append('filter', filter);
     const res = await fetch(`${API_URL}/tickets?${params}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  get: async (id) => {
+  get: async (id: string | number) => {
     const res = await fetch(`${API_URL}/tickets/${id}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  create: async (data) => {
+  create: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/tickets`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -401,7 +416,7 @@ export const ticketAPI = {
     return res.json();
   },
 
-  update: async (id, data) => {
+  update: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/tickets/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -411,7 +426,7 @@ export const ticketAPI = {
     return res.json();
   },
 
-  delete: async (id) => {
+  delete: async (id: string | number) => {
     const res = await fetch(`${API_URL}/tickets/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -420,7 +435,7 @@ export const ticketAPI = {
     return res.json();
   },
 
-  addComment: async (id, comment) => {
+  addComment: async (id: string | number, comment: string) => {
     const res = await fetch(`${API_URL}/tickets/${id}/comments`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -430,7 +445,7 @@ export const ticketAPI = {
     return res.json();
   },
 
-  deleteComment: async (ticketId, commentId) => {
+  deleteComment: async (ticketId: string | number, commentId: string | number) => {
     const res = await fetch(`${API_URL}/tickets/${ticketId}/comments/${commentId}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -442,7 +457,7 @@ export const ticketAPI = {
 
 // ======== HUBSOFT ========
 export const hubsoftAPI = {
-  graphql: async (query, variables) => {
+  graphql: async (query: string, variables?: Record<string, unknown>) => {
     const res = await fetch(`${API_URL}/hubsoft/graphql`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -452,7 +467,7 @@ export const hubsoftAPI = {
     return res.json();
   },
 
-  listTecnicos: async (params = {}) => {
+  listTecnicos: async (params: Record<string, string> = {}) => {
     const searchParams = new URLSearchParams(params);
     const url = `${API_URL}/hubsoft/tecnicos${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     const res = await fetch(url, {
@@ -462,7 +477,7 @@ export const hubsoftAPI = {
     return res.json();
   },
 
-  get: async (path, params = {}) => {
+  get: async (path: string, params: Record<string, string> = {}) => {
     const searchParams = new URLSearchParams(params);
     const url = `${API_URL}/hubsoft/proxy/${path}${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     const res = await fetch(url, {
@@ -481,7 +496,7 @@ export const labelAPI = {
     return res.json();
   },
 
-  create: async ({ name, color }) => {
+  create: async ({ name, color }: { name: string; color: string }) => {
     const res = await fetch(`${API_URL}/labels`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -491,7 +506,7 @@ export const labelAPI = {
     return res.json();
   },
 
-  update: async (id, { name, color }) => {
+  update: async (id: string | number, { name, color }: { name: string; color: string }) => {
     const res = await fetch(`${API_URL}/labels/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -501,7 +516,7 @@ export const labelAPI = {
     return res.json();
   },
 
-  delete: async (id) => {
+  delete: async (id: string | number) => {
     const res = await fetch(`${API_URL}/labels/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -513,7 +528,7 @@ export const labelAPI = {
 
 // ======== ARQUIVOS ========
 export const fileAPI = {
-  list: async (folderId = null) => {
+  list: async (folderId: string | number | null = null) => {
     let url = `${API_URL}/files`;
     if (folderId) url += `?folder_id=${folderId}`;
     const res = await fetch(url, {
@@ -523,7 +538,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  createFolder: async (name, parentId = null) => {
+  createFolder: async (name: string, parentId: string | number | null = null) => {
     const res = await fetch(`${API_URL}/files/folders`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -533,7 +548,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  renameFolder: async (id, name) => {
+  renameFolder: async (id: string | number, name: string) => {
     const res = await fetch(`${API_URL}/files/folders/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -543,7 +558,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  deleteFolder: async (id) => {
+  deleteFolder: async (id: string | number) => {
     const res = await fetch(`${API_URL}/files/folders/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -552,7 +567,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  upload: async (formData) => {
+  upload: async (formData: FormData) => {
     const res = await fetch(`${API_URL}/files/upload`, {
       method: 'POST',
       headers: {
@@ -564,7 +579,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  deleteFile: async (id) => {
+  deleteFile: async (id: string | number) => {
     const res = await fetch(`${API_URL}/files/${id}`, {
       method: 'DELETE',
       headers: headers(getToken())
@@ -573,7 +588,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  renameFile: async (id, name) => {
+  renameFile: async (id: string | number, name: string) => {
     const res = await fetch(`${API_URL}/files/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -583,7 +598,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  move: async (type, id, target_folder_id) => {
+  move: async (type: string, id: string | number, target_folder_id: string | number | null) => {
     const res = await fetch(`${API_URL}/files/move`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -593,7 +608,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  copy: async (type, id, target_folder_id) => {
+  copy: async (type: string, id: string | number, target_folder_id: string | number | null) => {
     const res = await fetch(`${API_URL}/files/copy`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -603,7 +618,7 @@ export const fileAPI = {
     return res.json();
   },
 
-  downloadFolder: async (id) => {
+  downloadFolder: async (id: string | number) => {
     const res = await fetch(`${API_URL}/files/folders/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
@@ -613,7 +628,7 @@ export const fileAPI = {
     return res.blob();
   },
 
-  downloadFile: async (id) => {
+  downloadFile: async (id: string | number) => {
     const res = await fetch(`${API_URL}/files/${id}/download`, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
@@ -626,7 +641,7 @@ export const fileAPI = {
 
 // ======== INDIQUE E GANHE ========
 export const referralAPI = {
-  list: async (status) => {
+  list: async (status?: string) => {
     let url = `${API_URL}/referral/indicacoes`;
     if (status) url += `?status=${encodeURIComponent(status)}`;
     const res = await fetch(url, { headers: headers(getToken()) });
@@ -634,7 +649,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  create: async (data) => {
+  create: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/indicacao`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -644,7 +659,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  cancel: async (id) => {
+  cancel: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/indicacao/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -653,7 +668,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  update: async (id, data) => {
+  update: async (id: string | number, data: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/indicacao/${id}`, {
       method: 'PUT',
       headers: headers(getToken()),
@@ -663,7 +678,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  remove: async (id) => {
+  remove: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/indicacoes/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -672,7 +687,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  descontoManual: async (data) => {
+  descontoManual: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/desconto-manual`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -682,13 +697,13 @@ export const referralAPI = {
     return res.json();
   },
 
-  getCliente: async (id) => {
+  getCliente: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/cliente/${id}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  getReferrerInfo: async (cpf) => {
+  getReferrerInfo: async (cpf: string) => {
     const res = await fetch(`${API_URL}/referral/public/referrer-info`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -698,7 +713,7 @@ export const referralAPI = {
     if (!res.ok) throw new Error(data.error || 'Erro ao buscar indicador');
     return data;
   },
-  registerIndication: async (formData) => {
+  registerIndication: async (formData: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/public/register-indication`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -713,7 +728,7 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  setPrimeiroBoleto: async (id, pago) => {
+  setPrimeiroBoleto: async (id: string | number, pago: boolean) => {
     const res = await fetch(`${API_URL}/referral/leads/${id}/primeiro-boleto`, {
       method: 'PATCH',
       headers: headers(getToken()),
@@ -727,12 +742,12 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  getCRMEtapas: async (id_crm) => {
+  getCRMEtapas: async (id_crm: string | number) => {
     const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  addCRMEtapa: async (id_crm, { id_etapa, nome }) => {
+  addCRMEtapa: async (id_crm: string | number, { id_etapa, nome }: { id_etapa: string | number; nome: string }) => {
     const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -741,7 +756,7 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  deleteCRMEtapa: async (id_crm, id) => {
+  deleteCRMEtapa: async (id_crm: string | number, id: string | number) => {
     const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas/${id}`, {
       method: 'DELETE',
       headers: headers(getToken()),
@@ -749,7 +764,7 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  sendLeadToCRM: async (formData) => {
+  sendLeadToCRM: async (formData: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/leads/send-to-crm`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -760,7 +775,7 @@ export const referralAPI = {
     return data;
   },
 
-  createProspect: async (data) => {
+  createProspect: async (data: JSONValue) => {
     const res = await fetch(`${API_URL}/hubsoft/prospecto`, {
       method: 'POST',
       headers: headers(getToken()),
@@ -772,7 +787,7 @@ export const referralAPI = {
     }
     return res.json();
   },
-  getProspecto: async (id) => {
+  getProspecto: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/prospecto/${id}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
@@ -784,7 +799,7 @@ export const referralAPI = {
     return res.json();
   },
 
-  saveConfig: async (data) => {
+  saveConfig: async (data: JSONValue) => {
     // data may contain desconto_valor and/or regra_ativacao
     const res = await fetch(`${API_URL}/referral/config`, {
       method: 'PUT',
