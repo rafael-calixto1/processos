@@ -42,9 +42,34 @@ Acompanhamento de todas as execuções de processos: histórico, status, respons
 ---
 
 ### Tickets (`/tickets`)
-Sistema de chamados interno com suporte a tipos (Tarefa, Bug, História, Feature), prioridades (Baixa, Média, Alta, Urgente) e status (Aberto → Em andamento → Resolvido → Fechado). Visualização em lista ou kanban, comentários em tempo real e etiquetas coloridas.
+Sistema de chamados interno com suporte a tipos (Tarefa, Bug, História, Feature), prioridades (Baixa, Média, Alta, Urgente) e status (Aberto → Em andamento → Resolvido → Fechado). Visualização em lista ou kanban, comentários em tempo real e etiquetas coloridas. Chamados podem ser filtrados e atribuídos por departamento, com log de atividade registrando a troca de departamento.
 
 ![Tickets](telas/pt-br/TICKETS.png)
+
+---
+
+### Indique e Ganhe (`/referral`)
+Programa de indicação integrado ao HubSoft: clientes indicam novos contatos usando um portal público (`public-referral/`) sem necessidade de login. Cada indicação é validada contra a base de clientes/prospectos do HubSoft, e o desconto é aplicado automaticamente via webhook quando a indicação é ativada ou paga a primeira fatura — conforme a regra configurada (na ativação ou na primeira fatura paga) e o tipo de recompensa (desconto em valor ou remoção de fatura).
+
+![Indique e Ganhe](telas/pt-br/REFERRAL.png)
+
+Portal público de indicação, usado pelos clientes sem necessidade de login:
+
+![Portal Público de Indicação](telas/pt-br/PUBLIC-REFERRAL.png)
+
+---
+
+### Leads (`/leads`)
+Painel para acompanhar e gerenciar as indicações recebidas pelo programa Indique e Ganhe: status de cada lead, sincronização automática de pagamentos com o HubSoft e encaminhamento para os CRMs cadastrados.
+
+![Leads](telas/pt-br/LEADS.png)
+
+---
+
+### Dashboard de Manutenção (`/frota/manutencao-dashboard`)
+Painel com layout customizável (drag-and-drop) mostrando custo total e quantidade de manutenções da frota por tipo, com filtro de período e gráficos de barras.
+
+![Dashboard de Manutenção](telas/pt-br/MANUTENCAO-DASHBOARD.png)
 
 ---
 
@@ -98,4 +123,14 @@ npm start
 
 # Front-end (em outro terminal)
 cd frontend && npm run dev
+```
+
+### Portal público de indicação (`public-referral/`)
+
+App separado, sem autenticação, usado pelos clientes para indicar novos contatos e acompanhar suas indicações.
+
+```bash
+cd processo-audit-app/processo-audit-app/public-referral
+npm install
+npm run dev
 ```
