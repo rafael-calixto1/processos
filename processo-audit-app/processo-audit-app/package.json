@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "db:init": "node scripts/initDb.js"
+    "db:init": "node scripts/initDb.js",
+    "seed:cameras": "node scripts/seed_suporte_cameras.js"
   },
   "keywords": [],
   "author": "",

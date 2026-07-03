@@ -49,6 +49,6 @@ export const hubsoft = {
   delete: (path) => request('DELETE', path),
   graphql: (query, variables) => request('POST', 'graphql/v1', { body: { query, variables } }),
   createProspect: async (data) => {
-    return request('POST', '/api/v1/integracao/cliente/prospecto', { body: data });
+    return request('POST', '/api/v1/integracao/prospecto', { body: data });
   }
 };

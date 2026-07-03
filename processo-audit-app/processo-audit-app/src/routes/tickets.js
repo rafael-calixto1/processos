@@ -29,11 +29,13 @@ const ticketWithUsers = `
     u1.email AS created_by_email,
     u2.name  AS assigned_to_name,
     u2.email AS assigned_to_email,
+    d.name   AS department_name,
     (SELECT COUNT(*) FROM ticket_comments c WHERE c.ticket_id = t.id) AS comment_count,
     ${labelsSubquery}
   FROM tickets t
   JOIN  users u1 ON u1.id = t.created_by
   LEFT JOIN users u2 ON u2.id = t.assigned_to
+  LEFT JOIN departments d ON d.id = t.department_id
 `;
 
 const parseLabels = (raw) =>
@@ -49,7 +51,7 @@ const parseTicket = (t) => ({ ...t, labels: parseLabels(t.labels_raw), labels_ra
 /* ── List tickets ── */
 router.get('/tickets', verifyToken, async (req, res) => {
   try {
-    const { status, priority, type, filter, page = 1, limit = 20 } = req.query;
+    const { status, priority, type, department_id, filter, page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const conditions = [];
@@ -63,9 +65,10 @@ router.get('/tickets', verifyToken, async (req, res) => {
       params.push(req.userId);
     }
 
-    if (status)   { conditions.push('t.status = ?');   params.push(status); }
-    if (priority) { conditions.push('t.priority = ?'); params.push(priority); }
-    if (type)     { conditions.push('t.type = ?');     params.push(type); }
+    if (status)        { conditions.push('t.status = ?');        params.push(status); }
+    if (priority)      { conditions.push('t.priority = ?');      params.push(priority); }
+    if (type)          { conditions.push('t.type = ?');          params.push(type); }
+    if (department_id) { conditions.push('t.department_id = ?'); params.push(department_id); }
 
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
@@ -97,17 +100,18 @@ router.get('/tickets', verifyToken, async (req, res) => {
 /* ── Create ticket ── */
 router.post('/tickets', verifyToken, async (req, res) => {
   try {
-    const { title, description, priority, type, assigned_to, due_date, labels } = req.body;
+    const { title, description, priority, type, department_id, assigned_to, due_date, labels } = req.body;
     if (!title) return res.status(400).json({ error: 'Título é obrigatório' });
 
     const [result] = await pool.execute(
-      `INSERT INTO tickets (title, description, priority, type, assigned_to, due_date, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tickets (title, description, priority, type, department_id, assigned_to, due_date, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title,
         description || null,
         priority || 'medium',
         type || 'task',
+        department_id || null,
         assigned_to || null,
         due_date || null,
         req.userId,
@@ -178,10 +182,14 @@ router.get('/tickets/:id', verifyToken, async (req, res) => {
 /* ── Update ticket ── */
 router.put('/tickets/:id', verifyToken, async (req, res) => {
   try {
-    const { title, description, status, priority, type, due_date, assigned_to, labels } = req.body;
+    const { title, description, status, priority, type, department_id, due_date, assigned_to, labels } = req.body;
 
     const [[ticket]] = await pool.execute(
-      'SELECT t.*, u.name AS assigned_to_name FROM tickets t LEFT JOIN users u ON u.id = t.assigned_to WHERE t.id = ?',
+      `SELECT t.*, u.name AS assigned_to_name, d.name AS department_name 
+       FROM tickets t 
+       LEFT JOIN users u ON u.id = t.assigned_to 
+       LEFT JOIN departments d ON d.id = t.department_id
+       WHERE t.id = ?`,
       [req.params.id]
     );
     if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
@@ -203,6 +211,23 @@ router.put('/tickets/:id', verifyToken, async (req, res) => {
     track('type',     ticket.type,     type);
     track('due_date', ticket.due_date ? String(ticket.due_date).slice(0, 10) : '', due_date ?? undefined);
 
+    if (department_id !== undefined) {
+      const oldId = ticket.department_id ?? '';
+      const newId = department_id || '';
+      if (String(oldId) !== String(newId)) {
+        let newName = '';
+        if (newId) {
+          const [[d]] = await pool.execute('SELECT name FROM departments WHERE id = ?', [newId]);
+          newName = d?.name ?? newId;
+        }
+        activities.push({
+          field: 'department',
+          old_value: ticket.department_name ?? '',
+          new_value: newName,
+        });
+      }
+    }
+
     if (assigned_to !== undefined) {
       const oldId = ticket.assigned_to ?? '';
       const newId = assigned_to || '';
@@ -223,7 +248,7 @@ router.put('/tickets/:id', verifyToken, async (req, res) => {
     await pool.execute(
       `UPDATE tickets SET
          title = ?, description = ?, status = ?, priority = ?, type = ?,
-         due_date = ?, assigned_to = ?
+         department_id = ?, due_date = ?, assigned_to = ?
        WHERE id = ?`,
       [
         title        ?? ticket.title,
@@ -231,6 +256,7 @@ router.put('/tickets/:id', verifyToken, async (req, res) => {
         status       ?? ticket.status,
         priority     ?? ticket.priority,
         type         ?? ticket.type,
+        department_id !== undefined ? (department_id || null) : ticket.department_id,
         due_date     !== undefined ? (due_date || null) : ticket.due_date,
         assigned_to  !== undefined ? (assigned_to || null) : ticket.assigned_to,
         req.params.id,

@@ -12,6 +12,7 @@ import fleetRoutes from './src/routes/fleet.js';
 import ticketRoutes from './src/routes/tickets.js';
 import labelRoutes from './src/routes/labels.js';
 import hubsoftRoutes from './src/routes/hubsoft.js';
+import referralRoutes from './src/routes/referral.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/fleet', fleetRoutes);
 app.use('/api', ticketRoutes);
 app.use('/api', labelRoutes);
 app.use('/api/hubsoft', hubsoftRoutes);
+app.use('/api/referral', referralRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

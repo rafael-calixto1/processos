@@ -4,7 +4,7 @@ import {
   Bug, CheckSquare2, BookOpen, Zap, Calendar, Clock, Tag, Pencil, Check,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ticketAPI, labelAPI } from '../api/index.js';
+import { ticketAPI, labelAPI, departmentAPI } from '../api/index.js';
 import styles from './Tickets.module.css';
 
 /* ── Constants ── */
@@ -42,6 +42,7 @@ const COLOR_PALETTE = [
 const ACTIVITY_FIELD_LABELS = {
   status: 'status', priority: 'prioridade', type: 'tipo',
   due_date: 'data limite', assigned_to: 'atribuído para',
+  department: 'departamento',
 };
 
 /* ── Helpers ── */
@@ -63,6 +64,7 @@ const getDisplayLabel = (field, value) => {
   if (field === 'priority') return PRIORITY_LABELS[value] || value;
   if (field === 'type')     return TYPE_LABELS[value] || value;
   if (field === 'due_date') return fmtDateShort(value) || value;
+  if (field === 'department') return value;
   return value;
 };
 const humanizeActivity = act => {
@@ -342,7 +344,7 @@ function LabelManager({ onClose, labels, onReload, currentUser }) {
 /* ══════════════════════════════════════════════════════════════
    MAIN TICKETS PAGE
 ══════════════════════════════════════════════════════════════ */
-const emptyForm = { title: '', description: '', priority: 'medium', type: 'task', assigned_to: '', due_date: '', label_ids: [] };
+const emptyForm = { title: '', description: '', priority: 'medium', type: 'task', department_id: '', assigned_to: '', due_date: '', label_ids: [] };
 
 export default function Tickets() {
   const { user } = useAuth();
@@ -355,10 +357,11 @@ export default function Tickets() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
 
-  const [filter,    setFilter]    = useState('');
-  const [statusF,   setStatusF]   = useState('');
-  const [priorityF, setPriorityF] = useState('');
-  const [typeF,     setTypeF]     = useState('');
+  const [filter,       setFilter]       = useState('');
+  const [statusF,      setStatusF]      = useState('');
+  const [priorityF,    setPriorityF]    = useState('');
+  const [typeF,        setTypeF]        = useState('');
+  const [departmentF,  setDepartmentF]  = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [form,     setForm]     = useState(emptyForm);
@@ -366,6 +369,7 @@ export default function Tickets() {
 
   const [users,         setUsers]         = useState([]);
   const [labels,        setLabels]        = useState([]);
+  const [departments,   setDepartments]   = useState([]);
   const [showLabelMgr,  setShowLabelMgr]  = useState(false);
 
   const [selected,        setSelected]        = useState(null);
@@ -375,6 +379,7 @@ export default function Tickets() {
   const [editStatus,      setEditStatus]      = useState('');
   const [editPrio,        setEditPrio]        = useState('');
   const [editType,        setEditType]        = useState('');
+  const [editDept,        setEditDept]        = useState('');
   const [editAssign,      setEditAssign]      = useState('');
   const [editDueDate,     setEditDueDate]     = useState('');
   const [detailTab,       setDetailTab]       = useState('details');
@@ -396,10 +401,18 @@ export default function Tickets() {
     } catch { /* silent */ }
   }, []);
 
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const depts = await departmentAPI.list();
+      setDepartments(depts || []);
+    } catch { /* silent */ }
+  }, []);
+
   useEffect(() => {
     ticketAPI.listAssignable().then(d => setUsers(d.users || [])).catch(() => {});
     fetchLabels();
-  }, [fetchLabels]);
+    fetchDepartments();
+  }, [fetchLabels, fetchDepartments]);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -407,12 +420,13 @@ export default function Tickets() {
     try {
       const isBoard = viewMode === 'board';
       const data = await ticketAPI.list({
-        status:   isBoard ? '' : statusF,
-        priority: priorityF,
-        type:     typeF,
+        status:        isBoard ? '' : statusF,
+        priority:      priorityF,
+        type:          typeF,
+        department_id: departmentF,
         filter,
-        page:     isBoard ? 1 : page,
-        limit:    isBoard ? 500 : LIMIT,
+        page:          isBoard ? 1 : page,
+        limit:         isBoard ? 500 : LIMIT,
       });
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
@@ -421,7 +435,7 @@ export default function Tickets() {
     } finally {
       setLoading(false);
     }
-  }, [filter, statusF, priorityF, typeF, page, viewMode]);
+  }, [filter, statusF, priorityF, typeF, departmentF, page, viewMode]);
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
@@ -469,6 +483,7 @@ export default function Tickets() {
       setEditStatus(d.status);
       setEditPrio(d.priority);
       setEditType(d.type || 'task');
+      setEditDept(d.department_id ?? '');
       setEditAssign(d.assigned_to ?? '');
       setEditDueDate(d.due_date ? String(d.due_date).slice(0, 10) : '');
     } catch (e) {
@@ -488,6 +503,7 @@ export default function Tickets() {
       setEditStatus(refreshed.status);
       setEditPrio(refreshed.priority);
       setEditType(refreshed.type || 'task');
+      setEditDept(refreshed.department_id ?? '');
       setEditAssign(refreshed.assigned_to ?? '');
       setEditDueDate(refreshed.due_date ? String(refreshed.due_date).slice(0, 10) : '');
       setTickets(prev => prev.map(t => t.id === detail.id ? { ...t, ...refreshed } : t));
@@ -512,13 +528,14 @@ export default function Tickets() {
     setError('');
     try {
       await ticketAPI.create({
-        title:       form.title,
-        description: form.description,
-        priority:    form.priority,
-        type:        form.type,
-        assigned_to: form.assigned_to || null,
-        due_date:    form.due_date    || null,
-        labels:      form.label_ids,
+        title:         form.title,
+        description:   form.description,
+        priority:      form.priority,
+        type:          form.type,
+        department_id: form.department_id || null,
+        assigned_to:   form.assigned_to || null,
+        due_date:      form.due_date    || null,
+        labels:        form.label_ids,
       });
       setForm(emptyForm);
       setShowForm(false);
@@ -637,6 +654,14 @@ export default function Tickets() {
                 <option value="bug">Bug</option>
                 <option value="story">História</option>
                 <option value="feature">Feature</option>
+              </select>
+            </div>
+            <div className={styles.controlGroup}>
+              <label className={styles.label}>Departamento</label>
+              <select className={styles.select} value={editDept}
+                onChange={e => { setEditDept(e.target.value); handleDetailUpdate({ department_id: e.target.value || null }); }}>
+                <option value="">— Nenhum —</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div className={styles.controlGroup}>
@@ -801,6 +826,13 @@ export default function Tickets() {
                 </select>
               </div>
               <div className={styles.formGroup}>
+                <label className={styles.label}>Departamento</label>
+                <select className={styles.select} value={form.department_id} onChange={e => setForm({ ...form, department_id: e.target.value })}>
+                  <option value="">— Nenhum —</option>
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+              <div className={styles.formGroup}>
                 <label className={styles.label}>Prioridade</label>
                 <select className={styles.select} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
                   <option value="low">Baixa</option>
@@ -865,6 +897,10 @@ export default function Tickets() {
               <option value="closed">Fechado</option>
             </select>
           )}
+          <select className={styles.select} value={departmentF} onChange={e => { setDepartmentF(e.target.value); setPage(1); }}>
+            <option value="">Todos os departamentos</option>
+            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
           <select className={styles.select} value={typeF} onChange={e => { setTypeF(e.target.value); setPage(1); }}>
             <option value="">Todos os tipos</option>
             <option value="task">Tarefa</option>
@@ -992,6 +1028,7 @@ export default function Tickets() {
                       )}
                       <div className={styles.ticketMeta}>
                         <span>Por <strong>{t.created_by_name}</strong></span>
+                        {t.department_name && <span className={styles.metaDept}>· <strong>{t.department_name}</strong></span>}
                         {t.assigned_to_name && <span>→ <strong>{t.assigned_to_name}</strong></span>}
                         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <MessageSquare size={12} /> {t.comment_count}

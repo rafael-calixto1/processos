@@ -214,6 +214,11 @@ const FleetVehicleStatus = () => {
                       </td>
                       <td>
                         <span style={{ fontWeight: 600 }}>{r.total_manutencoes || 0}</span>
+                        {r.custo_total_manutencao > 0 && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                            R$ {fmt(r.custo_total_manutencao, 2)}
+                          </div>
+                        )}
                         {r.ultima_manutencao_data && (
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                             Últ: {fmtDate(r.ultima_manutencao_data)}

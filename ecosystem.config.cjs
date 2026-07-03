@@ -17,5 +17,14 @@ module.exports = {
         NODE_ENV: 'production',
       },
     },
+    {
+      name: 'processo-audit-public-referral',
+      script: 'npm',
+      args: 'run dev',
+      cwd: './processo-audit-app/processo-audit-app/public-referral',
+      env: {
+        NODE_ENV: 'production',
+      },
+    },
   ],
 };
