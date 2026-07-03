@@ -7,6 +7,16 @@ import path from 'path';
 
 const router = express.Router();
 
+router.get('/branding/public', async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM branding LIMIT 1');
+    if (rows.length === 0) return res.json({});
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Configuração do Multer para upload de logos e favicons
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

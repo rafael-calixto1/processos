@@ -24,6 +24,8 @@ import HotspotMikrotikConfig from './pages/HotspotMikrotikConfig';
 import HubsoftTecnicos from './pages/HubsoftTecnicos';
 import HubsoftExplorer from './pages/HubsoftExplorer';
 import HubsoftLoginSearch from './pages/HubsoftLoginSearch';
+import Referral from './pages/Referral';
+import Leads from './pages/Leads';
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -310,6 +312,28 @@ function AppContent() {
               <HubsoftExplorer />
             </Layout>
           </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/indique-e-ganhe"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Referral />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/leads"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Leads />
+            </Layout>
+          </ProtectedRoute>
         }
       />
 
