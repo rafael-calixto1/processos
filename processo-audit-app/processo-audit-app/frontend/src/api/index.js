@@ -653,6 +653,25 @@ export const referralAPI = {
     return res.json();
   },
 
+  update: async (id, data) => {
+    const res = await fetch(`${API_URL}/referral/indicacao/${id}`, {
+      method: 'PUT',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  remove: async (id) => {
+    const res = await fetch(`${API_URL}/referral/indicacoes/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   descontoManual: async (data) => {
     const res = await fetch(`${API_URL}/referral/desconto-manual`, {
       method: 'POST',
@@ -694,8 +713,39 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+  setPrimeiroBoleto: async (id, pago) => {
+    const res = await fetch(`${API_URL}/referral/leads/${id}/primeiro-boleto`, {
+      method: 'PATCH',
+      headers: headers(getToken()),
+      body: JSON.stringify({ pago }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
   getHubsoftCRMs: async () => {
     const res = await fetch(`${API_URL}/referral/hubsoft/crms`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  getCRMEtapas: async (id_crm) => {
+    const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  addCRMEtapa: async (id_crm, { id_etapa, nome }) => {
+    const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify({ id_etapa, nome }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  deleteCRMEtapa: async (id_crm, id) => {
+    const res = await fetch(`${API_URL}/referral/crm/${id_crm}/etapas/${id}`, {
+      method: 'DELETE',
+      headers: headers(getToken()),
+    });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
@@ -735,6 +785,7 @@ export const referralAPI = {
   },
 
   saveConfig: async (data) => {
+    // data may contain desconto_valor and/or regra_ativacao
     const res = await fetch(`${API_URL}/referral/config`, {
       method: 'PUT',
       headers: headers(getToken()),

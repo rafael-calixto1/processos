@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, ClipboardList } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ClipboardList, LayoutDashboard } from 'lucide-react';
 import styles from './Fleet.module.css';
+import MaintenanceDashboard from './MaintenanceDashboard';
 
 const LIMIT = 15;
 
@@ -9,7 +10,7 @@ const LIMIT = 15;
    ════════════════════════════════════════════════════════ */
 const emptyHistoryForm = {
   car_id: '', maintenance_type_id: '', maintenance_date: '',
-  maintenance_kilometers: '', observation: '',
+  maintenance_kilometers: '', total_cost: '', observation: '',
 };
 
 const MaintenanceHistory = ({ cars, types }) => {
@@ -53,6 +54,7 @@ const MaintenanceHistory = ({ cars, types }) => {
       maintenance_type_id:    r.maintenance_type_id ?? '',
       maintenance_date:       r.maintenance_date ? r.maintenance_date.slice(0, 10) : '',
       maintenance_kilometers: r.maintenance_kilometers ?? '',
+      total_cost:             r.total_cost ?? '',
       observation:            r.observation || '',
     });
     setShowForm(true);
@@ -69,6 +71,7 @@ const MaintenanceHistory = ({ cars, types }) => {
         car_id:               form.car_id !== '' ? Number(form.car_id) : undefined,
         maintenance_type_id:  form.maintenance_type_id !== '' ? Number(form.maintenance_type_id) : undefined,
         maintenance_kilometers: form.maintenance_kilometers !== '' ? Number(form.maintenance_kilometers) : undefined,
+        total_cost:           form.total_cost !== '' ? Number(form.total_cost) : undefined,
       };
       if (editId) {
         await fetch(`/api/fleet/maintenance/history/${editId}`, {
@@ -161,6 +164,10 @@ const MaintenanceHistory = ({ cars, types }) => {
                 <label className={styles.label}>Km na Manutenção</label>
                 <input type="number" min="0" className={styles.input} value={form.maintenance_kilometers} onChange={e => setForm({ ...form, maintenance_kilometers: e.target.value })} />
               </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Custo Total (R$)</label>
+                <input type="number" step="0.01" min="0" className={styles.input} value={form.total_cost} onChange={e => setForm({ ...form, total_cost: e.target.value })} />
+              </div>
               <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
                 <label className={styles.label}>Observação</label>
                 <textarea className={styles.textarea} value={form.observation} onChange={e => setForm({ ...form, observation: e.target.value })} rows={2} />
@@ -193,6 +200,7 @@ const MaintenanceHistory = ({ cars, types }) => {
                 <th>Tipo</th>
                 <th>Data</th>
                 <th>Km</th>
+                <th>Custo</th>
                 <th>Observação</th>
                 <th>Ações</th>
               </tr>
@@ -208,6 +216,7 @@ const MaintenanceHistory = ({ cars, types }) => {
                   </td>
                   <td>{fmtDate(r.maintenance_date)}</td>
                   <td>{r.maintenance_kilometers != null ? Number(r.maintenance_kilometers).toLocaleString('pt-BR') : '—'}</td>
+                  <td>{r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</td>
                   <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.observation || '—'}
                   </td>
@@ -559,7 +568,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
    Main FleetMaintenance component
    ════════════════════════════════════════════════════════ */
 const FleetMaintenance = () => {
-  const [activeTab, setActiveTab] = useState('history');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [cars,  setCars]  = useState([]);
   const [types, setTypes] = useState([]);
 
@@ -585,6 +594,12 @@ const FleetMaintenance = () => {
     <div>
       <div className={styles.innerTabBar}>
         <button
+          className={`${styles.innerTab} ${activeTab === 'dashboard' ? styles.innerTabActive : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          Dashboard
+        </button>
+        <button
           className={`${styles.innerTab} ${activeTab === 'history' ? styles.innerTabActive : ''}`}
           onClick={() => setActiveTab('history')}
         >
@@ -598,6 +613,9 @@ const FleetMaintenance = () => {
         </button>
       </div>
 
+      {activeTab === 'dashboard' && (
+        <MaintenanceDashboard />
+      )}
       {activeTab === 'history' && (
         <MaintenanceHistory cars={cars} types={types} />
       )}

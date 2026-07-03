@@ -284,7 +284,7 @@ router.get('/fueling/statistics/maintenance-by-type', async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const [rows] = await pool.execute(
-      `SELECT mt.name AS tipo_manutencao, COUNT(mh.id) AS total_manutencoes
+      `SELECT mt.name AS tipo_manutencao, COUNT(mh.id) AS total_manutencoes, COALESCE(SUM(mh.total_cost), 0) AS custo_total
        FROM fleet_maintenance_history mh
        JOIN fleet_maintenance_types mt ON mt.id = mh.maintenance_type_id
        WHERE mh.maintenance_date BETWEEN ? AND ?
@@ -586,12 +586,12 @@ router.get('/maintenance/history', async (req, res) => {
 
 router.post('/maintenance/history', async (req, res) => {
   try {
-    const { car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, observation } = req.body;
+    const { car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, total_cost, observation } = req.body;
     if (!car_id || !maintenance_date) return res.status(400).json({ error: 'Veículo e data são obrigatórios' });
     const [result] = await pool.execute(
-      `INSERT INTO fleet_maintenance_history (car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, observation)
-       VALUES (?, ?, ?, ?, ?)`,
-      [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, observation || null]
+      `INSERT INTO fleet_maintenance_history (car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, total_cost, observation)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, total_cost ?? null, observation || null]
     );
     res.status(201).json({ id: result.insertId, message: 'Manutenção registrada' });
   } catch (err) {
@@ -601,12 +601,12 @@ router.post('/maintenance/history', async (req, res) => {
 
 router.put('/maintenance/history/:id', async (req, res) => {
   try {
-    const { car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, observation } = req.body;
+    const { car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, total_cost, observation } = req.body;
     await pool.execute(
       `UPDATE fleet_maintenance_history
-       SET car_id = ?, maintenance_type_id = ?, maintenance_date = ?, maintenance_kilometers = ?, observation = ?
+       SET car_id = ?, maintenance_type_id = ?, maintenance_date = ?, maintenance_kilometers = ?, total_cost = ?, observation = ?
        WHERE id = ?`,
-      [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, observation || null, req.params.id]
+      [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, total_cost ?? null, observation || null, req.params.id]
     );
     res.json({ message: 'Manutenção atualizada' });
   } catch (err) {
@@ -661,13 +661,14 @@ router.get('/vehicle-status', async (req, res) => {
          (SELECT MAX(t.tire_change_date) FROM fleet_tire_changes t WHERE t.car_id = c.id)                          AS ultima_troca_pneu_data,
 
          (SELECT COUNT(*) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?)  AS total_manutencoes,
+         (SELECT COALESCE(SUM(m.total_cost), 0) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?) AS custo_total_manutencao,
          (SELECT MAX(m.maintenance_date) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?)  AS ultima_manutencao_data
 
        FROM fleet_cars c
        LEFT JOIN fleet_drivers d ON d.id = c.driver_id
        WHERE c.status = 'active'
        ORDER BY c.make, c.model`,
-      [...p, ...p, ...p, ...p, ...p, ...p, ...p]
+      [...p, ...p, ...p, ...p, ...p, ...p, ...p, ...p]
     );
 
     const result = rows.map(r => ({

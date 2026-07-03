@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -18,6 +18,8 @@ const menuItems = [
   { label: 'Minha Conta', path: '/configuracoes', Icon: Settings },
   { label: 'Frota', path: '/frota', Icon: Truck },
   { label: 'Tickets', path: '/tickets', Icon: TicketCheck },
+  { label: 'Indique e Ganhe', path: '/indique-e-ganhe', Icon: Gift },
+  { label: 'Leads', path: '/leads', Icon: Users },
 ];
 
 const adminItems = [

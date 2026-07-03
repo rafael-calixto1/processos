@@ -67,6 +67,7 @@ const FleetDashboard = () => {
   /* ── Derived totals ── */
   const totalCost = costByVehicle.reduce((s, r) => s + parseFloat(r.custo_total || 0), 0);
   const totalLiters = fuelByType.reduce((s, r) => s + parseFloat(r.total_litros || 0), 0);
+  const totalMaintenanceCost = maintenanceByType.reduce((s, r) => s + parseFloat(r.custo_total || 0), 0);
 
   /* ── Chart data ── */
   const pieVehicleData = {
@@ -205,25 +206,27 @@ const FleetDashboard = () => {
           <div className={styles.summaryCards}>
             <div className={styles.summaryCard}>
               <div className={styles.summaryValue}>
+                R$ {(totalCost + totalMaintenanceCost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <div className={styles.summaryLabel}>Custo Total Geral</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryValue}>
                 R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              <div className={styles.summaryLabel}>Custo Total</div>
+              <div className={styles.summaryLabel}>Custo de Combustível</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryValue}>
+                R$ {totalMaintenanceCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <div className={styles.summaryLabel}>Custo de Manutenção</div>
             </div>
             <div className={styles.summaryCard}>
               <div className={styles.summaryValue}>
                 {totalLiters.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L
               </div>
               <div className={styles.summaryLabel}>Total de Litros</div>
-            </div>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryValue}>{costByVehicle.length}</div>
-              <div className={styles.summaryLabel}>Veículos com Dados</div>
-            </div>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryValue}>
-                {maintenanceByType.reduce((s, r) => s + parseInt(r.total_manutencoes || 0), 0)}
-              </div>
-              <div className={styles.summaryLabel}>Total de Manutenções</div>
             </div>
           </div>
 

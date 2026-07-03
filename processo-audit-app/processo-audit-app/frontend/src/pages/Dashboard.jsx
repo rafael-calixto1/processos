@@ -104,6 +104,28 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* Departamentos */}
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>Departamentos</h2>
+        </div>
+        {departments.length === 0 ? (
+          <p className={styles.emptyText}>Nenhum departamento criado</p>
+        ) : (
+          <div className={styles.deptGrid}>
+            {departments.map((dept) => (
+              <div key={dept.id} className={styles.deptCard}>
+                <h3>{dept.name}</h3>
+                <p>{dept.description}</p>
+                <span className={styles.processCount}>
+                  {dept.process_count} processos
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Processos Recentes */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -143,28 +165,6 @@ const Dashboard = () => {
                     {process.steps?.length || 0} passos
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Departamentos */}
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>Departamentos</h2>
-        </div>
-        {departments.length === 0 ? (
-          <p className={styles.emptyText}>Nenhum departamento criado</p>
-        ) : (
-          <div className={styles.deptGrid}>
-            {departments.map((dept) => (
-              <div key={dept.id} className={styles.deptCard}>
-                <h3>{dept.name}</h3>
-                <p>{dept.description}</p>
-                <span className={styles.processCount}>
-                  {dept.process_count} processos
-                </span>
               </div>
             ))}
           </div>
