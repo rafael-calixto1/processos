@@ -147,89 +147,174 @@ const FleetVehicleStatus = () => {
           {data.length === 0 ? (
             <div className={styles.emptyState}><p>Nenhum dado encontrado para o período selecionado.</p></div>
           ) : (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Veículo</th>
-                    <th>Motorista</th>
-                    <th>Km Atual</th>
-                    <th>Combustível (L)</th>
-                    <th>Custo Comb.</th>
-                    <th>Média km/L</th>
-                    <th>Óleo</th>
-                    <th>Pneu</th>
-                    <th>Manutenções</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((r, i) => (
-                    <tr key={r.carro_id || i}>
-                      <td>
-                        <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
-                          {r.marca_carro} {r.modelo_carro}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{r.placa_carro}</div>
-                      </td>
-                      <td>{r.nome_motorista || '—'}</td>
-                      <td>{fmt(r.quilometragem_atual)} km</td>
-                      <td>{fmt(r.total_combustivel, 2)} L</td>
-                      <td>R$ {fmt(r.custo_total_combustivel, 2)}</td>
-                      <td>{fmt(r.media_consumo_km_por_litro, 2)}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          {r.oleo_atrasado ? (
-                            <AlertTriangle size={14} color="var(--error)" />
-                          ) : (
-                            <CheckCircle size={14} color="var(--success)" />
-                          )}
-                          <span style={{ fontSize: '0.8rem' }}>
-                            {r.total_trocas_oleo || 0} troca(s)
-                            {r.ultima_troca_oleo_data ? ` · ${fmtDate(r.ultima_troca_oleo_data)}` : ''}
-                          </span>
-                        </div>
-                        {r.data_proxima_troca_oleo && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            Próx: {fmtDate(r.data_proxima_troca_oleo)}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          {r.pneu_atrasado ? (
-                            <AlertTriangle size={14} color="var(--error)" />
-                          ) : (
-                            <CheckCircle size={14} color="var(--success)" />
-                          )}
-                          <span style={{ fontSize: '0.8rem' }}>
-                            {r.total_trocas_pneu || 0} troca(s)
-                            {r.ultima_troca_pneu_data ? ` · ${fmtDate(r.ultima_troca_pneu_data)}` : ''}
-                          </span>
-                        </div>
-                        {r.data_proxima_troca_pneu && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            Próx: {fmtDate(r.data_proxima_troca_pneu)}
-                          </div>
-                        )}
-                      </td>
-                      <td>
+            <>
+              <div className={`${styles.tableContainer} ${styles.statusTableDesktop}`}>
+                <div className={styles.tableScrollX}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Veículo</th>
+                        <th>Motorista</th>
+                        <th>Km Atual</th>
+                        <th>Combustível (L)</th>
+                        <th>Custo Comb.</th>
+                        <th>Média km/L</th>
+                        <th>Óleo</th>
+                        <th>Pneu</th>
+                        <th>Manutenções</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.map((r, i) => (
+                        <tr key={r.carro_id || i}>
+                          <td>
+                            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
+                              {r.marca_carro} {r.modelo_carro}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{r.placa_carro}</div>
+                          </td>
+                          <td>{r.nome_motorista || '—'}</td>
+                          <td>{fmt(r.quilometragem_atual)} km</td>
+                          <td>{fmt(r.total_combustivel, 2)} L</td>
+                          <td>R$ {fmt(r.custo_total_combustivel, 2)}</td>
+                          <td>{fmt(r.media_consumo_km_por_litro, 2)}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              {r.oleo_atrasado ? (
+                                <AlertTriangle size={14} color="var(--error)" />
+                              ) : (
+                                <CheckCircle size={14} color="var(--success)" />
+                              )}
+                              <span style={{ fontSize: '0.8rem' }}>
+                                {r.total_trocas_oleo || 0} troca(s)
+                                {r.ultima_troca_oleo_data ? ` · ${fmtDate(r.ultima_troca_oleo_data)}` : ''}
+                              </span>
+                            </div>
+                            {r.data_proxima_troca_oleo && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                Próx: {fmtDate(r.data_proxima_troca_oleo)}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              {r.pneu_atrasado ? (
+                                <AlertTriangle size={14} color="var(--error)" />
+                              ) : (
+                                <CheckCircle size={14} color="var(--success)" />
+                              )}
+                              <span style={{ fontSize: '0.8rem' }}>
+                                {r.total_trocas_pneu || 0} troca(s)
+                                {r.ultima_troca_pneu_data ? ` · ${fmtDate(r.ultima_troca_pneu_data)}` : ''}
+                              </span>
+                            </div>
+                            {r.data_proxima_troca_pneu && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                Próx: {fmtDate(r.data_proxima_troca_pneu)}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 600 }}>{r.total_manutencoes || 0}</span>
+                            {r.custo_total_manutencao > 0 && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                                R$ {fmt(r.custo_total_manutencao, 2)}
+                              </div>
+                            )}
+                            {r.ultima_manutencao_data && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                Últ: {fmtDate(r.ultima_manutencao_data)}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile card list — shows every field per vehicle without horizontal scrolling */}
+              <div className={styles.statusCardList}>
+                {data.map((r, i) => (
+                  <div key={r.carro_id || i} className={styles.statusCard}>
+                    <div className={styles.statusCardHeader}>
+                      <div>
+                        <div className={styles.statusCardVehicle}>{r.marca_carro} {r.modelo_carro}</div>
+                        <div className={styles.statusCardPlate}>{r.placa_carro}</div>
+                      </div>
+                      <div className={styles.statusCardDriver}>{r.nome_motorista || '—'}</div>
+                    </div>
+
+                    <div className={styles.statusCardMetrics}>
+                      <div className={styles.statusCardMetric}>
+                        <span className={styles.statusCardLabel}>Km Atual</span>
+                        <span className={styles.statusCardValue}>{fmt(r.quilometragem_atual)} km</span>
+                      </div>
+                      <div className={styles.statusCardMetric}>
+                        <span className={styles.statusCardLabel}>Combustível</span>
+                        <span className={styles.statusCardValue}>{fmt(r.total_combustivel, 2)} L</span>
+                      </div>
+                      <div className={styles.statusCardMetric}>
+                        <span className={styles.statusCardLabel}>Custo Comb.</span>
+                        <span className={styles.statusCardValue}>R$ {fmt(r.custo_total_combustivel, 2)}</span>
+                      </div>
+                      <div className={styles.statusCardMetric}>
+                        <span className={styles.statusCardLabel}>Média km/L</span>
+                        <span className={styles.statusCardValue}>{fmt(r.media_consumo_km_por_litro, 2)}</span>
+                      </div>
+                    </div>
+
+                    <div className={styles.statusCardRow}>
+                      <span className={styles.statusCardLabel}>Óleo</span>
+                      <div className={styles.statusCardInline}>
+                        {r.oleo_atrasado
+                          ? <AlertTriangle size={14} color="var(--error)" />
+                          : <CheckCircle size={14} color="var(--success)" />}
+                        <span>
+                          {r.total_trocas_oleo || 0} troca(s)
+                          {r.ultima_troca_oleo_data ? ` · ${fmtDate(r.ultima_troca_oleo_data)}` : ''}
+                        </span>
+                      </div>
+                      {r.data_proxima_troca_oleo && (
+                        <span className={styles.statusCardMuted}>Próx: {fmtDate(r.data_proxima_troca_oleo)}</span>
+                      )}
+                    </div>
+
+                    <div className={styles.statusCardRow}>
+                      <span className={styles.statusCardLabel}>Pneu</span>
+                      <div className={styles.statusCardInline}>
+                        {r.pneu_atrasado
+                          ? <AlertTriangle size={14} color="var(--error)" />
+                          : <CheckCircle size={14} color="var(--success)" />}
+                        <span>
+                          {r.total_trocas_pneu || 0} troca(s)
+                          {r.ultima_troca_pneu_data ? ` · ${fmtDate(r.ultima_troca_pneu_data)}` : ''}
+                        </span>
+                      </div>
+                      {r.data_proxima_troca_pneu && (
+                        <span className={styles.statusCardMuted}>Próx: {fmtDate(r.data_proxima_troca_pneu)}</span>
+                      )}
+                    </div>
+
+                    <div className={styles.statusCardRow}>
+                      <span className={styles.statusCardLabel}>Manutenções</span>
+                      <div className={styles.statusCardInline}>
                         <span style={{ fontWeight: 600 }}>{r.total_manutencoes || 0}</span>
                         {r.custo_total_manutencao > 0 && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                          <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
                             R$ {fmt(r.custo_total_manutencao, 2)}
-                          </div>
+                          </span>
                         )}
-                        {r.ultima_manutencao_data && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            Últ: {fmtDate(r.ultima_manutencao_data)}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      {r.ultima_manutencao_data && (
+                        <span className={styles.statusCardMuted}>Últ: {fmtDate(r.ultima_manutencao_data)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}

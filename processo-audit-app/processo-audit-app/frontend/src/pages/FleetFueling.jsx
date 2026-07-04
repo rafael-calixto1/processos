@@ -301,8 +301,8 @@ const FleetFueling = () => {
       {error && <div className={styles.errorState}>{error}</div>}
 
       <div className={styles.filterRow}>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div className={styles.fuelingSpacer} />
+        <div className={styles.fuelingActionsRow}>
           <button className={styles.btnSecondary} onClick={() => { setCameraError(''); setScanStatus('scanning'); setShowImport(true); setImportMode('camera'); }}>
             <QrCode size={16} /> Ler QR Code
           </button>
@@ -520,49 +520,100 @@ const FleetFueling = () => {
         </div>
       ) : (
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Veículo</th>
-                <th>Tipo</th>
-                <th>Litros</th>
-                <th>R$/L</th>
-                <th>Total (R$)</th>
-                <th>Km</th>
-                <th>Data</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td>
-                    <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
-                      {getCarLabel(r.car_id)}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
-                      {r.fuel_type || '—'}
-                    </span>
-                  </td>
-                  <td>{r.liters_quantity != null ? parseFloat(r.liters_quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}</td>
-                  <td>{r.price_per_liter != null ? `R$ ${parseFloat(r.price_per_liter).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}` : '—'}</td>
-                  <td style={{ fontWeight: 600 }}>
-                    {r.total_cost != null ? `R$ ${parseFloat(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
-                  </td>
-                  <td>{r.fueling_kilometers != null ? Number(r.fueling_kilometers).toLocaleString('pt-BR') : '—'}</td>
-                  <td>{fmtDate(r.fuel_date)}</td>
-                  <td>
-                    <div className={styles.actionBtns}>
-                      <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                      <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
-                    </div>
-                  </td>
+          <div className={`${styles.tableScrollX} ${styles.fuelingTableDesktop}`}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Veículo</th>
+                  <th>Tipo</th>
+                  <th>Litros</th>
+                  <th>R$/L</th>
+                  <th>Total (R$)</th>
+                  <th>Km</th>
+                  <th>Data</th>
+                  <th>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {records.map(r => (
+                  <tr key={r.id}>
+                    <td>
+                      <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
+                        {getCarLabel(r.car_id)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
+                        {r.fuel_type || '—'}
+                      </span>
+                    </td>
+                    <td>{r.liters_quantity != null ? parseFloat(r.liters_quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}</td>
+                    <td>{r.price_per_liter != null ? `R$ ${parseFloat(r.price_per_liter).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}` : '—'}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      {r.total_cost != null ? `R$ ${parseFloat(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                    </td>
+                    <td>{r.fueling_kilometers != null ? Number(r.fueling_kilometers).toLocaleString('pt-BR') : '—'}</td>
+                    <td>{fmtDate(r.fuel_date)}</td>
+                    <td>
+                      <div className={styles.actionBtns}>
+                        <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                        <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list — shows every field per abastecimento without horizontal scrolling */}
+          <div className={styles.fuelingCardList}>
+            {records.map(r => (
+              <div key={r.id} className={styles.fuelingCard}>
+                <div className={styles.fuelingCardHeader}>
+                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)}</div>
+                  <div className={styles.actionBtns}>
+                    <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                    <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+
+                <div className={styles.fuelingCardTop}>
+                  <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
+                    {r.fuel_type || '—'}
+                  </span>
+                  <span className={styles.statusCardMuted}>{fmtDate(r.fuel_date)}</span>
+                </div>
+
+                <div className={styles.statusCardMetrics}>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>Litros</span>
+                    <span className={styles.statusCardValue}>
+                      {r.liters_quantity != null ? parseFloat(r.liters_quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}
+                    </span>
+                  </div>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>R$/L</span>
+                    <span className={styles.statusCardValue}>
+                      {r.price_per_liter != null ? `R$ ${parseFloat(r.price_per_liter).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}` : '—'}
+                    </span>
+                  </div>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>Total</span>
+                    <span className={styles.statusCardValue}>
+                      {r.total_cost != null ? `R$ ${parseFloat(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                    </span>
+                  </div>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>Km</span>
+                    <span className={styles.statusCardValue}>
+                      {r.fueling_kilometers != null ? Number(r.fueling_kilometers).toLocaleString('pt-BR') : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {totalPages > 1 && (
             <div className={styles.pagination}>

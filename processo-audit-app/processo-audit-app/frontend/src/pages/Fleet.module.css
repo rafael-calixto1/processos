@@ -211,6 +211,154 @@
   background: #fafffe;
 }
 
+.tableScrollX {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Vehicle Status: mobile card list (hidden on desktop) ─── */
+.statusCardList {
+  display: none;
+}
+
+.statusCard {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statusCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.statusCardVehicle {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+}
+
+.statusCardPlate {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.statusCardDriver {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.statusCardMetrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.statusCardMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statusCardLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statusCardValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.statusCardRow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-light);
+}
+
+.statusCardInline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+}
+
+.statusCardMuted {
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+
+/* ── Fueling: header actions + mobile card list ─────────────── */
+.fuelingSpacer {
+  flex: 1;
+}
+
+.fuelingActionsRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.fuelingCardList {
+  display: none;
+}
+
+.fuelingCard {
+  border-bottom: 1px solid var(--border-light);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fuelingCard:last-child {
+  border-bottom: none;
+}
+
+.fuelingCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fuelingCardVehicle {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.fuelingCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ── Maintenance History / Types: mobile card lists ─────────── */
+.historyCardList,
+.typesCardList {
+  display: none;
+}
+
 /* ── Pagination ──────────────────────────────────────────── */
 .pagination {
   display: flex;
@@ -670,6 +818,23 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+@media (max-width: 700px) {
+  .statusTableDesktop { display: none; }
+  .statusCardList { display: flex; flex-direction: column; gap: 12px; }
+
+  .fuelingTableDesktop { display: none; }
+  .fuelingCardList { display: flex; flex-direction: column; }
+
+  .fuelingSpacer { display: none; }
+  .fuelingActionsRow { width: 100%; }
+  .fuelingActionsRow button { flex: 1 1 0; justify-content: center; }
+
+  .historyTableDesktop,
+  .typesTableDesktop { display: none; }
+  .historyCardList,
+  .typesCardList { display: flex; flex-direction: column; }
 }
 
 /* ── QR Scanner overrides (html5-qrcode default UI) ────────── */
