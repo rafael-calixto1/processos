@@ -384,18 +384,18 @@ export default function Referral() {
             <p className={styles.subtitle}>Gerencie indicações e descontos automáticos de mensalidade</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className={styles.headerActions}>
           <button className={styles.btnSecondary} onClick={openConfig}>
             <Settings size={15} />
-            Configurações
+            <span>Configurações</span>
           </button>
           <button className={styles.btnTeste} onClick={() => { setShowTeste(true); setTesteResult(null); setTesteError(null); setTesteForm({ cod_cliente: '', id_cliente_servico: '', valor: '', descricao: '' }); setTesteLookup({ loading: false, nome: '', servicos: [], error: null }); }}>
             <FlaskConical size={15} />
-            Teste
+            <span>Teste</span>
           </button>
           <button className={styles.btnPrimary} onClick={openModal}>
             <Plus size={16} />
-            Nova Indicação
+            <span>Nova Indicação</span>
           </button>
         </div>
       </div>
@@ -467,34 +467,138 @@ export default function Referral() {
             <span>Clique em "Nova Indicação" para registrar</span>
           </div>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Indicador</th>
-                <th>Indicado</th>
-                <th>Status</th>
-                <th>Desconto</th>
-                <th>Evento Hubsoft</th>
-                <th>Fatura</th>
-                <th>Data</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Indicador</th>
+                  <th>Indicado</th>
+                  <th>Status</th>
+                  <th>Desconto</th>
+                  <th>Evento Hubsoft</th>
+                  <th>Fatura</th>
+                  <th>Data</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((i) => {
+                  const cfg = STATUS_COLORS[i.status] || STATUS_COLORS.pendente;
+                  const Icon = STATUS_ICONS[i.status] || Clock;
+                  return (
+                    <tr key={i.id}>
+                      <td className={styles.tdId}>{i.id}</td>
+                      <td>
+                        <div className={styles.clientCell}>
+                          <span className={styles.clientName}>{i.nome_indicador || '—'}</span>
+                          <span className={styles.clientId}>Cód. {i.cod_cliente_indicador}</span>
+                        </div>
+                      </td>
+                      <td>
+                        {i.status === 'manual' ? (
+                          <span className={styles.clientId} style={{ fontStyle: 'italic' }}>Desconto direto</span>
+                        ) : (
+                          <div className={styles.clientCell}>
+                            <span className={styles.clientName}>{i.nome_indicado || '—'}</span>
+                            {i.id_prospecto_indicado
+                              ? <span className={styles.clientId}>Prosp. #{i.id_prospecto_indicado}</span>
+                              : i.cod_cliente_indicado
+                                ? <span className={styles.clientId}>Cód. {i.cod_cliente_indicado}</span>
+                                : null}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={styles.badge}
+                          style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                        >
+                          <Icon size={12} />
+                          {STATUS_LABELS[i.status]}
+                        </span>
+                      </td>
+                      <td className={styles.tdMoney}>
+                        {i.valor_desconto ? fmtMoney(i.valor_desconto) : '—'}
+                      </td>
+                      <td className={styles.tdId}>
+                        {i.id_evento_faturamento ? `#${i.id_evento_faturamento}` : '—'}
+                      </td>
+                      <td style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-medium)', lineHeight: 1.3 }}>
+                        <div>{i.fatura_referencia || '—'}</div>
+                        {i.data_vencimento && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-light)', marginTop: 2 }}>
+                            Venc: {fmtDate(i.data_vencimento)}
+                          </div>
+                        )}
+                        {i.data_faturamento && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>
+                            Fat: {fmtDate(i.data_faturamento)}
+                          </div>
+                        )}
+                      </td>
+                      <td className={styles.tdDate}>{fmtDate(i.created_at)}</td>
+                      <td>
+                        <div className={styles.rowActions}>
+                          {i.status === 'pendente' && (
+                            <button
+                              className={styles.btnCancel}
+                              onClick={() => handleCancel(i.id)}
+                              title="Cancelar indicação"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                          <button
+                            className={styles.btnEdit}
+                            onClick={() => openEditModal(i)}
+                            title="Editar indicação"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            className={styles.btnCancel}
+                            onClick={() => handleDelete(i.id)}
+                            title="Excluir indicação"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Mobile card list */}
+            <div className={styles.cardList}>
               {filtered.map((i) => {
                 const cfg = STATUS_COLORS[i.status] || STATUS_COLORS.pendente;
                 const Icon = STATUS_ICONS[i.status] || Clock;
                 return (
-                  <tr key={i.id}>
-                    <td className={styles.tdId}>{i.id}</td>
-                    <td>
+                  <div key={i.id} className={styles.card}>
+                    <div className={styles.cardTop}>
+                      <span className={styles.tdId}>#{i.id}</span>
+                      <span
+                        className={styles.badge}
+                        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                      >
+                        <Icon size={12} />
+                        {STATUS_LABELS[i.status]}
+                      </span>
+                    </div>
+
+                    <div className={styles.cardRow}>
+                      <span className={styles.cardLabel}>Indicador</span>
                       <div className={styles.clientCell}>
                         <span className={styles.clientName}>{i.nome_indicador || '—'}</span>
                         <span className={styles.clientId}>Cód. {i.cod_cliente_indicador}</span>
                       </div>
-                    </td>
-                    <td>
+                    </div>
+
+                    <div className={styles.cardRow}>
+                      <span className={styles.cardLabel}>Indicado</span>
                       {i.status === 'manual' ? (
                         <span className={styles.clientId} style={{ fontStyle: 'italic' }}>Desconto direto</span>
                       ) : (
@@ -507,68 +611,49 @@ export default function Referral() {
                               : null}
                         </div>
                       )}
-                    </td>
-                    <td>
-                      <span
-                        className={styles.badge}
-                        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
-                      >
-                        <Icon size={12} />
-                        {STATUS_LABELS[i.status]}
-                      </span>
-                    </td>
-                    <td className={styles.tdMoney}>
-                      {i.valor_desconto ? fmtMoney(i.valor_desconto) : '—'}
-                    </td>
-                    <td className={styles.tdId}>
-                      {i.id_evento_faturamento ? `#${i.id_evento_faturamento}` : '—'}
-                    </td>
-                    <td style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-medium)', lineHeight: 1.3 }}>
-                      <div>{i.fatura_referencia || '—'}</div>
-                      {i.data_vencimento && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-light)', marginTop: 2 }}>
-                          Venc: {fmtDate(i.data_vencimento)}
-                        </div>
-                      )}
-                      {i.data_faturamento && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>
-                          Fat: {fmtDate(i.data_faturamento)}
-                        </div>
-                      )}
-                    </td>
-                    <td className={styles.tdDate}>{fmtDate(i.created_at)}</td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        {i.status === 'pendente' && (
-                          <button
-                            className={styles.btnCancel}
-                            onClick={() => handleCancel(i.id)}
-                            title="Cancelar indicação"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                        <button
-                          className={styles.btnEdit}
-                          onClick={() => openEditModal(i)}
-                          title="Editar indicação"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className={styles.btnCancel}
-                          onClick={() => handleDelete(i.id)}
-                          title="Excluir indicação"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                    </div>
+
+                    <div className={styles.cardMeta}>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Desconto</span>
+                        <span className={styles.tdMoney}>{i.valor_desconto ? fmtMoney(i.valor_desconto) : '—'}</span>
                       </div>
-                    </td>
-                  </tr>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Evento Hubsoft</span>
+                        <span className={styles.tdId}>{i.id_evento_faturamento ? `#${i.id_evento_faturamento}` : '—'}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Fatura</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-medium)' }}>
+                          {i.fatura_referencia || '—'}
+                          {i.data_vencimento && ` · Venc: ${fmtDate(i.data_vencimento)}`}
+                          {i.data_faturamento && ` · Fat: ${fmtDate(i.data_faturamento)}`}
+                        </span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Data</span>
+                        <span className={styles.tdDate}>{fmtDate(i.created_at)}</span>
+                      </div>
+                    </div>
+
+                    <div className={styles.cardActions}>
+                      {i.status === 'pendente' && (
+                        <button className={styles.btnCancel} onClick={() => handleCancel(i.id)} title="Cancelar indicação">
+                          <X size={14} />
+                        </button>
+                      )}
+                      <button className={styles.btnEdit} onClick={() => openEditModal(i)} title="Editar indicação">
+                        <Pencil size={14} />
+                      </button>
+                      <button className={styles.btnCancel} onClick={() => handleDelete(i.id)} title="Excluir indicação">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

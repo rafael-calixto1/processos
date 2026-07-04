@@ -98,18 +98,6 @@ Gestão completa da frota de veículos com abas para:
 
 ---
 
-## Tecnologias
-
-| Camada | Stack |
-|--------|-------|
-| Front-end | React 18, Vite, React Router, CSS Modules |
-| Back-end | Node.js, Express |
-| Banco de dados | PostgreSQL |
-| Autenticação | JWT |
-| PDF | jsPDF + AutoTable |
-
----
-
 ## Executando localmente
 
 ```bash
@@ -134,3 +122,23 @@ cd processo-audit-app/processo-audit-app/public-referral
 npm install
 npm run dev
 ```
+
+---
+
+## Tecnologias
+
+| Camada | Stack |
+|--------|-------|
+| Front-end | React 18, Vite, React Router v6, CSS Modules, Axios |
+| Back-end | Node.js, Express |
+| Banco de dados | MySQL (mysql2) |
+| Autenticação | JWT (jsonwebtoken), bcryptjs |
+| Gráficos e dashboards | Chart.js / react-chartjs-2, React Grid Layout (dashboards com drag-and-drop) |
+| Fluxogramas de processo | @xyflow/react |
+| Documentos e exportação | jsPDF + jsPDF-AutoTable, Markdown (react-markdown + remark-gfm, marked) |
+| Leitura de QR Code | html5-qrcode (cupons fiscais de abastecimento) |
+| Web scraping / parsing | Cheerio (extração de dados de notas fiscais Sefaz) |
+| Upload e arquivos | Multer, Archiver |
+| Ícones | React Icons, Lucide React |
+| PWA | vite-plugin-pwa |
+| Testes | Playwright |

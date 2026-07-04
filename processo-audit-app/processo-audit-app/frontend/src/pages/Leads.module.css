@@ -244,6 +244,69 @@
 }
 
 /* ══════════════════════════════════════
+   MOBILE CARD LIST (hidden on desktop)
+══════════════════════════════════════ */
+.cardList {
+  display: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card:last-child {
+  border-bottom: none;
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardTop .nameLink {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardTopRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cardMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-light);
+}
+
+.cardMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.855rem;
+  color: var(--text-dark);
+  min-width: 0;
+}
+
+.cardLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ══════════════════════════════════════
    BADGES
 ══════════════════════════════════════ */
 .badge {
@@ -695,9 +758,43 @@
    RESPONSIVE
 ══════════════════════════════════════ */
 @media (max-width: 900px) {
-  .page { padding: 16px; }
-  .pageHeader { flex-direction: column; }
-  .stats { flex-wrap: wrap; }
+  .page { padding: 16px; gap: 16px; }
+  .pageHeader { flex-direction: column; gap: 14px; }
+  .stats {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .stats::-webkit-scrollbar { display: none; }
+  .statItem { flex-shrink: 0; }
   .detailBody { grid-template-columns: 1fr; }
   .detailSection:nth-child(odd) { border-right: none; }
+}
+
+@media (max-width: 700px) {
+  .page { padding: 12px; }
+  .title { font-size: 1.12rem; }
+  .subtitle { font-size: 0.78rem; }
+
+  /* Swap table for stacked cards */
+  .table { display: none; }
+  .cardList { display: flex; flex-direction: column; }
+
+  /* Full-screen / bottom-sheet modals */
+  .overlay { padding: 0; align-items: flex-end; }
+  .detailModal,
+  .crmModal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .detailHeader { padding: 16px 18px; }
+  .detailSection { padding: 16px 18px; }
+  .crmModalHeader { padding: 16px 18px 12px; }
+  .crmLeadTag { margin: 14px 18px 0; }
+  .crmForm { padding: 14px 18px 20px; }
 }

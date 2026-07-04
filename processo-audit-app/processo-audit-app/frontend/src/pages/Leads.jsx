@@ -227,76 +227,127 @@ const Leads = () => {
 
       {/* Table */}
       <div className={styles.tableWrap}>
-        <div className={styles.tableScroll}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.colName}>Indicado</th>
-                <th className={styles.colCpf}>CPF</th>
-                <th className={styles.colPhone}>Telefone</th>
-                <th className={styles.colBairro}>Bairro</th>
-                <th className={styles.colIndicador}>Indicador</th>
-                <th className={styles.colDate}>Data</th>
-                <th className={styles.colStatus}>Status</th>
-                <th className={styles.colBoleto}>1º Boleto</th>
-                <th className={styles.colActions}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLeads.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className={styles.emptyRow}>
-                    <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{opacity:0.3}}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                    {activeFilter ? `Nenhum lead com status "${STATUS_LABELS[activeFilter]}"` : 'Nenhum lead encontrado'}
-                  </td>
-                </tr>
-              ) : (
-                filteredLeads.map(lead => {
-                  const { bairro } = parseEndereco(lead.endereco_indicado);
-                  return (
-                    <tr key={lead.id}>
-                      <td className={styles.colName}>
-                        <button className={styles.nameLink} onClick={() => handleOpenDetail(lead)}>
-                          {toTitleCase(lead.nome_indicado)}
-                        </button>
-                      </td>
-                      <td className={styles.colCpf}>
-                        <span className={styles.mono}>{lead.cpf_indicado || '—'}</span>
-                      </td>
-                      <td className={styles.colPhone}>
-                        <span className={styles.mono}>{lead.telefone_indicado || '—'}</span>
-                      </td>
-                      <td className={styles.colBairro}>
-                        <span className={styles.muted}>{toTitleCase(bairro) || '—'}</span>
-                      </td>
-                      <td className={styles.colIndicador}>
-                        {toTitleCase(lead.nome_indicador)}
-                      </td>
-                      <td className={styles.colDate}>
-                        <span className={styles.muted}>{new Date(lead.created_at).toLocaleDateString('pt-BR')}</span>
-                      </td>
-                      <td className={styles.colStatus}>
+        {filteredLeads.length === 0 ? (
+          <div className={styles.emptyRow}>
+            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{opacity:0.3}}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            {activeFilter ? `Nenhum lead com status "${STATUS_LABELS[activeFilter]}"` : 'Nenhum lead encontrado'}
+          </div>
+        ) : (
+          <>
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.colName}>Indicado</th>
+                    <th className={styles.colCpf}>CPF</th>
+                    <th className={styles.colPhone}>Telefone</th>
+                    <th className={styles.colBairro}>Bairro</th>
+                    <th className={styles.colIndicador}>Indicador</th>
+                    <th className={styles.colDate}>Data</th>
+                    <th className={styles.colStatus}>Status</th>
+                    <th className={styles.colBoleto}>1º Boleto</th>
+                    <th className={styles.colActions}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map(lead => {
+                    const { bairro } = parseEndereco(lead.endereco_indicado);
+                    return (
+                      <tr key={lead.id}>
+                        <td className={styles.colName}>
+                          <button className={styles.nameLink} onClick={() => handleOpenDetail(lead)}>
+                            {toTitleCase(lead.nome_indicado)}
+                          </button>
+                        </td>
+                        <td className={styles.colCpf}>
+                          <span className={styles.mono}>{lead.cpf_indicado || '—'}</span>
+                        </td>
+                        <td className={styles.colPhone}>
+                          <span className={styles.mono}>{lead.telefone_indicado || '—'}</span>
+                        </td>
+                        <td className={styles.colBairro}>
+                          <span className={styles.muted}>{toTitleCase(bairro) || '—'}</span>
+                        </td>
+                        <td className={styles.colIndicador}>
+                          {toTitleCase(lead.nome_indicador)}
+                        </td>
+                        <td className={styles.colDate}>
+                          <span className={styles.muted}>{new Date(lead.created_at).toLocaleDateString('pt-BR')}</span>
+                        </td>
+                        <td className={styles.colStatus}>
+                          <StatusBadge status={lead.status} />
+                        </td>
+                        <td className={styles.colBoleto}>
+                          <BoletoStatus lead={lead} />
+                        </td>
+                        <td className={styles.colActions}>
+                          <ActionsMenu
+                            lead={lead}
+                            onView={() => handleOpenDetail(lead)}
+                            onSendCRM={() => handleOpenCRM(lead)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className={styles.cardList}>
+              {filteredLeads.map(lead => {
+                const { bairro } = parseEndereco(lead.endereco_indicado);
+                return (
+                  <div key={lead.id} className={styles.card}>
+                    <div className={styles.cardTop}>
+                      <button className={styles.nameLink} onClick={() => handleOpenDetail(lead)}>
+                        {toTitleCase(lead.nome_indicado)}
+                      </button>
+                      <div className={styles.cardTopRight}>
                         <StatusBadge status={lead.status} />
-                      </td>
-                      <td className={styles.colBoleto}>
-                        <BoletoStatus lead={lead} />
-                      </td>
-                      <td className={styles.colActions}>
                         <ActionsMenu
                           lead={lead}
                           onView={() => handleOpenDetail(lead)}
                           onSendCRM={() => handleOpenCRM(lead)}
                         />
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.cardMeta}>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>CPF</span>
+                        <span className={styles.mono}>{lead.cpf_indicado || '—'}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Telefone</span>
+                        <span className={styles.mono}>{lead.telefone_indicado || '—'}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Bairro</span>
+                        <span className={styles.muted}>{toTitleCase(bairro) || '—'}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Indicador</span>
+                        <span>{toTitleCase(lead.nome_indicador)}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Data</span>
+                        <span className={styles.muted}>{new Date(lead.created_at).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>1º Boleto</span>
+                        <BoletoStatus lead={lead} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Detail Drawer ── */}

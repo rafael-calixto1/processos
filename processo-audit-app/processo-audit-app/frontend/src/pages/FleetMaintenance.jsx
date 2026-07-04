@@ -193,43 +193,90 @@ const MaintenanceHistory = ({ cars, types }) => {
         </div>
       ) : (
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Veículo</th>
-                <th>Tipo</th>
-                <th>Data</th>
-                <th>Km</th>
-                <th>Custo</th>
-                <th>Observação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{getCarLabel(r.car_id)}</td>
-                  <td>
-                    <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
-                      {getTypeName(r.maintenance_type_id)}
-                    </span>
-                  </td>
-                  <td>{fmtDate(r.maintenance_date)}</td>
-                  <td>{r.maintenance_kilometers != null ? Number(r.maintenance_kilometers).toLocaleString('pt-BR') : '—'}</td>
-                  <td>{r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</td>
-                  <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.observation || '—'}
-                  </td>
-                  <td>
-                    <div className={styles.actionBtns}>
-                      <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                      <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
-                    </div>
-                  </td>
+          <div className={`${styles.tableScrollX} ${styles.historyTableDesktop}`}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Veículo</th>
+                  <th>Tipo</th>
+                  <th>Data</th>
+                  <th>Km</th>
+                  <th>Custo</th>
+                  <th>Observação</th>
+                  <th>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {records.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{getCarLabel(r.car_id)}</td>
+                    <td>
+                      <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
+                        {getTypeName(r.maintenance_type_id)}
+                      </span>
+                    </td>
+                    <td>{fmtDate(r.maintenance_date)}</td>
+                    <td>{r.maintenance_kilometers != null ? Number(r.maintenance_kilometers).toLocaleString('pt-BR') : '—'}</td>
+                    <td>{r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</td>
+                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.observation || '—'}
+                    </td>
+                    <td>
+                      <div className={styles.actionBtns}>
+                        <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                        <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list — shows every field per registro without horizontal scrolling */}
+          <div className={styles.historyCardList}>
+            {records.map(r => (
+              <div key={r.id} className={styles.fuelingCard}>
+                <div className={styles.fuelingCardHeader}>
+                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)}</div>
+                  <div className={styles.actionBtns}>
+                    <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                    <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+
+                <div className={styles.fuelingCardTop}>
+                  <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
+                    {getTypeName(r.maintenance_type_id)}
+                  </span>
+                  <span className={styles.statusCardMuted}>{fmtDate(r.maintenance_date)}</span>
+                </div>
+
+                <div className={styles.statusCardMetrics}>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>Km</span>
+                    <span className={styles.statusCardValue}>
+                      {r.maintenance_kilometers != null ? Number(r.maintenance_kilometers).toLocaleString('pt-BR') : '—'}
+                    </span>
+                  </div>
+                  <div className={styles.statusCardMetric}>
+                    <span className={styles.statusCardLabel}>Custo</span>
+                    <span className={styles.statusCardValue}>
+                      {r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {r.observation && (
+                  <div className={styles.statusCardRow}>
+                    <span className={styles.statusCardLabel}>Observação</span>
+                    <span className={styles.statusCardInline}>{r.observation}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
           {totalPages > 1 && (
             <div className={styles.pagination}>
               <button className={styles.paginationBtn} disabled={page === 1} onClick={() => setPage(1)}>«</button>
@@ -514,35 +561,58 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
         </div>
       ) : (
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Recorrência</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {types.map(t => (
-                <tr key={t.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t.name}</td>
-                  <td style={{ color: 'var(--text-medium)', fontSize: '0.875rem' }}>{recurrenceLabel(t)}</td>
-                  <td>
-                    <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
-                      {t.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.actionBtns}>
-                      <button className="primary" onClick={() => openEdit(t)} title="Editar"><Pencil size={15} /></button>
-                      <button className="danger" onClick={() => setDeleteTarget(t)} title="Excluir"><Trash2 size={15} /></button>
-                    </div>
-                  </td>
+          <div className={`${styles.tableScrollX} ${styles.typesTableDesktop}`}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Recorrência</th>
+                  <th>Status</th>
+                  <th>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {types.map(t => (
+                  <tr key={t.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t.name}</td>
+                    <td style={{ color: 'var(--text-medium)', fontSize: '0.875rem' }}>{recurrenceLabel(t)}</td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
+                        {t.status === 'active' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.actionBtns}>
+                        <button className="primary" onClick={() => openEdit(t)} title="Editar"><Pencil size={15} /></button>
+                        <button className="danger" onClick={() => setDeleteTarget(t)} title="Excluir"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className={styles.typesCardList}>
+            {types.map(t => (
+              <div key={t.id} className={styles.fuelingCard}>
+                <div className={styles.fuelingCardHeader}>
+                  <div className={styles.fuelingCardVehicle}>{t.name}</div>
+                  <div className={styles.actionBtns}>
+                    <button className="primary" onClick={() => openEdit(t)} title="Editar"><Pencil size={15} /></button>
+                    <button className="danger" onClick={() => setDeleteTarget(t)} title="Excluir"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+                <div className={styles.fuelingCardTop}>
+                  <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
+                    {t.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                  <span className={styles.statusCardMuted}>{recurrenceLabel(t)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

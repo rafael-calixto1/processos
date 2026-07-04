@@ -20,6 +20,13 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .headerIcon {
@@ -307,6 +314,64 @@
   border-color: var(--info);
   color: var(--info);
   background: var(--info-light);
+}
+
+/* ── Mobile card list (hidden on desktop, shown <=700px) ── */
+.cardList {
+  display: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card:last-child {
+  border-bottom: none;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardRow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cardLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cardMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-light);
+}
+
+.cardMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 2px;
 }
 
 /* ── States ── */
@@ -646,15 +711,56 @@
 
 /* ── Responsive ── */
 @media (max-width: 700px) {
-  .page { padding: 16px; }
-  .statsGrid { grid-template-columns: repeat(2, 1fr); }
-  .formRow { grid-template-columns: 1fr; }
-  .filterTabs { display: none; }
+  .page { padding: 12px; gap: 14px; }
 
-  .table th:nth-child(5),
-  .table td:nth-child(5),
-  .table th:nth-child(6),
-  .table td:nth-child(6),
-  .table th:nth-child(7),
-  .table td:nth-child(7) { display: none; }
+  .header { gap: 10px; }
+  .title { font-size: 1.12rem; }
+  .subtitle { font-size: 0.78rem; }
+  .headerIcon { width: 38px; height: 38px; }
+
+  .headerActions { width: 100%; }
+  .headerActions .btnPrimary,
+  .headerActions .btnSecondary,
+  .headerActions .btnTeste {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 9px 8px;
+    font-size: 0.78rem;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .statsGrid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .statCard { padding: 12px 14px; }
+  .statValue { font-size: 1.4rem; }
+
+  .formRow { grid-template-columns: 1fr; }
+
+  .filters { gap: 8px; }
+  .searchWrap { min-width: 0; flex: 1 1 100%; }
+  .filterTabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .filterTabs::-webkit-scrollbar { display: none; }
+  .filterTab { flex-shrink: 0; }
+  .btnRefresh { flex-shrink: 0; }
+
+  /* Swap table for stacked cards */
+  .table { display: none; }
+  .cardList { display: flex; flex-direction: column; }
+
+  /* Full-screen modals */
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .modalBody { overflow-y: auto; }
 }
