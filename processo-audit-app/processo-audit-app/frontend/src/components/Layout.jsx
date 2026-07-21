@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift, FileSearch
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -30,6 +30,7 @@ const adminItems = [
 
 const toolItems = [
   { label: 'Consulta Login PPPoE', path: '/ferramentas/hubsoft-login-search', Icon: UserCheck },
+  { label: 'Consulta de Fatura', path: '/ferramentas/consulta-fatura', Icon: FileSearch },
   { label: 'Técnicos HubSoft', path: '/hubsoft/tecnicos', Icon: UserCheck },
   { label: 'Integração Hotspot Google Sheet', path: '/ferramentas/hotspot-google-sheets', Icon: Wrench },
   { label: 'Criar Config do Hotspot', path: '/ferramentas/criar-config-hotspot', Icon: Wrench },

@@ -113,7 +113,8 @@ export async function criarEventoDesconto({ id_cliente_servico, servico, valor, 
 
 // Sincroniza status e pagamento de todos os leads com cod_cliente_indicado contra o HubSoft.
 // Usa GraphQL para detectar clientes cancelados (REST omite clientes sem serviços ativos).
-// Também detecta automaticamente o pagamento do 1º boleto consultando faturas no HubSoft.
+// Também detecta o pagamento do 1º boleto e atualiza o status da fatura vigente (fatura_atual_*)
+// consultando as faturas do cliente no HubSoft.
 export async function sincronizarLeads(leads) {
   const comCliente = leads.filter(l => l.cod_cliente_indicado);
   if (comCliente.length === 0) return;
@@ -145,14 +146,77 @@ export async function sincronizarLeads(leads) {
         return;
       }
 
-      // Detecta pagamento do 1º boleto: se o lead está ativo mas nunca foi marcado como pago,
-      // consulta as faturas do cliente no HubSoft. Qualquer fatura paga indica que o 1º boleto foi quitado.
-      if (lead.status === 'ativo' && !lead.pagou_primeiro_boleto) {
+      // Busca as faturas do cliente indicado para detectar o 1º boleto pago e a fatura vigente.
+      // IMPORTANTE: o filtro precisa ir em busca/termo_busca — a API do Hubsoft ignora
+      // id_cliente_servico quando enviado como parâmetro solto e devolve a lista global de
+      // faturas (de qualquer cliente), o que gerava datas de pagamento de outras pessoas aqui.
+      if (lead.status === 'ativo') {
         const servico = servicosAtivos[0] ?? servicos[0];
         if (servico?.id_cliente_servico) {
           try {
             const faturasData = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
-              id_cliente_servico: servico.id_cliente_servico,
+              busca: 'id_cliente_servico',
+              termo_busca: servico.id_cliente_servico,
+              pagina: 0,
+              itens_por_pagina: 20,
+            });
+            const faturas = faturasData.faturas ?? [];
+
+            if (!lead.pagou_primeiro_boleto) {
+              const pagas = faturas
+                .filter(f => f.data_pagamento)
+                .sort((a, b) => new Date(a.data_pagamento) - new Date(b.data_pagamento));
+
+              if (pagas.length > 0) {
+                await pool.execute(
+                  `UPDATE indicacoes
+                   SET pagou_primeiro_boleto = 1, data_pagamento_primeiro_boleto = ?, updated_at = NOW()
+                   WHERE id = ?`,
+                  [pagas[0].data_pagamento, lead.id]
+                );
+              }
+            }
+
+            // Fatura vigente = a de vencimento mais recente. Só é considerada "paga" se tiver
+            // baixa (data_pagamento preenchida) — caso contrário fica vencida ou aguardando.
+            const maisRecente = [...faturas]
+              .sort((a, b) => new Date(b.data_vencimento) - new Date(a.data_vencimento))[0];
+
+            if (maisRecente) {
+              const status = maisRecente.data_pagamento
+                ? 'pago'
+                : (new Date(maisRecente.data_vencimento) < new Date() ? 'vencido' : 'aguardando');
+
+              await pool.execute(
+                `UPDATE indicacoes
+                 SET fatura_atual_vencimento = ?, fatura_atual_baixa = ?, fatura_atual_status = ?, updated_at = NOW()
+                 WHERE id = ?`,
+                [maisRecente.data_vencimento, maisRecente.data_pagamento ?? null, status, lead.id]
+              );
+            } else {
+              await pool.execute(
+                `UPDATE indicacoes
+                 SET fatura_atual_vencimento = NULL, fatura_atual_baixa = NULL, fatura_atual_status = NULL, updated_at = NOW()
+                 WHERE id = ?`,
+                [lead.id]
+              );
+            }
+          } catch (_) { /* ignora se a consulta de faturas falhar */ }
+        }
+      }
+
+      // Indicações aguardando o 1º pagamento (regra primeira_fatura_paga): o fluxo normal depende
+      // do webhook /webhook/pagamento disparado pelo Hubsoft, mas se ele falhar ou nunca chegar
+      // (ex: baixa manual no Hubsoft) o lead fica preso em "aguardando_pagamento" para sempre.
+      // Aqui checamos direto no Hubsoft se alguma fatura já foi baixada e, se sim, aplicamos o
+      // desconto e ativamos a indicação, do mesmo jeito que o webhook faria.
+      if (lead.status === 'aguardando_pagamento') {
+        const servico = servicosAtivos[0] ?? servicos[0];
+        if (servico?.id_cliente_servico) {
+          try {
+            const faturasData = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
+              busca: 'id_cliente_servico',
+              termo_busca: servico.id_cliente_servico,
               pagina: 0,
               itens_por_pagina: 20,
             });
@@ -161,15 +225,18 @@ export async function sincronizarLeads(leads) {
               .sort((a, b) => new Date(a.data_pagamento) - new Date(b.data_pagamento));
 
             if (pagas.length > 0) {
-              const primeiroPagamento = pagas[0].data_pagamento;
+              const resultado = await aplicarDesconto(lead, lead.cod_cliente_indicado);
               await pool.execute(
                 `UPDATE indicacoes
                  SET pagou_primeiro_boleto = 1, data_pagamento_primeiro_boleto = ?, updated_at = NOW()
                  WHERE id = ?`,
-                [primeiroPagamento, lead.id]
+                [pagas[0].data_pagamento, lead.id]
               );
+              console.log(`[Indique e Ganhe] Desconto aplicado via sync (webhook não chegou): indicação #${lead.id} | evento Hubsoft #${resultado.idEvento}`);
             }
-          } catch (_) { /* ignora se a consulta de faturas falhar */ }
+          } catch (e) {
+            console.error(`[Indique e Ganhe] Falha ao aplicar desconto via sync para indicação #${lead.id}:`, e.message);
+          }
         }
       }
     } catch (_) { /* ignora erros individuais */ }
@@ -352,7 +419,8 @@ async function encontrarIndicacao(codClienteIndicado, statusBusca) {
 // Finds the referrer's next unpaid invoice for a given service.
 async function buscarProximaFaturaPendente(idClienteServico) {
   const data = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
-    id_cliente_servico: idClienteServico,
+    busca: 'id_cliente_servico',
+    termo_busca: idClienteServico,
     pagina: 0,
     itens_por_pagina: 20,
   });
@@ -388,9 +456,16 @@ async function aplicarDesconto(indicacao, codClienteIndicado) {
 
   if (tipo_recompensa === 'remover_fatura') {
     const fatura = await buscarProximaFaturaPendente(servico.id_cliente_servico);
-    if (!fatura) throw new Error(`Nenhuma fatura pendente encontrada para o cliente indicador (serviço ${servico.id_cliente_servico})`);
-    DESCONTO_VALOR = parseFloat(fatura.valor);
-    descricaoEvento = `Indique e Ganhe — fatura removida pela indicação de ${nomeExibicao} (fatura #${fatura.id_fatura})`;
+    if (fatura) {
+      DESCONTO_VALOR = parseFloat(fatura.valor);
+      descricaoEvento = `Indique e Ganhe — fatura removida pela indicação de ${nomeExibicao} (fatura #${fatura.id_fatura})`;
+    } else {
+      // Sem fatura pendente agora (ex: ainda não foi gerada) — manda o desconto para a próxima
+      // fatura que for faturada, usando o valor do plano como referência.
+      DESCONTO_VALOR = parseFloat(servico.valor);
+      if (isNaN(DESCONTO_VALOR)) throw new Error(`Não foi possível determinar o valor do plano do serviço ${servico.id_cliente_servico} para aplicar o desconto`);
+      descricaoEvento = `Indique e Ganhe — próxima fatura removida pela indicação de ${nomeExibicao}`;
+    }
   } else {
     DESCONTO_VALOR = indicacao.valor_desconto ? parseFloat(indicacao.valor_desconto) : descontoPadrao;
     descricaoEvento = `Desconto Indique e Ganhe — indicação de ${nomeExibicao} ativado`;

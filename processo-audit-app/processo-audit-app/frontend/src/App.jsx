@@ -24,6 +24,7 @@ import HotspotMikrotikConfig from './pages/HotspotMikrotikConfig';
 import HubsoftTecnicos from './pages/HubsoftTecnicos';
 import HubsoftExplorer from './pages/HubsoftExplorer';
 import HubsoftLoginSearch from './pages/HubsoftLoginSearch';
+import ConsultaFatura from './pages/ConsultaFatura';
 import Referral from './pages/Referral';
 import Leads from './pages/Leads';
 import './styles/global.css';
@@ -288,6 +289,17 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <HubsoftLoginSearch />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/ferramentas/consulta-fatura"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ConsultaFatura />
             </Layout>
           </ProtectedRoute>
         }

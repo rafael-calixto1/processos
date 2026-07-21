@@ -53,6 +53,17 @@ const BoletoStatus = ({ lead }) => {
     : <span className={styles.boletoPendente}>Vence {fmt(venc)}</span>;
 };
 
+// Status da fatura vigente (a de vencimento mais recente no Hubsoft), diferente do 1º boleto:
+// só aparece "Pago em" quando a fatura teve baixa de fato (data_pagamento preenchida).
+const FaturaAtualStatus = ({ lead }) => {
+  const { fatura_atual_status: status, fatura_atual_vencimento: venc, fatura_atual_baixa: baixa } = lead;
+
+  if (!status) return <span className={styles.boletoNone}>—</span>;
+  if (status === 'pago') return <span className={styles.boletoPago}>Pago em {fmt(baixa)}</span>;
+  if (status === 'vencido') return <span className={styles.boletoVencido}>Venceu {fmt(venc)}</span>;
+  return <span className={styles.boletoPendente}>Vence {fmt(venc)}</span>;
+};
+
 const ActionsMenu = ({ lead, onView, onSendCRM }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -113,6 +124,7 @@ const Leads = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
+  const [searchIndicadorId, setSearchIndicadorId] = useState('');
 
   useEffect(() => { fetchLeads(); fetchCRMs(); }, []);
 
@@ -153,7 +165,14 @@ const Leads = () => {
     manual:      leads.filter(l => l.status === 'manual').length,
   };
 
-  const filteredLeads = activeFilter ? leads.filter(l => l.status === activeFilter) : leads;
+  const searchId = searchIndicadorId.trim();
+  const filteredLeads = leads
+    .filter(l => activeFilter ? l.status === activeFilter : true)
+    .filter(l => searchId ? String(l.cod_cliente_indicador ?? '') === searchId : true);
+
+  const indicadorEncontrado = searchId
+    ? leads.find(l => String(l.cod_cliente_indicador ?? '') === searchId)?.nome_indicador
+    : null;
 
   const handleFilterClick = (filter) =>
     setActiveFilter(prev => (prev === filter ? null : filter));
@@ -225,6 +244,26 @@ const Leads = () => {
         </div>
       </div>
 
+      {/* Search by indicador ID */}
+      <div className={styles.searchBar}>
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M18 11a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="Buscar por ID do indicador (ex: 6989)"
+          value={searchIndicadorId}
+          onChange={(e) => setSearchIndicadorId(e.target.value)}
+          className={styles.searchInput}
+        />
+        {searchId && (
+          indicadorEncontrado
+            ? <span className={styles.searchResult}>Indicador: {toTitleCase(indicadorEncontrado)}</span>
+            : <span className={styles.searchResultEmpty}>Nenhum indicador com esse ID</span>
+        )}
+      </div>
+
       {/* Table */}
       <div className={styles.tableWrap}>
         {filteredLeads.length === 0 ? (
@@ -248,6 +287,7 @@ const Leads = () => {
                     <th className={styles.colDate}>Data</th>
                     <th className={styles.colStatus}>Status</th>
                     <th className={styles.colBoleto}>1º Boleto</th>
+                    <th className={styles.colBoleto}>Fatura Atual</th>
                     <th className={styles.colActions}></th>
                   </tr>
                 </thead>
@@ -281,6 +321,9 @@ const Leads = () => {
                         </td>
                         <td className={styles.colBoleto}>
                           <BoletoStatus lead={lead} />
+                        </td>
+                        <td className={styles.colBoleto}>
+                          <FaturaAtualStatus lead={lead} />
                         </td>
                         <td className={styles.colActions}>
                           <ActionsMenu
@@ -340,6 +383,10 @@ const Leads = () => {
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>1º Boleto</span>
                         <BoletoStatus lead={lead} />
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Fatura Atual</span>
+                        <FaturaAtualStatus lead={lead} />
                       </div>
                     </div>
                   </div>
@@ -405,6 +452,21 @@ const Leads = () => {
                   )}
                   {detailLead.fatura_referencia && <Row label="Fatura Referência" value={detailLead.fatura_referencia} mono />}
                   {detailLead.id_evento_faturamento && <Row label="Evento Faturamento" value={`#${detailLead.id_evento_faturamento}`} mono />}
+                </Section>
+
+                <Section title="Fatura Atual">
+                  {detailLead.fatura_atual_status ? (
+                    <>
+                      <Row label="Vencimento" value={fmt(detailLead.fatura_atual_vencimento)} />
+                      <Row
+                        label="Status"
+                        value={{ pago: 'Pago', vencido: 'Vencido', aguardando: 'Aguardando' }[detailLead.fatura_atual_status]}
+                      />
+                      {detailLead.fatura_atual_baixa && <Row label="Baixa" value={fmt(detailLead.fatura_atual_baixa)} />}
+                    </>
+                  ) : (
+                    <Row label="Status" value="Sem dado disponível no Hubsoft" />
+                  )}
                 </Section>
               </div>
 

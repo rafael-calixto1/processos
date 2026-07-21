@@ -95,6 +95,47 @@
   background: currentColor;
 }
 
+/* ══════════════════════════════════════
+   SEARCH BAR
+══════════════════════════════════════ */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  color: var(--text-light);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.searchInput::placeholder {
+  color: var(--text-light);
+}
+
+.searchResult {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #065f46;
+  white-space: nowrap;
+}
+
+.searchResultEmpty {
+  font-size: 0.85rem;
+  color: #991b1b;
+  white-space: nowrap;
+}
+
 .statPendente.statActive::after    { background: #92400e; }
 .statEncaminhado.statActive::after { background: #1e40af; }
 .statAtivo.statActive::after       { background: #065f46; }

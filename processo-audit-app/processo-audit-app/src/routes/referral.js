@@ -369,6 +369,22 @@ router.get('/indicacoes', verifyToken, async (req, res) => {
   }
 });
 
+// Busca atualizações no HubSoft para uma indicação específica (fallback manual para quando
+// o webhook de pagamento do HubSoft não chega — ver sincronizarLeads em referralService.js).
+router.post('/indicacao/:id/sincronizar', verifyToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM indicacoes WHERE id = ?', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Indicação não encontrada' });
+
+    await sincronizarLeads(rows);
+
+    const [atualizado] = await pool.execute('SELECT * FROM indicacoes WHERE id = ?', [req.params.id]);
+    return res.json({ ok: true, indicacao: atualizado[0] });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/indicacao/:id', verifyToken, async (req, res) => {
   try {
     const [result] = await pool.execute(

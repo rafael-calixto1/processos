@@ -1,0 +1,183 @@
+.page {
+  padding: 28px 32px;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 3px 0 0;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 6px 6px 6px 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+}
+
+.searchInput::placeholder {
+  color: var(--text-light);
+}
+
+.searchButton {
+  background: var(--primary-color, #0ba52b);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  font-size: 0.875rem;
+}
+
+.resultCard {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.resultName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.resultMeta {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status_ativo     { background: #d1fae5; color: #065f46; }
+.status_cancelado { background: #fee2e2; color: #991b1b; }
+
+.resultBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0;
+}
+
+.resultItem {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+}
+
+.resultItem:last-child {
+  border-right: none;
+}
+
+.resultLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.boletoPago {
+  display: inline-flex;
+  align-items: center;
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.boletoVencido {
+  display: inline-flex;
+  align-items: center;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.boletoPendente {
+  display: inline-flex;
+  align-items: center;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.boletoNone {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
