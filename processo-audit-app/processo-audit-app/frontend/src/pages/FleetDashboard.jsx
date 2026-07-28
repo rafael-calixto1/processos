@@ -11,50 +11,16 @@ import {
 } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import { DollarSign, Fuel, Wrench, Droplet } from 'lucide-react';
+import {
+  CATEGORICAL, FONT_FAMILY, TEXT_LIGHT,
+  barDataset, makeBarOptions, tooltipStyle, brl,
+} from './fleetCharts';
 import styles from './Fleet.module.css';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-/*
- * Paleta dos gráficos — espelha os tokens de styles/global.css.
- * O verde da marca marca a série principal; as demais usam a rampa neutra,
- * para que categorias vizinhas não fiquem em dois verdes indistinguíveis.
- */
-const BRAND        = '#0ba52b'; // --primary-color
-const BRAND_SOFT   = 'rgba(11, 165, 43, 0.16)';
-const BRAND_HOVER  = 'rgba(11, 165, 43, 0.28)';
-const TEXT_LIGHT   = '#6b7280'; // --text-light
-const TEXT_DARK    = '#1a1a1a'; // --text-dark
-const GRID_COLOR   = 'rgba(0, 0, 0, 0.05)';
-
-const CATEGORICAL = [
-  BRAND,     // --primary-color
-  '#9ca3af', // --text-muted
-  '#6b7280', // --text-light
-  '#e5e7eb', // --border-color
-  '#374151', // --text-medium
-  '#274518', // --accent-color
-  '#bbf804', // --secondary-color
-];
-
-const FONT_FAMILY = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-
 const defaultStart = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
 const defaultEnd   = format(new Date(), 'yyyy-MM-dd');
-
-const brl = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-/* Barras: preenchimento suave + contorno da marca, em vez de bloco chapado */
-const softBar = (label, data) => ({
-  label,
-  data,
-  backgroundColor: BRAND_SOFT,
-  hoverBackgroundColor: BRAND_HOVER,
-  borderColor: BRAND,
-  borderWidth: 1.5,
-  borderRadius: 6,
-  maxBarThickness: 72,
-});
 
 const FleetDashboard = () => {
   const [startDate, setStartDate] = useState(defaultStart);
@@ -122,54 +88,14 @@ const FleetDashboard = () => {
     }],
   };
 
-  const barFuelByTypeData    = { labels: fuelByType.map(r => r.tipo_combustivel),           datasets: [softBar('Litros',         fuelByType.map(r => parseFloat(r.total_litros || 0)))] };
-  const barFuelCostData      = { labels: fuelCostByType.map(r => r.tipo_combustivel),       datasets: [softBar('Custo (R$)',     fuelCostByType.map(r => parseFloat(r.custo_total || 0)))] };
-  const barMaintenanceData   = { labels: maintenanceByType.map(r => r.tipo_manutencao),     datasets: [softBar('Total',          maintenanceByType.map(r => parseInt(r.total_manutencoes || 0)))] };
-  const barFuelingDateData   = { labels: fuelingByDate.map(r => r.periodo || r.data_inicio || ''), datasets: [softBar('Abastecimentos', fuelingByDate.map(r => parseInt(r.total_abastecimentos || 0)))] };
+  const barFuelByTypeData    = { labels: fuelByType.map(r => r.tipo_combustivel),           datasets: [barDataset('Litros',         fuelByType.map(r => parseFloat(r.total_litros || 0)))] };
+  const barFuelCostData      = { labels: fuelCostByType.map(r => r.tipo_combustivel),       datasets: [barDataset('Custo (R$)',     fuelCostByType.map(r => parseFloat(r.custo_total || 0)))] };
+  const barMaintenanceData   = { labels: maintenanceByType.map(r => r.tipo_manutencao),     datasets: [barDataset('Total',          maintenanceByType.map(r => parseInt(r.total_manutencoes || 0)))] };
+  const barFuelingDateData   = { labels: fuelingByDate.map(r => r.periodo || r.data_inicio || ''), datasets: [barDataset('Abastecimentos', fuelingByDate.map(r => parseInt(r.total_abastecimentos || 0)))] };
 
-  const tooltipStyle = {
-    backgroundColor: TEXT_DARK,
-    titleFont: { family: FONT_FAMILY, size: 12, weight: '600' },
-    bodyFont:  { family: FONT_FAMILY, size: 12 },
-    padding: 10,
-    cornerRadius: 8,
-    displayColors: false,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-  };
-
-  const axisTicks = {
-    font: { family: FONT_FAMILY, size: 11 },
-    color: TEXT_LIGHT,
-    padding: 6,
-  };
-
-  const baseBarOptions = (formatValue, integerOnly = false) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { ...tooltipStyle, callbacks: { label: ctx => ` ${formatValue(ctx.parsed.y)}` } },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: GRID_COLOR },
-        border: { display: false },
-        // Contagens não têm meia unidade — evita eixos com 0,1 / 0,2 …
-        ticks: { ...axisTicks, precision: integerOnly ? 0 : undefined, stepSize: integerOnly ? 1 : undefined },
-      },
-      x: {
-        grid: { display: false },
-        border: { color: 'rgba(0,0,0,0.08)' },
-        ticks: axisTicks,
-      },
-    },
-  });
-
-  const litersOptions = baseBarOptions(v => `${brl(v)} L`);
-  const moneyOptions  = baseBarOptions(v => `R$ ${brl(v)}`);
-  const countOptions  = baseBarOptions(v => v.toLocaleString('pt-BR'), true);
+  const litersOptions = makeBarOptions({ formatValue: v => `${brl(v)} L` });
+  const moneyOptions  = makeBarOptions({ formatValue: v => `R$ ${brl(v)}` });
+  const countOptions  = makeBarOptions({ formatValue: v => v.toLocaleString('pt-BR'), integerOnly: true });
 
   const pieOptions = {
     responsive: true,

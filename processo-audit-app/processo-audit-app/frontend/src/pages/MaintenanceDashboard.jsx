@@ -10,16 +10,31 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { Coins, Wrench, RotateCcw } from 'lucide-react';
+import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const STORAGE_KEY = 'maintenance_dashboard_layout';
+// v2: os KPIs saíram da grade — layouts salvos com as chaves antigas são descartados
+const STORAGE_KEY = 'maintenance_dashboard_layout_v2';
 
 const defaultStart = format(subMonths(new Date(), 6), 'yyyy-MM-dd');
 const defaultEnd   = format(new Date(), 'yyyy-MM-dd');
+
+/*
+ * Só os gráficos ficam na grade arrastável. Os KPIs saíram dela: como itens de
+ * grade a largura vinha das colunas (w:3 = 25% da tela) e a altura das linhas,
+ * o que os deixava largos e vazios. Agora são cartões compactos de largura fixa.
+ */
+const defaultLayouts = {
+  lg: [
+    { i: 'chart-count', x: 0, y: 0, w: 6, h: 7 },
+    { i: 'chart-cost',  x: 6, y: 0, w: 6, h: 7 },
+  ],
+};
 
 const MaintenanceDashboard = () => {
   const [startDate, setStartDate] = useState(defaultStart);
@@ -27,16 +42,6 @@ const MaintenanceDashboard = () => {
   const [data,      setData]      = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState('');
-
-  // Initial layout
-  const defaultLayouts = {
-    lg: [
-      { i: 'summary-cost',  x: 0, y: 0, w: 3, h: 2 },
-      { i: 'summary-count', x: 3, y: 0, w: 3, h: 2 },
-      { i: 'chart-count',   x: 0, y: 2, w: 6, h: 6 },
-      { i: 'chart-cost',    x: 6, y: 2, w: 6, h: 6 },
-    ]
-  };
 
   const [layouts, setLayouts] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -66,53 +71,56 @@ const MaintenanceDashboard = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts));
   };
 
+  const resetLayout = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setLayouts(defaultLayouts);
+  };
+
   const totalCost = data.reduce((acc, curr) => acc + parseFloat(curr.custo_total || 0), 0);
   const totalCount = data.reduce((acc, curr) => acc + parseInt(curr.total_manutencoes || 0), 0);
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-    },
-    scales: {
-      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-      x: { grid: { display: false } },
-    },
-  };
+  const labels = data.map(d => d.tipo_manutencao);
 
   const countChartData = {
-    labels: data.map(d => d.tipo_manutencao),
-    datasets: [{
-      label: 'Qtd. Manutenções',
-      data: data.map(d => d.total_manutencoes),
-      backgroundColor: 'rgba(11, 165, 43, 0.7)',
-      borderRadius: 6,
-    }]
+    labels,
+    datasets: [barDataset('Qtd. Manutenções', data.map(d => parseInt(d.total_manutencoes || 0)))],
   };
 
   const costChartData = {
-    labels: data.map(d => d.tipo_manutencao),
-    datasets: [{
-      label: 'Custo Total (R$)',
-      data: data.map(d => d.custo_total),
-      backgroundColor: 'rgba(37, 99, 235, 0.7)',
-      borderRadius: 6,
-    }]
+    labels,
+    datasets: [barDataset('Custo Total (R$)', data.map(d => parseFloat(d.custo_total || 0)))],
   };
+
+  const countOptions = makeBarOptions({
+    formatValue: v => `${v.toLocaleString('pt-BR')} manutenção(ões)`,
+    integerOnly: true,
+  });
+  const costOptions = makeBarOptions({ formatValue: v => `R$ ${brl(v)}` });
 
   return (
     <div className={styles.dashboardContainer}>
-      <div className={styles.filterRow} style={{ marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label>De</label>
-          <input type="date" className={styles.input} value={startDate} onChange={e => setStartDate(e.target.value)} style={{ width: 'auto' }} />
-          <label>Até</label>
-          <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} style={{ width: 'auto' }} />
+      {/* Toolbar unificada: período à esquerda, ações à direita */}
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarGroup}>
+          <label htmlFor="maint-start">De</label>
+          <input
+            id="maint-start"
+            type="date"
+            className={styles.dateInput}
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+          />
+          <label htmlFor="maint-end">Até</label>
+          <input
+            id="maint-end"
+            type="date"
+            className={styles.dateInput}
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+          />
         </div>
-        <div style={{ flex: 1 }} />
-        <button className={styles.btnSecondary} onClick={() => { localStorage.removeItem(STORAGE_KEY); setLayouts(defaultLayouts); }}>
-          Resetar Layout
+        <button className={styles.btnSecondary} onClick={resetLayout}>
+          <RotateCcw size={15} strokeWidth={2} /> Resetar Layout
         </button>
       </div>
 
@@ -121,6 +129,24 @@ const MaintenanceDashboard = () => {
       {loading ? (
         <div className={styles.loadingState}><div className="spinner" /></div>
       ) : (
+        <>
+        {/* KPIs compactos, fora da grade arrastável */}
+        <div className={styles.kpiRow}>
+          <div className={styles.kpiCard}>
+            <Coins className={styles.kpiWatermark} strokeWidth={1.5} aria-hidden="true" />
+            <span className={styles.kpiLabel}>Custo Total de Manutenção</span>
+            <span className={styles.kpiValue}>R$ {brl(totalCost)}</span>
+            <span className={styles.kpiHint}>no período selecionado</span>
+          </div>
+
+          <div className={styles.kpiCard}>
+            <Wrench className={styles.kpiWatermark} strokeWidth={1.5} aria-hidden="true" />
+            <span className={styles.kpiLabel}>Total de Manutenções</span>
+            <span className={styles.kpiValue}>{totalCount.toLocaleString('pt-BR')}</span>
+            <span className={styles.kpiHint}>{data.length} tipo(s) registrado(s)</span>
+          </div>
+        </div>
+
         <ResponsiveGridLayout
           className="layout"
           layouts={layouts}
@@ -130,46 +156,25 @@ const MaintenanceDashboard = () => {
           onLayoutChange={onLayoutChange}
           draggableHandle=".widget-header"
         >
-          <div key="summary-cost" className={styles.widgetCard}>
-            <div className="widget-header" style={{ cursor: 'move', padding: '10px', borderBottom: '1px solid #eee', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}>
-              Custo Total de Manutenção
-            </div>
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-
-          <div key="summary-count" className={styles.widgetCard}>
-            <div className="widget-header" style={{ cursor: 'move', padding: '10px', borderBottom: '1px solid #eee', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}>
-              Total de Manutenções
-            </div>
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-dark)' }}>
-                {totalCount}
-              </div>
-            </div>
-          </div>
-
           <div key="chart-count" className={styles.widgetCard}>
-            <div className="widget-header" style={{ cursor: 'move', padding: '10px', borderBottom: '1px solid #eee', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}>
-              Manutenções por Tipo (Qtd)
-            </div>
-            <div style={{ padding: '15px', height: 'calc(100% - 40px)' }}>
-              <Bar data={countChartData} options={chartOptions} />
+            <div className={`widget-header ${styles.widgetHeader}`}>Manutenções por Tipo (Qtd)</div>
+            <div className={styles.widgetBody}>
+              {data.length === 0
+                ? <div className={styles.emptyState}><p>Sem dados</p></div>
+                : <Bar data={countChartData} options={countOptions} />}
             </div>
           </div>
 
           <div key="chart-cost" className={styles.widgetCard}>
-            <div className="widget-header" style={{ cursor: 'move', padding: '10px', borderBottom: '1px solid #eee', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}>
-              Custos por Tipo (R$)
-            </div>
-            <div style={{ padding: '15px', height: 'calc(100% - 40px)' }}>
-              <Bar data={costChartData} options={chartOptions} />
+            <div className={`widget-header ${styles.widgetHeader}`}>Custos por Tipo (R$)</div>
+            <div className={styles.widgetBody}>
+              {data.length === 0
+                ? <div className={styles.emptyState}><p>Sem dados</p></div>
+                : <Bar data={costChartData} options={costOptions} />}
             </div>
           </div>
         </ResponsiveGridLayout>
+        </>
       )}
     </div>
   );
