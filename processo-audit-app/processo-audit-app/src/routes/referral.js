@@ -6,6 +6,9 @@ import {
   getConfig,
   saveConfig,
   criarEventoDesconto,
+  buscarProximaFaturaPendente,
+  simularDesconto,
+  renegociarFaturaExistente,
   buscarClientePorCodigo,
   buscarProspectoPorId,
   buscarClientePorCPF,
@@ -289,13 +292,14 @@ router.post('/webhook/ativacao', async (req, res) => {
       });
     }
 
-    console.log(`[Indique e Ganhe] Desconto aplicado: indicação #${resultado.indicacao.id} | evento Hubsoft #${resultado.idEvento} | R$ ${resultado.valorDesconto}`);
+    console.log(`[Indique e Ganhe] Desconto aplicado: indicação #${resultado.indicacao.id} | evento Hubsoft #${resultado.idEvento} | R$ ${resultado.valorDesconto}${resultado.descontoAdiado ? ' | ADIADO para a próxima fatura (a atual já existia)' : ''}`);
     return res.json({
       ok: true,
       msg: 'Desconto de indicação aplicado com sucesso',
       id_indicacao: resultado.indicacao.id,
       id_evento_faturamento: resultado.idEvento,
       valor_desconto: resultado.valorDesconto,
+      desconto_adiado: resultado.descontoAdiado,
     });
   } catch (err) {
     console.error('[Indique e Ganhe] Erro no webhook:', err.message);
@@ -505,9 +509,35 @@ router.get('/cliente/:cod', verifyToken, async (req, res) => {
   }
 });
 
+// Prévia do que aplicarDesconto()/desconto-manual faria — não escreve nada no Hubsoft nem no
+// banco local. Usado pelo botão "Simular" no painel antes de confirmar um lançamento real.
+router.post('/simular-desconto', verifyToken, async (req, res) => {
+  try {
+    const { cod_cliente, id_cliente_servico, tipo_recompensa, valor, mes_processar, ano_processar } = req.body;
+
+    if (!cod_cliente) return res.status(400).json({ error: 'cod_cliente é obrigatório' });
+    if (!id_cliente_servico) return res.status(400).json({ error: 'id_cliente_servico é obrigatório' });
+
+    const preview = await simularDesconto({
+      cod_cliente,
+      id_cliente_servico,
+      tipo_recompensa,
+      valor: valor != null ? parseFloat(valor) : undefined,
+      mes_processar: mes_processar != null ? Number(mes_processar) : undefined,
+      ano_processar: ano_processar != null ? Number(ano_processar) : undefined,
+    });
+
+    return res.json(preview);
+  } catch (err) {
+    console.error('[Simular Desconto]', err.message);
+    const status = err.message.includes('não encontrado') ? 404 : 400;
+    return res.status(status).json({ error: err.message });
+  }
+});
+
 router.post('/desconto-manual', verifyToken, async (req, res) => {
   try {
-    const { cod_cliente, id_cliente_servico, valor, descricao } = req.body;
+    const { cod_cliente, id_cliente_servico, valor, descricao, mes_processar, ano_processar, tipo_recompensa, id_fatura_alvo } = req.body;
 
     if (!cod_cliente) return res.status(400).json({ error: 'cod_cliente é obrigatório' });
     if (!id_cliente_servico) return res.status(400).json({ error: 'id_cliente_servico é obrigatório' });
@@ -519,17 +549,64 @@ router.post('/desconto-manual', verifyToken, async (req, res) => {
     const cliente = await buscarClientePorCodigo(cod_cliente);
     const servico = (cliente.servicos ?? []).find(s => s.id_cliente_servico === Number(id_cliente_servico));
 
+    // Alvo é uma fatura já emitida — evento_faturamento não consegue mudar o valor dela, só
+    // renegociação consegue (ver simularDesconto()/renegociarFaturaExistente()).
+    if (id_fatura_alvo) {
+      const tipoFinal = tipo_recompensa === 'remover_fatura' ? 'remover_fatura' : 'desconto_valor';
+
+      const resultado = await renegociarFaturaExistente({
+        id_fatura: Number(id_fatura_alvo),
+        id_cliente_servico: Number(id_cliente_servico),
+        tipo_recompensa: tipoFinal,
+        valor: valorFinal,
+        descricao: descricao || 'Indique e Ganhe — desconto manual (renegociação)',
+      });
+
+      await pool.execute(
+        `INSERT INTO indicacoes (cod_cliente_indicador, nome_indicador, cod_cliente_indicado, status, valor_desconto, fatura_referencia, desconto_adiado, data_vencimento)
+         VALUES (?, ?, NULL, 'manual', ?, ?, 0, ?)`,
+        [
+          cliente.codigo_cliente, cliente.nome_razaosocial, valorFinal,
+          `Renegociação — fatura #${resultado.nova_fatura?.id_fatura ?? id_fatura_alvo}`,
+          resultado.nova_fatura?.data_vencimento ?? null,
+        ]
+      );
+
+      return res.json({
+        ok: true,
+        mecanismo: 'renegociacao',
+        cliente: { codigo_cliente: cliente.codigo_cliente, nome: cliente.nome_razaosocial },
+        valor: valorFinal,
+        desconto_adiado: false,
+        fatura_referencia: `Renegociação — fatura #${resultado.nova_fatura?.id_fatura ?? id_fatura_alvo}`,
+        ...resultado,
+      });
+    }
+
+    const alvoManual = mes_processar != null && ano_processar != null;
+    // Só faz sentido checar "adiado" no modo automático — no modo manual o operador já viu a
+    // simulação e escolheu o alvo de propósito (ver simularDesconto()).
+    let descontoAdiado = false;
+    let faturaEmAberto = null;
+    if (!alvoManual) {
+      faturaEmAberto = await buscarProximaFaturaPendente(Number(id_cliente_servico));
+      descontoAdiado = !!faturaEmAberto;
+    }
+
     const { id_evento_faturamento, fatura_referencia, data_faturamento, data_vencimento } = await criarEventoDesconto({
       id_cliente_servico: Number(id_cliente_servico),
       servico: servico ?? {},
       valor: valorFinal,
-      descricao: descricao || 'Desconto manual — Indique e Ganhe',
+      descricao: (descricao || 'Desconto manual — Indique e Ganhe')
+        + (descontoAdiado ? ` (fatura em aberto vence ${faturaEmAberto.data_vencimento} e não é afetada — vale a partir da próxima)` : ''),
+      mes_processar,
+      ano_processar,
     });
 
     await pool.execute(
-      `INSERT INTO indicacoes (cod_cliente_indicador, nome_indicador, cod_cliente_indicado, status, valor_desconto, id_evento_faturamento, fatura_referencia, data_faturamento, data_vencimento)
-       VALUES (?, ?, NULL, 'manual', ?, ?, ?, ?, ?)`,
-      [cliente.codigo_cliente, cliente.nome_razaosocial, valorFinal, id_evento_faturamento, fatura_referencia, data_faturamento, data_vencimento]
+      `INSERT INTO indicacoes (cod_cliente_indicador, nome_indicador, cod_cliente_indicado, status, valor_desconto, id_evento_faturamento, fatura_referencia, desconto_adiado, data_faturamento, data_vencimento)
+       VALUES (?, ?, NULL, 'manual', ?, ?, ?, ?, ?, ?)`,
+      [cliente.codigo_cliente, cliente.nome_razaosocial, valorFinal, id_evento_faturamento, fatura_referencia, descontoAdiado ? 1 : 0, data_faturamento, data_vencimento]
     );
 
     return res.json({
@@ -537,6 +614,7 @@ router.post('/desconto-manual', verifyToken, async (req, res) => {
       cliente: { codigo_cliente: cliente.codigo_cliente, nome: cliente.nome_razaosocial },
       id_evento_faturamento,
       fatura_referencia,
+      desconto_adiado: descontoAdiado,
       data_faturamento,
       data_vencimento,
       valor: valorFinal,
@@ -622,13 +700,14 @@ router.post('/webhook/pagamento', async (req, res) => {
       [dataPagamento, resultado.indicacao.id]
     );
 
-    console.log(`[Indique e Ganhe] Desconto aplicado (1ª fatura paga): indicação #${resultado.indicacao.id} | evento Hubsoft #${resultado.idEvento} | R$ ${resultado.valorDesconto}`);
+    console.log(`[Indique e Ganhe] Desconto aplicado (1ª fatura paga): indicação #${resultado.indicacao.id} | evento Hubsoft #${resultado.idEvento} | R$ ${resultado.valorDesconto}${resultado.descontoAdiado ? ' | ADIADO para a próxima fatura (a atual já existia)' : ''}`);
     return res.json({
       ok: true,
       msg: 'Desconto de indicação aplicado após primeiro pagamento',
       id_indicacao: resultado.indicacao.id,
       id_evento_faturamento: resultado.idEvento,
       valor_desconto: resultado.valorDesconto,
+      desconto_adiado: resultado.descontoAdiado,
     });
   } catch (err) {
     console.error('[Indique e Ganhe] Erro no webhook de pagamento:', err.message);

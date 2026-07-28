@@ -18,10 +18,12 @@ module.exports = {
       },
     },
     {
-      name: 'processo-audit-public-referral',
+      // Substitui o antigo 'processo-audit-public-referral' na porta 3005.
+      // Código agora vive no repo separado rafael-calixto1/indique-e-ganhe-referral.
+      name: 'indique-e-ganhe-referral',
       script: 'npm',
       args: 'run dev',
-      cwd: './processo-audit-app/processo-audit-app/public-referral',
+      cwd: '/root/indique-e-ganhe-referral',
       env: {
         NODE_ENV: 'production',
       },
