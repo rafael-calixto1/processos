@@ -2,8 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useBranding } from '../context/BrandingContext';
-import { BarChart3, CheckCircle2, FileEdit, Building2, ArrowRight } from 'lucide-react';
+import { BarChart3, CheckCircle2, FileEdit, Building2, ArrowRight, Layers } from 'lucide-react';
 import styles from './Dashboard.module.css';
+
+const STATUS_LABEL = {
+  active:   'Ativo',
+  draft:    'Rascunho',
+  archived: 'Arquivado',
+};
+
+const STATUS_VARIANT = {
+  active:   'statusActive',
+  draft:    'statusDraft',
+  archived: 'statusArchived',
+};
 
 const Dashboard = () => {
   const [processes, setProcesses] = useState([]);
@@ -44,34 +56,40 @@ const Dashboard = () => {
     );
   }
 
+  /*
+   * Acentos vindos dos tokens, com a mesma semântica de status usada em
+   * Processos (ativo = success, rascunho = warning). O verde da marca segue
+   * o branding; os demais são fixos porque a cor secundária (#bbf804) não
+   * tem contraste suficiente para texto/ícone sobre fundo claro.
+   */
   const stats = [
     {
       value: processes.length,
       label: 'Total de Processos',
       Icon: BarChart3,
-      color: branding?.primary_color || '#0ba52b',
-      bg: 'rgba(11,165,43,0.1)',
+      color: branding?.primary_color || 'var(--primary-color)',
+      bg: 'var(--primary-light)',
     },
     {
       value: activeProcesses,
       label: 'Processos Ativos',
       Icon: CheckCircle2,
-      color: branding?.secondary_color || '#bbf804',
-      bg: 'rgba(187,248,4,0.12)',
+      color: 'var(--success)',
+      bg: 'var(--success-light)',
     },
     {
       value: draftProcesses,
       label: 'Rascunhos',
       Icon: FileEdit,
-      color: branding?.accent_color || '#274518',
-      bg: 'rgba(39,69,24,0.09)',
+      color: 'var(--warning)',
+      bg: 'var(--warning-light)',
     },
     {
       value: departments.length,
       label: 'Departamentos',
       Icon: Building2,
-      color: '#2563eb',
-      bg: 'rgba(37,99,235,0.1)',
+      color: 'var(--accent-color)',
+      bg: 'rgba(39, 69, 24, 0.08)',
     },
   ];
 
@@ -93,9 +111,7 @@ const Dashboard = () => {
             className={styles.statCard}
             style={{ '--stat-color': color, '--stat-bg': bg }}
           >
-            <div className={styles.statIconWrap}>
-              <Icon size={22} strokeWidth={2} />
-            </div>
+            <Icon className={styles.statWatermark} strokeWidth={1.5} aria-hidden="true" />
             <div className={styles.statContent}>
               <div className={styles.statValue}>{value}</div>
               <div className={styles.statLabel}>{label}</div>
@@ -115,10 +131,13 @@ const Dashboard = () => {
           <div className={styles.deptGrid}>
             {departments.map((dept) => (
               <div key={dept.id} className={styles.deptCard}>
-                <h3>{dept.name}</h3>
-                <p>{dept.description}</p>
+                <div className={styles.deptCardTop}>
+                  <h3>{dept.name}</h3>
+                  {dept.description && <p>{dept.description}</p>}
+                </div>
                 <span className={styles.processCount}>
-                  {dept.process_count} processos
+                  <Layers size={12} strokeWidth={2.5} />
+                  {dept.process_count} {dept.process_count === 1 ? 'processo' : 'processos'}
                 </span>
               </div>
             ))}
@@ -146,22 +165,22 @@ const Dashboard = () => {
           <div className={styles.processList}>
             {processes.slice(0, 5).map((process) => (
               <div key={process.id} className={styles.processCard}>
-                <div className={styles.processHeader}>
-                  <h3>
-                    <Link to={`/processos/${process.id}`}>{process.title}</Link>
-                  </h3>
-                  <span className={`badge badge-${process.status === 'active' ? 'success' : process.status === 'draft' ? 'warning' : 'accent'}`}>
-                    {process.status === 'active' ? 'Ativo' :
-                     process.status === 'draft' ? 'Rascunho' : 'Arquivado'}
+                <h3>
+                  <Link to={`/processos/${process.id}`}>{process.title}</Link>
+                </h3>
+                {process.description && (
+                  <p className={styles.processDesc}>{process.description}</p>
+                )}
+                <div className={styles.badgeRow}>
+                  <span className={`${styles.statusBadge} ${styles[STATUS_VARIANT[process.status] ?? 'statusDraft']}`}>
+                    {STATUS_LABEL[process.status] ?? 'Rascunho'}
                   </span>
-                </div>
-                <p className={styles.processDesc}>{process.description}</p>
-                <div className={styles.processFooter}>
                   <span className={styles.department}>
-                    <Building2 size={13} />
+                    <Building2 size={12} strokeWidth={2} />
                     {process.department_name}
                   </span>
                   <span className={styles.steps}>
+                    <Layers size={12} strokeWidth={2.5} />
                     {process.steps?.length || 0} passos
                   </span>
                 </div>
