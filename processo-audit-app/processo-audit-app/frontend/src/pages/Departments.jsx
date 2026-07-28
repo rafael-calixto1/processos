@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { Plus, Pencil, Trash2, Search, X, FileText, Building2 } from 'lucide-react';
 import styles from './Departments.module.css';
 
 const Departments = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -69,6 +71,14 @@ const Departments = () => {
     }
   };
 
+  const term = search.trim().toLowerCase();
+  const filtered = term
+    ? departments.filter(d =>
+        (d.name || '').toLowerCase().includes(term) ||
+        (d.description || '').toLowerCase().includes(term)
+      )
+    : departments;
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -82,64 +92,93 @@ const Departments = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>Departamentos</h1>
-        {user?.role === 'admin' && (
-          <button
-            className="btn btn-primary"
-            onClick={() => handleOpenModal()}
-          >
-            <FiPlus /> Novo Departamento
-          </button>
-        )}
       </div>
 
       {error && <div className={styles.alert}>{error}</div>}
 
+      {/* Toolbar: busca + ação primária */}
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrap}>
+          <Search size={16} strokeWidth={2} className={styles.searchIcon} />
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder="Buscar por nome ou descrição…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        {user?.role === 'admin' && (
+          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+            <Plus size={16} /> Novo Departamento
+          </button>
+        )}
+      </div>
+
       {departments.length === 0 ? (
         <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>
+            <Building2 size={22} strokeWidth={2} />
+          </span>
           <p>Nenhum departamento criado ainda</p>
           {user?.role === 'admin' && (
-            <button
-              className="btn btn-primary"
-              onClick={() => handleOpenModal()}
-            >
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
               Criar Primeiro Departamento
             </button>
           )}
         </div>
+      ) : filtered.length === 0 ? (
+        <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>
+            <Search size={22} strokeWidth={2} />
+          </span>
+          <p>Nenhum departamento encontrado para “{search.trim()}”</p>
+          <button className="btn btn-outline" onClick={() => setSearch('')}>
+            Limpar busca
+          </button>
+        </div>
       ) : (
         <div className={styles.grid}>
-          {departments.map((dept) => (
+          {filtered.map((dept) => (
             <div key={dept.id} className={styles.card}>
               <div className={styles.cardHeader}>
                 <h2>{dept.name}</h2>
                 {user?.role === 'admin' && (
                   <div className={styles.actions}>
                     <button
-                      className="btn btn-outline btn-small"
+                      className={styles.iconBtn}
                       onClick={() => handleOpenModal(dept)}
-                      title="Editar"
+                      title="Editar departamento"
+                      aria-label={`Editar ${dept.name}`}
                     >
-                      <FiEdit2 />
+                      <Pencil size={16} strokeWidth={2} />
                     </button>
                     <button
-                      className="btn btn-danger btn-small"
+                      className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
                       onClick={() => handleDelete(dept.id)}
-                      title="Inativar"
+                      title="Inativar departamento"
+                      aria-label={`Inativar ${dept.name}`}
                     >
-                      <FiTrash2 />
+                      <Trash2 size={16} strokeWidth={2} />
                     </button>
                   </div>
                 )}
               </div>
 
-              <p className={styles.description}>
-                {dept.description || 'Sem descrição'}
-              </p>
+              {/* Sem descrição: o campo some e o espaçador mantém os cartões alinhados */}
+              {dept.description
+                ? <p className={styles.description}>{dept.description}</p>
+                : <div className={styles.descriptionSpacer} aria-hidden="true" />}
 
               <div className={styles.footer}>
-                <span className={styles.processCount}>
-                  📋 {dept.process_count} {dept.process_count === 1 ? 'processo' : 'processos'}
-                </span>
+                <Link
+                  to={`/processos?departamento=${dept.id}`}
+                  className={styles.processCount}
+                  title={`Ver processos de ${dept.name}`}
+                >
+                  <FileText size={13} strokeWidth={2.5} />
+                  {dept.process_count} {dept.process_count === 1 ? 'processo' : 'processos'}
+                </Link>
               </div>
             </div>
           ))}
@@ -155,8 +194,9 @@ const Departments = () => {
               <button
                 className={styles.closeBtn}
                 onClick={() => setShowModal(false)}
+                aria-label="Fechar"
               >
-                ✕
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
 

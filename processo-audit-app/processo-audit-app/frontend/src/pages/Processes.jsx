@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
 import { FiPlus, FiEdit2, FiTrash2, FiEye, FiCamera, FiFileText } from 'react-icons/fi';
@@ -12,7 +12,8 @@ const Processes = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filterDept, setFilterDept] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filterDept, setFilterDept] = useState(searchParams.get('departamento') || '');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -259,7 +260,15 @@ const Processes = () => {
         <div className={styles.filters}>
           <select
             value={filterDept}
-            onChange={(e) => { setFilterDept(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilterDept(value);
+              setCurrentPage(1);
+              // mantém a URL compartilhável
+              const next = new URLSearchParams(searchParams);
+              if (value) next.set('departamento', value); else next.delete('departamento');
+              setSearchParams(next, { replace: true });
+            }}
           >
             <option value="">Todos os Departamentos</option>
             {departments.map((d) => (
