@@ -21,6 +21,8 @@
   --error-light: #fee2e2;
   --info: #2563eb;
   --info-light: #dbeafe;
+  --violet: #5b21b6;
+  --violet-light: #ede9fe;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
@@ -335,6 +337,11 @@ label {
 .badge-accent {
   background-color: rgba(39, 69, 24, 0.08);
   color: var(--accent-color);
+}
+
+.badge-violet {
+  background-color: var(--violet-light);
+  color: var(--violet);
 }
 
 /* Tables */

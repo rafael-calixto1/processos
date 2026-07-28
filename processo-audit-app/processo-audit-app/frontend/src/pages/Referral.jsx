@@ -17,13 +17,15 @@ const STATUS_ICONS  = {
   cancelado:            XCircle,
   manual:               FlaskConical,
 };
-const STATUS_COLORS = {
-  pendente:             { bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
-  aguardando_pagamento: { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
-  ativo:                { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
-  cancelado:            { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
-  manual:               { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+const STATUS_CLASS = {
+  pendente:             'badgePendente',
+  aguardando_pagamento: 'badgeAguardando',
+  ativo:                'badgeAtivo',
+  cancelado:            'badgeCancelado',
+  manual:               'badgeManual',
 };
+
+const PAGE_SIZE = 10;
 
 const fmtDate = (v) => {
   if (!v) return '—';
@@ -43,6 +45,7 @@ export default function Referral() {
   const [error, setError]             = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm]   = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal]       = useState(false);
   const [saving, setSaving]             = useState(false);
   const [saveError, setSaveError]       = useState(null);
@@ -142,12 +145,27 @@ export default function Referral() {
   };
 
   const [showTeste, setShowTeste]         = useState(false);
-  const [testeForm, setTesteForm]         = useState({ cod_cliente: '', id_cliente_servico: '', valor: '', descricao: '' });
+  const [testeForm, setTesteForm]         = useState({ cod_cliente: '', id_cliente_servico: '', tipo_recompensa: 'desconto_valor', valor: '', descricao: '', alvo: '' });
   const [testeLookup, setTesteLookup]     = useState({ loading: false, nome: '', servicos: [], error: null });
+  const [testeFaturasDisponiveis, setTesteFaturasDisponiveis] = useState([]);
   const [testeResult, setTesteResult]     = useState(null);
   const [savingTeste, setSavingTeste]     = useState(false);
   const [testeError, setTesteError]       = useState(null);
+  const [simulando, setSimulando]         = useState(false);
+  const [simulacao, setSimulacao]         = useState(null);
+  const [simulacaoError, setSimulacaoError] = useState(null);
   const timerTeste = useRef(null);
+
+  // Qualquer mudança no formulário invalida a simulação e o resultado anteriores — evita
+  // aplicar de verdade um valor que não corresponde mais ao que foi simulado. Não mexe na
+  // lista de faturas disponíveis nem no alvo escolhido: esses só mudam quando o cliente/
+  // serviço muda (ver handleTesteIdChange e o onChange do <select> de Serviço).
+  const resetSimulacao = () => {
+    setSimulacao(null);
+    setSimulacaoError(null);
+    setTesteResult(null);
+    setTesteError(null);
+  };
 
   const [showConfig, setShowConfig]         = useState(false);
   const [configValor, setConfigValor]       = useState('');
@@ -172,9 +190,14 @@ export default function Referral() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Volta para a primeira página sempre que a busca ou o filtro mudam
+  useEffect(() => { setCurrentPage(1); }, [filterStatus, searchTerm]);
+
   const handleTesteIdChange = (val) => {
-    setTesteForm(f => ({ ...f, cod_cliente: val, id_cliente_servico: '' }));
+    setTesteForm(f => ({ ...f, cod_cliente: val, id_cliente_servico: '', alvo: '' }));
     setTesteLookup({ loading: false, nome: '', servicos: [], error: null });
+    setTesteFaturasDisponiveis([]);
+    resetSimulacao();
     clearTimeout(timerTeste.current);
     if (!val) return;
     setTesteLookup({ loading: true, nome: '', servicos: [], error: null });
@@ -191,8 +214,61 @@ export default function Referral() {
     }, 600);
   };
 
-  const handleTesteSubmit = async (e) => {
-    e.preventDefault();
+  // Serviço diferente = lista de faturas diferente, então zera o alvo escolhido junto.
+  const handleTesteServicoChange = (val) => {
+    setTesteForm(f => ({ ...f, id_cliente_servico: val, alvo: '' }));
+    setTesteFaturasDisponiveis([]);
+    resetSimulacao();
+  };
+
+  // Passo 1: simula (não escreve nada no Hubsoft) — mostra qual fatura seria afetada, se
+  // alguma já está aberta e vai ficar de fora, e o valor real que seria lançado. Aceita
+  // overrides pontuais (ex: o <select> de "Fatura alvo" dispara isso direto no onChange, sem
+  // esperar o próximo render do estado do formulário).
+  const runSimular = async (overrides = {}) => {
+    const f = { ...testeForm, ...overrides };
+    setSimulando(true);
+    setSimulacaoError(null);
+    setSimulacao(null);
+    setTesteResult(null);
+    setTesteError(null);
+    try {
+      let mes_processar, ano_processar;
+      if (f.alvo) {
+        const [mes, ano] = f.alvo.split('-');
+        mes_processar = Number(mes);
+        ano_processar = Number(ano);
+      }
+      const res = await referralAPI.simularDesconto({
+        cod_cliente: Number(f.cod_cliente),
+        id_cliente_servico: Number(f.id_cliente_servico),
+        tipo_recompensa: f.tipo_recompensa,
+        valor: f.tipo_recompensa === 'desconto_valor' && f.valor ? parseFloat(f.valor) : undefined,
+        mes_processar,
+        ano_processar,
+      });
+      setSimulacao(res);
+      setTesteFaturasDisponiveis(res.faturas_disponiveis || []);
+    } catch (err) {
+      setSimulacaoError(err.message);
+    } finally {
+      setSimulando(false);
+    }
+  };
+
+  const handleSimularSubmit = (e) => { e.preventDefault(); runSimular(); };
+
+  // Trocar a fatura alvo já dispara a simulação de novo — não precisa clicar em "Simular"
+  // de novo só porque escolheu outra fatura na lista.
+  const handleAlvoChange = (val) => {
+    setTesteForm(f => ({ ...f, alvo: val }));
+    runSimular({ alvo: val });
+  };
+
+  // Passo 2: só depois de ver a simulação — aplica de verdade, usando o valor e o alvo exatos
+  // que foram simulados (não o que está no formulário, que pode ter mudado desde então).
+  const handleAplicarReal = async () => {
+    if (!simulacao) return;
     setSavingTeste(true);
     setTesteError(null);
     setTesteResult(null);
@@ -200,8 +276,12 @@ export default function Referral() {
       const res = await referralAPI.descontoManual({
         cod_cliente: Number(testeForm.cod_cliente),
         id_cliente_servico: Number(testeForm.id_cliente_servico),
-        valor: testeForm.valor ? parseFloat(testeForm.valor) : undefined,
+        valor: simulacao.valor_a_aplicar,
         descricao: testeForm.descricao || undefined,
+        tipo_recompensa: simulacao.tipo_recompensa,
+        mes_processar: simulacao.alvo.mes_processar ?? undefined,
+        ano_processar: simulacao.alvo.ano_processar ?? undefined,
+        id_fatura_alvo: simulacao.mecanismo === 'renegociacao' ? simulacao.alvo_fatura_existente?.id_fatura : undefined,
       });
       setTesteResult(res);
     } catch (err) {
@@ -362,6 +442,12 @@ export default function Referral() {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const page       = Math.min(currentPage, totalPages);
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd   = Math.min(page * PAGE_SIZE, filtered.length);
+
   const stats = {
     total:                indicacoes.length,
     pendente:             indicacoes.filter(i => i.status === 'pendente').length,
@@ -389,7 +475,7 @@ export default function Referral() {
             <Settings size={15} />
             <span>Configurações</span>
           </button>
-          <button className={styles.btnTeste} onClick={() => { setShowTeste(true); setTesteResult(null); setTesteError(null); setTesteForm({ cod_cliente: '', id_cliente_servico: '', valor: '', descricao: '' }); setTesteLookup({ loading: false, nome: '', servicos: [], error: null }); }}>
+          <button className={styles.btnTeste} onClick={() => { setShowTeste(true); resetSimulacao(); setTesteForm({ cod_cliente: '', id_cliente_servico: '', tipo_recompensa: 'desconto_valor', valor: '', descricao: '', alvo: '' }); setTesteLookup({ loading: false, nome: '', servicos: [], error: null }); setTesteFaturasDisponiveis([]); }}>
             <FlaskConical size={15} />
             <span>Teste</span>
           </button>
@@ -403,12 +489,12 @@ export default function Referral() {
       {/* Stats */}
       <div className={styles.statsGrid}>
         {[
-          { label: 'Total',          value: stats.total,                color: '#6366f1' },
-          { label: 'Pendentes',      value: stats.pendente,             color: '#d97706' },
-          { label: 'Ag. Pagamento',  value: stats.aguardando_pagamento, color: '#2563eb' },
-          { label: 'Ativados',       value: stats.ativo,                color: '#16a34a' },
-          { label: 'Cancelados',     value: stats.cancelado,            color: '#94a3b8' },
-          { label: 'Manuais',        value: stats.manual,               color: '#7c3aed' },
+          { label: 'Total',          value: stats.total,                color: 'var(--text-dark)'     },
+          { label: 'Pendentes',      value: stats.pendente,             color: 'var(--warning)'       },
+          { label: 'Ag. Pagamento',  value: stats.aguardando_pagamento, color: 'var(--info)'          },
+          { label: 'Ativados',       value: stats.ativo,                color: 'var(--success)'       },
+          { label: 'Cancelados',     value: stats.cancelado,            color: 'var(--text-light)'    },
+          { label: 'Manuais',        value: stats.manual,               color: 'var(--accent-color)'  },
         ].map(({ label, value, color }) => (
           <div key={label} className={styles.statCard}>
             <span className={styles.statValue} style={{ color }}>{value}</span>
@@ -483,8 +569,8 @@ export default function Referral() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((i) => {
-                  const cfg = STATUS_COLORS[i.status] || STATUS_COLORS.pendente;
+                {paginated.map((i) => {
+                  const badgeClass = styles[STATUS_CLASS[i.status] || STATUS_CLASS.pendente];
                   const Icon = STATUS_ICONS[i.status] || Clock;
                   return (
                     <tr key={i.id}>
@@ -510,10 +596,7 @@ export default function Referral() {
                         )}
                       </td>
                       <td>
-                        <span
-                          className={styles.badge}
-                          style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
-                        >
+                        <span className={`${styles.badge} ${badgeClass}`}>
                           <Icon size={12} />
                           {STATUS_LABELS[i.status]}
                         </span>
@@ -534,6 +617,15 @@ export default function Referral() {
                         {i.data_faturamento && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>
                             Fat: {fmtDate(i.data_faturamento)}
+                          </div>
+                        )}
+                        {!!i.desconto_adiado && (
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.7rem', color: '#b45309', marginTop: 2 }}
+                            title="A fatura em aberto no momento do lançamento já havia sido gerada e não foi afetada — o desconto vale a partir da próxima."
+                          >
+                            <AlertCircle size={11} />
+                            Adiado p/ próxima
                           </div>
                         )}
                       </td>
@@ -573,17 +665,14 @@ export default function Referral() {
 
             {/* Mobile card list */}
             <div className={styles.cardList}>
-              {filtered.map((i) => {
-                const cfg = STATUS_COLORS[i.status] || STATUS_COLORS.pendente;
+              {paginated.map((i) => {
+                const badgeClass = styles[STATUS_CLASS[i.status] || STATUS_CLASS.pendente];
                 const Icon = STATUS_ICONS[i.status] || Clock;
                 return (
                   <div key={i.id} className={styles.card}>
                     <div className={styles.cardTop}>
                       <span className={styles.tdId}>#{i.id}</span>
-                      <span
-                        className={styles.badge}
-                        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
-                      >
+                      <span className={`${styles.badge} ${badgeClass}`}>
                         <Icon size={12} />
                         {STATUS_LABELS[i.status]}
                       </span>
@@ -629,6 +718,15 @@ export default function Referral() {
                           {i.data_vencimento && ` · Venc: ${fmtDate(i.data_vencimento)}`}
                           {i.data_faturamento && ` · Fat: ${fmtDate(i.data_faturamento)}`}
                         </span>
+                        {!!i.desconto_adiado && (
+                          <span
+                            style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', color: '#b45309', marginTop: 2 }}
+                            title="A fatura em aberto no momento do lançamento já havia sido gerada e não foi afetada — o desconto vale a partir da próxima."
+                          >
+                            <AlertCircle size={11} />
+                            Adiado p/ próxima fatura
+                          </span>
+                        )}
                       </div>
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>Data</span>
@@ -653,6 +751,34 @@ export default function Referral() {
                 );
               })}
             </div>
+
+            {/* Paginação */}
+            <div className={styles.pagination}>
+              <span className={styles.pageInfo}>
+                Mostrando <strong>{rangeStart}–{rangeEnd}</strong> de {filtered.length} indicações
+              </span>
+              {totalPages > 1 && (
+              <div className={styles.pageControls}>
+                <button
+                  className={styles.pageBtn}
+                  disabled={page === 1}
+                  onClick={() => setCurrentPage(page - 1)}
+                >
+                  Anterior
+                </button>
+                <span className={styles.pageInfo}>
+                  Página <strong>{page}</strong> de {totalPages}
+                </span>
+                <button
+                  className={styles.pageBtn}
+                  disabled={page === totalPages}
+                  onClick={() => setCurrentPage(page + 1)}
+                >
+                  Próxima
+                </button>
+              </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -660,16 +786,16 @@ export default function Referral() {
       {/* Modal Teste */}
       {showTeste && (
         <div className={styles.overlay} onClick={() => setShowTeste(false)}>
-          <div className={styles.modal} style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+          <div className={styles.modal} style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <FlaskConical size={16} style={{ color: '#7c3aed' }} />
-                <h2>Aplicar Desconto Manual</h2>
+                <h2>Testar / Aplicar Desconto</h2>
               </div>
               <button className={styles.modalClose} onClick={() => setShowTeste(false)}><X size={18} /></button>
             </div>
 
-            <form onSubmit={handleTesteSubmit} className={styles.modalBody}>
+            <form onSubmit={handleSimularSubmit} className={styles.modalBody}>
               <div className={styles.formGroup}>
                 <label>
                   Cód. do Cliente (Hubsoft) *
@@ -696,7 +822,7 @@ export default function Referral() {
                   <select
                     required
                     value={testeForm.id_cliente_servico}
-                    onChange={e => setTesteForm(f => ({ ...f, id_cliente_servico: e.target.value }))}
+                    onChange={e => handleTesteServicoChange(e.target.value)}
                     className={styles.select}
                   >
                     {testeLookup.servicos.map(s => (
@@ -708,6 +834,44 @@ export default function Referral() {
                 </div>
               )}
 
+              <div className={styles.formGroup}>
+                <label>Tipo de recompensa</label>
+                <select
+                  className={styles.select}
+                  value={testeForm.tipo_recompensa}
+                  onChange={e => { setTesteForm(f => ({ ...f, tipo_recompensa: e.target.value })); resetSimulacao(); }}
+                >
+                  <option value="desconto_valor">Desconto em valor (R$)</option>
+                  <option value="remover_fatura">Remover uma fatura (valor cheio do plano)</option>
+                </select>
+              </div>
+
+              {testeForm.id_cliente_servico && (
+                <div className={styles.formGroup}>
+                  <label>
+                    Fatura alvo
+                    {simulando && <span className={styles.lookupHint}> simulando...</span>}
+                  </label>
+                  <select
+                    className={styles.select}
+                    value={testeForm.alvo}
+                    onChange={e => handleAlvoChange(e.target.value)}
+                  >
+                    <option value="">Automático — deixa o Hubsoft escolher (padrão)</option>
+                    {testeFaturasDisponiveis.map(f => (
+                      <option key={`${f.mes_processar}-${f.ano_processar}`} value={`${f.mes_processar}-${f.ano_processar}`}>
+                        {String(f.mes_processar).padStart(2, '0')}/{f.ano_processar} — {fmtMoney(f.valor)} — vence {fmtDate(f.data_vencimento)} (fatura #{f.id_fatura})
+                      </option>
+                    ))}
+                  </select>
+                  {simulacao && testeFaturasDisponiveis.length === 0 && (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: 2 }}>
+                      Nenhuma fatura em aberto encontrada para esse serviço — só a opção automática está disponível.
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label>Valor (R$)</label>
@@ -715,9 +879,10 @@ export default function Referral() {
                     type="number"
                     min="0.01"
                     step="0.01"
-                    placeholder="Usa padrão se vazio"
+                    placeholder={testeForm.tipo_recompensa === 'remover_fatura' ? 'Ignorado — usa o valor do plano' : 'Usa padrão se vazio'}
                     value={testeForm.valor}
-                    onChange={e => setTesteForm(f => ({ ...f, valor: e.target.value }))}
+                    disabled={testeForm.tipo_recompensa === 'remover_fatura'}
+                    onChange={e => { setTesteForm(f => ({ ...f, valor: e.target.value })); resetSimulacao(); }}
                   />
                 </div>
                 <div className={styles.formGroup}>
@@ -731,10 +896,78 @@ export default function Referral() {
                 </div>
               </div>
 
-              <div className={styles.infoBox} style={{ background: '#f5f3ff', color: '#7c3aed', borderColor: '#ddd6fe' }}>
-                <AlertCircle size={14} />
-                <span>Aplica o desconto diretamente na próxima fatura do cliente, sem vincular a nenhuma indicação.</span>
-              </div>
+              {!simulacao && !testeResult && (
+                <div className={styles.infoBox} style={{ background: '#f5f3ff', color: '#7c3aed', borderColor: '#ddd6fe' }}>
+                  <AlertCircle size={14} />
+                  <span>Simule primeiro — nada é gravado no Hubsoft nesta etapa. Você só aplica de verdade depois de ver o resultado.</span>
+                </div>
+              )}
+
+              {simulacaoError && (
+                <div className={styles.errorBox}>
+                  <AlertCircle size={14} />
+                  {simulacaoError}
+                </div>
+              )}
+
+              {simulacao && !testeResult && (
+                <div className={styles.infoBox} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, background: '#eff6ff', color: '#1e3a8a', borderColor: '#bfdbfe' }}>
+                  <strong style={{ fontSize: '0.82rem' }}>Simulação — nada foi gravado ainda</strong>
+                  <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+                    Cliente: <strong>{simulacao.cliente.nome}</strong> · Plano: {simulacao.servico.nome} (R$ {fmtMoney(simulacao.servico.valor)})
+                    <br />
+                    Fatura em aberto agora:{' '}
+                    {simulacao.fatura_em_aberto
+                      ? <strong>#{simulacao.fatura_em_aberto.id_fatura} · {fmtMoney(simulacao.fatura_em_aberto.valor)} · vence {fmtDate(simulacao.fatura_em_aberto.data_vencimento)}</strong>
+                      : <strong>nenhuma</strong>}
+                    <br />
+                    Alvo: <strong>{simulacao.alvo.referencia}</strong>
+                    {simulacao.alvo.mes_processar && ` (${String(simulacao.alvo.mes_processar).padStart(2, '0')}/${simulacao.alvo.ano_processar})`}
+                    {simulacao.alvo.escolhido_manualmente && <span style={{ color: '#7c3aed' }}> · escolhida manualmente</span>}
+                    <br />
+                    Mecanismo:{' '}
+                    <strong>
+                      {simulacao.mecanismo === 'evento_faturamento' && 'Evento de faturamento (fatura ainda não existe)'}
+                      {simulacao.mecanismo === 'renegociacao' && 'Renegociação (fatura já existe — cancela e reemite)'}
+                      {simulacao.mecanismo === 'bloqueado_ja_paga' && 'Bloqueado — fatura já paga'}
+                      {simulacao.mecanismo === 'bloqueado_valor_muito_baixo' && 'Bloqueado — valor da fatura muito baixo'}
+                      {simulacao.mecanismo === 'bloqueado_desconto_maior_que_fatura' && 'Bloqueado — desconto maior que a fatura'}
+                    </strong>
+                    <br />
+                    Valor que será lançado: <strong>{fmtMoney(simulacao.valor_a_aplicar)}</strong>
+                  </div>
+
+                  {simulacao.mecanismo === 'renegociacao' && simulacao.renegociacao_preview && (
+                    <div style={{ fontSize: '0.78rem', lineHeight: 1.6, background: '#fff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '6px 8px' }}>
+                      Renegociação da fatura #{simulacao.alvo_fatura_existente.id_fatura}: desconto de{' '}
+                      <strong>{fmtMoney(simulacao.renegociacao_preview.desconto)}</strong>, cancela o boleto atual e emite um novo de{' '}
+                      <strong>{fmtMoney(simulacao.renegociacao_preview.valor_final)}</strong>.
+                      {simulacao.renegociacao_preview.sera_liquidado_automaticamente && (
+                        <> Esse centavo restante é <strong>liquidado automaticamente</strong> logo em seguida (sem custo pro cliente) — fica um registro de "pago R$0,01" na fatura nova.</>
+                      )}
+                    </div>
+                  )}
+
+                  {simulacao.desconto_adiado && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: '0.78rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 8px' }}>
+                      <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>A fatura em aberto acima já foi gerada e <strong>não</strong> vai ser afetada por um evento de faturamento — escolha-a na lista "Fatura alvo" acima para renegociá-la diretamente.</span>
+                    </div>
+                  )}
+                  {simulacao.mecanismo === 'bloqueado_ja_paga' && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: '0.78rem', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 8px' }}>
+                      <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>A fatura de {simulacao.alvo.referencia} já foi <strong>paga</strong> — esse desconto não vai ter efeito nenhum.</span>
+                    </div>
+                  )}
+                  {simulacao.mecanismo === 'bloqueado_desconto_maior_que_fatura' && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: '0.78rem', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 8px' }}>
+                      <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>O valor do desconto (R$ {fmtMoney(simulacao.valor_a_aplicar)}) precisa ser menor que o da fatura (R$ {fmtMoney(simulacao.alvo_fatura_existente.valor)}) — para zerar use "Remover uma fatura".</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {testeError && (
                 <div className={styles.errorBox}>
@@ -743,7 +976,18 @@ export default function Referral() {
                 </div>
               )}
 
-              {testeResult && (
+              {testeResult && testeResult.mecanismo === 'renegociacao' && (
+                <div className={styles.successBox}>
+                  <CheckCircle2 size={14} />
+                  <span>
+                    Fatura #{testeResult.fatura_original?.id_fatura} renegociada para <strong>{testeResult.cliente?.nome}</strong> — nova fatura <strong>#{testeResult.nova_fatura?.id_fatura}</strong> de {fmtMoney(testeResult.nova_fatura?.valor)}
+                    {testeResult.liquidado && <> · centavo restante liquidado automaticamente</>}
+                    {testeResult.aviso && <><br /><strong style={{ color: '#b45309' }}>{testeResult.aviso}</strong></>}
+                  </span>
+                </div>
+              )}
+
+              {testeResult && testeResult.mecanismo !== 'renegociacao' && (
                 <div className={styles.successBox}>
                   <CheckCircle2 size={14} />
                   <span>
@@ -752,11 +996,33 @@ export default function Referral() {
                 </div>
               )}
 
+              {testeResult?.desconto_adiado && (
+                <div className={styles.infoBox} style={{ background: '#fffbeb', color: '#b45309', borderColor: '#fde68a' }}>
+                  <AlertCircle size={14} />
+                  <span>
+                    O cliente já tinha uma fatura em aberto no momento do lançamento — o Hubsoft não altera faturas já geradas, então esse desconto só vai valer a partir da <strong>próxima</strong> fatura, não da atual.
+                  </span>
+                </div>
+              )}
+
               <div className={styles.modalFooter}>
                 <button type="button" className={styles.btnSecondary} onClick={() => setShowTeste(false)}>Fechar</button>
-                <button type="submit" className={styles.btnTeste} disabled={savingTeste}>
-                  {savingTeste ? 'Aplicando...' : 'Aplicar Desconto'}
-                </button>
+                {!testeResult && simulacao && (
+                  <button
+                    type="button"
+                    className={styles.btnTeste}
+                    disabled={savingTeste || simulacao.mecanismo?.startsWith('bloqueado')}
+                    title={simulacao.mecanismo?.startsWith('bloqueado') ? 'Esse alvo está bloqueado — veja o aviso acima' : undefined}
+                    onClick={handleAplicarReal}
+                  >
+                    {savingTeste ? 'Aplicando...' : simulacao.mecanismo === 'renegociacao' ? 'Renegociar de verdade' : 'Aplicar de verdade'}
+                  </button>
+                )}
+                {!testeResult && (
+                  <button type="submit" className={simulacao ? styles.btnSecondary : styles.btnTeste} disabled={simulando}>
+                    {simulando ? 'Simulando...' : simulacao ? 'Simular de novo' : 'Simular'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

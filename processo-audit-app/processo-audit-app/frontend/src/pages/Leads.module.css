@@ -126,21 +126,21 @@
 .searchResult {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #065f46;
+  color: var(--success);
   white-space: nowrap;
 }
 
 .searchResultEmpty {
   font-size: 0.85rem;
-  color: #991b1b;
+  color: var(--error);
   white-space: nowrap;
 }
 
-.statPendente.statActive::after    { background: #92400e; }
-.statEncaminhado.statActive::after { background: #1e40af; }
-.statAtivo.statActive::after       { background: #065f46; }
-.statCancelado.statActive::after   { background: #991b1b; }
-.statManual.statActive::after      { background: #5b21b6; }
+.statPendente.statActive::after    { background: var(--warning); }
+.statEncaminhado.statActive::after { background: var(--violet); }
+.statAtivo.statActive::after       { background: var(--success); }
+.statCancelado.statActive::after   { background: var(--error); }
+.statManual.statActive::after      { background: var(--accent-color); }
 .statActive:not(.statPendente):not(.statEncaminhado):not(.statAtivo):not(.statCancelado):not(.statManual)::after { background: var(--text-dark); }
 
 .statValue {
@@ -159,11 +159,11 @@
   margin-top: 3px;
 }
 
-.statPendente .statValue    { color: #92400e; }
-.statEncaminhado .statValue { color: #1e40af; }
-.statAtivo .statValue       { color: #065f46; }
-.statCancelado .statValue   { color: #991b1b; }
-.statManual .statValue      { color: #5b21b6; }
+.statPendente .statValue    { color: var(--warning); }
+.statEncaminhado .statValue { color: var(--violet); }
+.statAtivo .statValue       { color: var(--success); }
+.statCancelado .statValue   { color: var(--error); }
+.statManual .statValue      { color: var(--accent-color); }
 
 /* ══════════════════════════════════════
    TABLE
@@ -182,6 +182,7 @@
 
 .table {
   width: 100%;
+  min-width: 1240px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -198,14 +199,14 @@
 .colActions  { width: 48px; }
 
 .table th {
-  padding: 11px 14px;
+  padding: 12px 16px;
   text-align: left;
-  background: #f8f9fa;
+  background: var(--background-color);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-light);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
   overflow: hidden;
@@ -214,7 +215,7 @@
 .table th.colActions { text-align: center; }
 
 .table td {
-  padding: 13px 14px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-light);
   font-size: 0.855rem;
   color: var(--text-dark);
@@ -234,7 +235,7 @@
 }
 
 .table tbody tr:hover {
-  background: #fafffe;
+  background: var(--primary-light);
 }
 
 /* ── Name link ── */
@@ -282,6 +283,11 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  opacity: 0.55;
 }
 
 /* ══════════════════════════════════════
@@ -353,7 +359,8 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
   font-weight: 700;
@@ -361,18 +368,24 @@
   white-space: nowrap;
 }
 
-.status_pendente    { background: #fef3c7; color: #92400e; }
-.status_ativo       { background: #d1fae5; color: #065f46; }
-.status_cancelado   { background: #fee2e2; color: #991b1b; }
-.status_encaminhado { background: #dbeafe; color: #1e40af; }
-.status_manual      { background: #ede9fe; color: #5b21b6; }
+/*
+ * Pills de status — mesmo tratamento das badges globais (styles/global.css):
+ * fundo *-light + texto sólido, todos com o mesmo raio e peso.
+ */
+.status_pendente             { background: var(--warning-light); color: var(--warning); }
+.status_aguardando_pagamento { background: var(--info-light);    color: var(--info); }
+.status_ativo                { background: var(--success-light); color: var(--success); }
+.status_cancelado            { background: var(--error-light);   color: var(--error); }
+.status_encaminhado          { background: var(--violet-light); color: var(--violet); }
+.status_manual               { background: rgba(39, 69, 24, 0.08); color: var(--accent-color); }
+.status_default              { background: var(--border-light);  color: var(--text-light); }
 
 /* ── Boleto badges ── */
 .boletoPago {
   display: inline-flex;
   align-items: center;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-light);
+  color: var(--success);
   padding: 3px 9px;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
@@ -383,8 +396,8 @@
 .boletoVencido {
   display: inline-flex;
   align-items: center;
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--error-light);
+  color: var(--error);
   padding: 3px 9px;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
@@ -395,8 +408,8 @@
 .boletoPendente {
   display: inline-flex;
   align-items: center;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-light);
+  color: var(--warning);
   padding: 3px 9px;
   border-radius: var(--radius-full);
   font-size: 0.72rem;
@@ -838,4 +851,64 @@
   .crmModalHeader { padding: 16px 18px 12px; }
   .crmLeadTag { margin: 14px 18px 0; }
   .crmForm { padding: 14px 18px 20px; }
+}
+
+/* ══════════════════════════════════════
+   PAGINAÇÃO
+══════════════════════════════════════ */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--background-color);
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.pageBtn {
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-medium);
+  transition: var(--transition);
+  font-weight: 500;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--primary-light);
+}
+
+.pageBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+}
+
+.pageInfo {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.pageInfo strong {
+  color: var(--text-dark);
+}
+
+@media (max-width: 700px) {
+  .pagination { flex-direction: column; align-items: stretch; padding: 14px 12px; }
+  .pageControls { justify-content: space-between; gap: 10px; }
+  .pageInfo { text-align: center; }
 }

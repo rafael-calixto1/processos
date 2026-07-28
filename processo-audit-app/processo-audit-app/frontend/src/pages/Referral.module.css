@@ -57,7 +57,7 @@
 /* ── Stats ── */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -90,8 +90,13 @@
 .filters {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
 }
 
 .searchWrap {
@@ -115,7 +120,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: 0.86rem;
-  background: var(--surface-color);
+  background: var(--background-color);
   color: var(--text-dark);
   outline: none;
   transition: var(--transition);
@@ -129,33 +134,35 @@
 .filterTabs {
   display: flex;
   gap: 4px;
-  background: var(--surface-color);
+  background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: 3px;
 }
 
 .filterTab {
-  padding: 5px 14px;
+  padding: 6px 14px;
   border: none;
   background: transparent;
   border-radius: calc(var(--radius) - 2px);
   font-size: 0.82rem;
   font-weight: 500;
-  color: var(--text-light);
+  color: var(--text-medium);
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
 }
 
 .filterTab:hover {
-  color: var(--text-dark);
-  background: var(--border-light);
+  color: var(--primary-color);
+  background: var(--primary-light);
 }
 
 .filterTabActive {
   background: var(--primary-color) !important;
   color: #fff !important;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .btnRefresh {
@@ -200,7 +207,7 @@
 }
 
 .table th {
-  padding: 11px 16px;
+  padding: 13px 20px;
   text-align: left;
   font-size: 0.75rem;
   font-weight: 600;
@@ -211,7 +218,7 @@
 }
 
 .table td {
-  padding: 13px 16px;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
 }
@@ -261,11 +268,92 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   font-size: 0.76rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/*
+ * Status — mesmo tratamento das badges globais (.badge-warning, .badge-info,
+ * .badge-success, .badge-accent em styles/global.css): fundo -light + texto sólido.
+ */
+.badgePendente {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.badgeAguardando {
+  background: var(--info-light);
+  color: var(--info);
+}
+
+.badgeAtivo {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.badgeCancelado {
+  background: var(--border-light);
+  color: var(--text-light);
+}
+
+.badgeManual {
+  background: rgba(39, 69, 24, 0.08);
+  color: var(--accent-color);
+}
+
+/* ── Paginação ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  background: var(--background-color);
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.pageBtn {
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-medium);
+  transition: var(--transition);
+  font-weight: 500;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--primary-light);
+}
+
+.pageBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+}
+
+.pageInfo {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.pageInfo strong {
+  color: var(--text-dark);
 }
 
 .btnCancel {
@@ -736,7 +824,7 @@
 
   .formRow { grid-template-columns: 1fr; }
 
-  .filters { gap: 8px; }
+  .filters { gap: 10px; padding: 12px; }
   .searchWrap { min-width: 0; flex: 1 1 100%; }
   .filterTabs {
     width: 100%;
@@ -751,6 +839,10 @@
   /* Swap table for stacked cards */
   .table { display: none; }
   .cardList { display: flex; flex-direction: column; }
+
+  .pagination { flex-direction: column; align-items: stretch; padding: 14px 12px; }
+  .pageControls { justify-content: space-between; gap: 10px; }
+  .pageInfo { text-align: center; }
 
   /* Full-screen modals */
   .overlay { padding: 0; align-items: flex-end; }
