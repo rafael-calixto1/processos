@@ -11,11 +11,59 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
   gap: 1rem;
 }
 
 .header h1 { margin: 0; }
+
+/* ── Toolbar: busca + ação primária ──────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.15rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background-color: var(--background-color);
+  color: var(--text-dark);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.searchInput:focus {
+  border-color: var(--primary-color);
+  background-color: var(--surface-color);
+  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.1);
+}
 
 .alert {
   background-color: var(--error-light);
@@ -37,13 +85,15 @@
 .card {
   background-color: var(--surface-color);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.375rem 1.5rem;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: var(--transition);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 0.875rem;
+  height: 100%;
 }
 
 .card:hover {
@@ -62,20 +112,54 @@
 .cardHeader h2 {
   margin: 0;
   font-size: 1.0625rem;
-  color: var(--primary-color);
+  font-weight: 600;
+  color: var(--text-dark);
   flex: 1;
+  min-width: 0;
 }
 
+/* Ícones discretos: aparecem no hover/foco do cartão */
 .actions {
   display: flex;
-  gap: 0.375rem;
+  gap: 0.125rem;
   flex-shrink: 0;
+  opacity: 0;
+  transition: var(--transition);
 }
 
-.actions .btn {
-  width: auto;
-  padding: 0.4375rem 0.75rem;
-  font-size: 0.8125rem;
+.card:hover .actions,
+.card:focus-within .actions {
+  opacity: 1;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.iconBtn:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.iconBtnDanger:hover {
+  background-color: var(--error-light);
+  color: var(--error);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
 }
 
 .description {
@@ -86,19 +170,42 @@
   flex: 1;
 }
 
+/* Mantém o rodapé alinhado entre cartões com e sem descrição */
+.descriptionSpacer {
+  flex: 1;
+  min-height: 0.5rem;
+}
+
 .footer {
   padding-top: 0.875rem;
   border-top: 1px solid var(--border-light);
 }
 
 .processCount {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   background-color: var(--primary-light);
-  color: var(--primary-color);
-  padding: 0.3rem 0.875rem;
+  color: var(--primary-dark);
+  padding: 0.35rem 0.875rem;
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.8125rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.processCount:hover {
+  background-color: var(--surface-color);
+  border-color: var(--primary-color);
+  color: var(--primary-dark);
+}
+
+.processCount:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 /* ── Empty State ─────────────────────────────── */
@@ -113,6 +220,18 @@
 .emptyState p {
   color: var(--text-light);
   margin-bottom: 1.5rem;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius);
+  background-color: var(--border-light);
+  color: var(--text-light);
+  margin-bottom: 1rem;
 }
 
 /* ── Modal ───────────────────────────────────── */
@@ -247,32 +366,29 @@
     text-align: center;
   }
 
-  .header button { 
-    width: 100%; 
-    justify-content: center;
-  }
-
   .grid { grid-template-columns: 1fr; }
 
   .card {
     padding: 1.25rem;
   }
 
-  .cardHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
+  /* Sem hover no toque: os ícones ficam sempre visíveis */
   .actions {
-    width: 100%;
-    display: flex;
-    gap: 0.5rem;
+    opacity: 1;
   }
 
-  .actions .btn {
-    flex: 1;
+  .toolbar {
+    padding: 0.75rem;
+  }
+
+  .toolbar .btn {
+    width: 100%;
     justify-content: center;
+  }
+
+  .searchWrap {
+    min-width: 0;
+    flex: 1 1 100%;
   }
 
   .modalContent { 
