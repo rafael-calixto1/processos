@@ -332,6 +332,18 @@
   font-size: 0.8125rem;
 }
 
+.sectionBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-left: 0.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .stepItem .btn {
   flex-shrink: 0;
 }

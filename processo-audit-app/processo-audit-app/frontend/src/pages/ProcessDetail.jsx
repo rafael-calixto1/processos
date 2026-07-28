@@ -114,7 +114,28 @@ const ProcessDetail = () => {
         return { ...step, imageData };
       }) || []);
 
+      let lastSection = null;
+
       stepsWithImages.forEach((step, index) => {
+        // Section header row (when the section changes)
+        const section = step.section || null;
+        if (section && section !== lastSection) {
+          tableRows.push([
+            {
+              content: section,
+              colSpan: 3,
+              styles: {
+                fillColor: [11, 165, 43],
+                textColor: 255,
+                fontStyle: 'bold',
+                fontSize: 11,
+                halign: 'left'
+              }
+            }
+          ]);
+        }
+        lastSection = section;
+
         // Text row
         tableRows.push([
           index + 1,

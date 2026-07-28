@@ -22,7 +22,7 @@ const Processes = () => {
     department_id: '',
     steps: []
   });
-  const [newStep, setNewStep] = useState({ title: '', description: '', photo_url: '' });
+  const [newStep, setNewStep] = useState({ title: '', description: '', section: '', photo_url: '' });
   const { user } = useAuth();
 
   // Search and Pagination
@@ -153,7 +153,7 @@ const Processes = () => {
       alert(`Processo criado com ${finalFormData.steps.length} passos!`);
       setShowModal(false);
       setFormData({ title: '', description: '', department_id: '', steps: [] });
-      setNewStep({ title: '', description: '', photo_url: '' });
+      setNewStep({ title: '', description: '', section: '', photo_url: '' });
       loadData();
     } catch (err) {
       setError(err.message);
@@ -187,7 +187,7 @@ const Processes = () => {
         ...formData,
         steps: [...formData.steps, { ...newStep, documentation_markdown: '' }]
       });
-      setNewStep({ title: '', description: '', photo_url: '' });
+      setNewStep({ title: '', description: '', section: '', photo_url: '' });
     }
   };
 
@@ -431,6 +431,7 @@ const Processes = () => {
                       <div key={idx} className={styles.stepItem}>
                         <div>
                           <strong>{idx + 1}. {step.title}</strong>
+                          {step.section && <span className={styles.sectionBadge}>{step.section}</span>}
                           {step.description && <p>{step.description}</p>}
                           {step.photo_url && (
                             <img 
@@ -469,7 +470,15 @@ const Processes = () => {
                       setNewStep({ ...newStep, description: e.target.value })
                     }
                   />
-                  
+                  <input
+                    type="text"
+                    placeholder="Seção (ex: Preparação)"
+                    value={newStep.section}
+                    onChange={(e) =>
+                      setNewStep({ ...newStep, section: e.target.value })
+                    }
+                  />
+
                   <div className={styles.stepPhotoSection}>
                     <label htmlFor="step-photo" className={styles.photoBtn}>
                       <FiCamera /> {newStep.photo_url ? '📸 Alterar Foto' : '➕ Foto de Instrução'}

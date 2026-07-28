@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, Gauge, Car, Users, Fuel, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Activity, Car, Users, Fuel, Wrench } from 'lucide-react';
 import styles from './Fleet.module.css';
 import FleetDashboard     from './FleetDashboard';
 import FleetVehicleStatus from './FleetVehicleStatus';
@@ -9,12 +9,12 @@ import FleetFueling       from './FleetFueling';
 import FleetMaintenance   from './FleetMaintenance';
 
 const TABS = [
-  { id: 'dashboard',    label: 'Painel',           Icon: Gauge          },
-  { id: 'status',       label: 'Status',            Icon: Truck          },
-  { id: 'cars',         label: 'Veículos',          Icon: Car            },
-  { id: 'drivers',      label: 'Motoristas',        Icon: Users          },
-  { id: 'fueling',      label: 'Abastecimento',     Icon: Fuel           },
-  { id: 'maintenance',  label: 'Manutenção',        Icon: ClipboardList  },
+  { id: 'dashboard',   label: 'Painel',        Icon: LayoutDashboard },
+  { id: 'status',      label: 'Status',        Icon: Activity        },
+  { id: 'cars',        label: 'Veículos',      Icon: Car             },
+  { id: 'drivers',     label: 'Motoristas',    Icon: Users           },
+  { id: 'fueling',     label: 'Abastecimento', Icon: Fuel            },
+  { id: 'maintenance', label: 'Manutenção',    Icon: Wrench          },
 ];
 
 const Fleet = () => {
@@ -53,7 +53,7 @@ const Fleet = () => {
             onClick={() => setActiveTab(id)}
             className={`${styles.tab} ${activeTab === id ? styles.tabActive : ''}`}
           >
-            <Icon size={15} strokeWidth={2} />
+            <Icon size={18} strokeWidth={activeTab === id ? 2.5 : 2} />
             {label}
           </button>
         ))}

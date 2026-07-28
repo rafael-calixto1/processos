@@ -1,4 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  MoreVertical, Eye, Send, Search, Inbox, X, User,
+  Clock, Hourglass, Forward, CheckCircle2, XCircle, FlaskConical,
+} from 'lucide-react';
 import { referralAPI } from '../api';
 import styles from './Leads.module.css';
 
@@ -13,9 +17,36 @@ const parseEndereco = (str) => {
   return { logradouro: before?.trim() || '', bairro, cidade: cidade?.trim() || '', estado: estado?.trim() || '' };
 };
 
-const fmt = (d) => {
+/*
+ * Converte para Date local a partir das formas que a API pode devolver:
+ * Date, ISO ("2026-02-28T03:00:00.000Z"), MySQL ("2026-02-28 00:00:00"),
+ * data pura ("2026-02-28") ou pt-BR ("28/02/2026").
+ * Monta a data pelos componentes para não sofrer deslocamento de fuso.
+ */
+const parseDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+
+  const str = String(value).trim();
+
+  const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
+
+  const ptBr = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (ptBr) return new Date(+ptBr[3], +ptBr[2] - 1, +ptBr[1]);
+
+  const parsed = new Date(str);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/* Sempre DD/MM/AAAA — nunca "Invalid Date" nem ano truncado. */
+const fmt = (value) => {
+  const d = parseDate(value);
   if (!d) return '—';
-  return new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR');
+  const dia = String(d.getDate()).padStart(2, '0');
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const ano = String(d.getFullYear()).padStart(4, '0');
+  return `${dia}/${mes}/${ano}`;
 };
 
 const toTitleCase = (str) => {
@@ -25,19 +56,37 @@ const toTitleCase = (str) => {
 };
 
 /* ── Sub-components ── */
+const PAGE_SIZE = 10;
+
 const STATUS_LABELS = {
-  pendente: 'Pendente',
-  ativo: 'Ativo',
-  cancelado: 'Cancelado',
-  encaminhado: 'Encaminhado',
-  manual: 'Manual',
+  pendente:             'Pendente',
+  aguardando_pagamento: 'Ag. Pagamento',
+  ativo:                'Ativo',
+  cancelado:            'Cancelado',
+  encaminhado:          'Encaminhado',
+  manual:               'Manual',
 };
 
-const StatusBadge = ({ status }) => (
-  <span className={`${styles.badge} ${styles['status_' + status]}`}>
-    {STATUS_LABELS[status] ?? status}
-  </span>
-);
+const STATUS_ICONS = {
+  pendente:             Clock,
+  aguardando_pagamento: Hourglass,
+  ativo:                CheckCircle2,
+  cancelado:            XCircle,
+  encaminhado:          Forward,
+  manual:               FlaskConical,
+};
+
+const StatusBadge = ({ status }) => {
+  // Status desconhecido cai no pill neutro em vez de perder a formatação
+  const variant = styles['status_' + status] ?? styles.status_default;
+  const Icon = STATUS_ICONS[status] ?? Clock;
+  return (
+    <span className={`${styles.badge} ${variant}`}>
+      <Icon size={12} strokeWidth={2.5} />
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  );
+};
 
 const BoletoStatus = ({ lead }) => {
   const pago = lead.data_pagamento_primeiro_boleto;
@@ -45,10 +94,14 @@ const BoletoStatus = ({ lead }) => {
 
   if (pago) return <span className={styles.boletoPago}>Pago em {fmt(pago)}</span>;
   if (lead.pagou_primeiro_boleto) return <span className={styles.boletoPago}>Pago</span>;
-  if (!venc) return <span className={styles.boletoNone}>—</span>;
 
-  const toDate = d => new Date(String(d).slice(0, 10) + 'T12:00:00');
-  return toDate(venc) < new Date()
+  const vencimento = parseDate(venc);
+  if (!vencimento) return <span className={styles.boletoNone}>—</span>;
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  return vencimento < hoje
     ? <span className={styles.boletoVencido}>Venceu {fmt(venc)}</span>
     : <span className={styles.boletoPendente}>Vence {fmt(venc)}</span>;
 };
@@ -82,27 +135,18 @@ const ActionsMenu = ({ lead, onView, onSendCRM }) => {
         onClick={() => setOpen(v => !v)}
         aria-label="Abrir menu de ações"
       >
-        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="5" r="1.5" />
-          <circle cx="12" cy="12" r="1.5" />
-          <circle cx="12" cy="19" r="1.5" />
-        </svg>
+        <MoreVertical size={18} strokeWidth={2} />
       </button>
 
       {open && (
         <div className={styles.menuDropdown}>
           <button className={styles.menuItem} onClick={() => { setOpen(false); onView(); }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
+            <Eye size={16} strokeWidth={2} />
             Ver detalhes
           </button>
           {lead.status === 'pendente' && (
             <button className={`${styles.menuItem} ${styles.menuItemCRM}`} onClick={() => { setOpen(false); onSendCRM(); }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
+              <Send size={16} strokeWidth={2} />
               Enviar para CRM
             </button>
           )}
@@ -125,8 +169,12 @@ const Leads = () => {
   const [detailLead, setDetailLead] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
   const [searchIndicadorId, setSearchIndicadorId] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { fetchLeads(); fetchCRMs(); }, []);
+
+  // Volta para a primeira página sempre que a busca ou o filtro mudam
+  useEffect(() => { setCurrentPage(1); }, [activeFilter, searchIndicadorId]);
 
   const fetchLeads = async () => {
     try { setLeads(await referralAPI.getLeads()); }
@@ -173,6 +221,12 @@ const Leads = () => {
   const indicadorEncontrado = searchId
     ? leads.find(l => String(l.cod_cliente_indicador ?? '') === searchId)?.nome_indicador
     : null;
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const page       = Math.min(currentPage, totalPages);
+  const pageLeads  = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rangeStart = filteredLeads.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd   = Math.min(page * PAGE_SIZE, filteredLeads.length);
 
   const handleFilterClick = (filter) =>
     setActiveFilter(prev => (prev === filter ? null : filter));
@@ -246,9 +300,7 @@ const Leads = () => {
 
       {/* Search by indicador ID */}
       <div className={styles.searchBar}>
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M18 11a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+        <Search size={18} strokeWidth={2} />
         <input
           type="text"
           inputMode="numeric"
@@ -268,9 +320,7 @@ const Leads = () => {
       <div className={styles.tableWrap}>
         {filteredLeads.length === 0 ? (
           <div className={styles.emptyRow}>
-            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{opacity:0.3}}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
+            <Inbox size={32} strokeWidth={1.5} className={styles.emptyIcon} />
             {activeFilter ? `Nenhum lead com status "${STATUS_LABELS[activeFilter]}"` : 'Nenhum lead encontrado'}
           </div>
         ) : (
@@ -292,7 +342,7 @@ const Leads = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map(lead => {
+                  {pageLeads.map(lead => {
                     const { bairro } = parseEndereco(lead.endereco_indicado);
                     return (
                       <tr key={lead.id}>
@@ -314,7 +364,7 @@ const Leads = () => {
                           {toTitleCase(lead.nome_indicador)}
                         </td>
                         <td className={styles.colDate}>
-                          <span className={styles.muted}>{new Date(lead.created_at).toLocaleDateString('pt-BR')}</span>
+                          <span className={styles.muted}>{fmt(lead.created_at)}</span>
                         </td>
                         <td className={styles.colStatus}>
                           <StatusBadge status={lead.status} />
@@ -341,7 +391,7 @@ const Leads = () => {
 
             {/* Mobile card list */}
             <div className={styles.cardList}>
-              {filteredLeads.map(lead => {
+              {pageLeads.map(lead => {
                 const { bairro } = parseEndereco(lead.endereco_indicado);
                 return (
                   <div key={lead.id} className={styles.card}>
@@ -378,7 +428,7 @@ const Leads = () => {
                       </div>
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>Data</span>
-                        <span className={styles.muted}>{new Date(lead.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span className={styles.muted}>{fmt(lead.created_at)}</span>
                       </div>
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>1º Boleto</span>
@@ -392,6 +442,34 @@ const Leads = () => {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Paginação */}
+            <div className={styles.pagination}>
+              <span className={styles.pageInfo}>
+                Mostrando <strong>{rangeStart}–{rangeEnd}</strong> de {filteredLeads.length} leads
+              </span>
+              {totalPages > 1 && (
+                <div className={styles.pageControls}>
+                  <button
+                    className={styles.pageBtn}
+                    disabled={page === 1}
+                    onClick={() => setCurrentPage(page - 1)}
+                  >
+                    Anterior
+                  </button>
+                  <span className={styles.pageInfo}>
+                    Página <strong>{page}</strong> de {totalPages}
+                  </span>
+                  <button
+                    className={styles.pageBtn}
+                    disabled={page === totalPages}
+                    onClick={() => setCurrentPage(page + 1)}
+                  >
+                    Próxima
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -417,9 +495,7 @@ const Leads = () => {
                   </div>
                 </div>
                 <button className={styles.btnClose} onClick={() => setShowDetail(false)}>
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X size={18} strokeWidth={2} />
                 </button>
               </div>
 
@@ -473,9 +549,7 @@ const Leads = () => {
               {detailLead.status === 'pendente' && (
                 <div className={styles.detailFooter}>
                   <button className={styles.btnCRMPrimary} onClick={() => { setShowDetail(false); handleOpenCRM(detailLead); }}>
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
+                    <Send size={16} strokeWidth={2} />
                     Enviar para CRM
                   </button>
                 </div>
@@ -492,16 +566,12 @@ const Leads = () => {
             <div className={styles.crmModalHeader}>
               <h2 className={styles.crmModalTitle}>Enviar para CRM</h2>
               <button className={styles.btnClose} onClick={() => setShowCrmModal(false)}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
 
             <div className={styles.crmLeadTag}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+              <User size={16} strokeWidth={2} />
               {toTitleCase(selectedLead?.nome_indicado)}
             </div>
 

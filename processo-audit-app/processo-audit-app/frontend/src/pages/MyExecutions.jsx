@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { executionAPI } from '../api/index';
-import { FiPlay, FiCheckCircle, FiClock } from 'react-icons/fi';
+import {
+  ClipboardList, Clock, CheckCircle2, PauseCircle,
+  Play, Check, ChevronRight
+} from 'lucide-react';
 import styles from './MyExecutions.module.css';
+
+const STATUS_META = {
+  in_progress: { label: 'Em Progresso', Icon: Clock },
+  completed: { label: 'Completo', Icon: CheckCircle2 },
+  abandoned: { label: 'Abandonado', Icon: PauseCircle },
+};
 
 const MyExecutions = () => {
   const [executions, setExecutions] = useState([]);
@@ -26,7 +35,7 @@ const MyExecutions = () => {
     }
   };
 
-  const filteredExecutions = executions.filter(e => 
+  const filteredExecutions = executions.filter(e =>
     filter === 'all' || e.status === filter
   );
 
@@ -37,31 +46,24 @@ const MyExecutions = () => {
     abandoned: executions.filter(e => e.status === 'abandoned').length
   };
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'in_progress':
-        return '⏱️';
-      case 'completed':
-        return '✅';
-      case 'abandoned':
-        return '⏸️';
-      default:
-        return '📋';
-    }
-  };
+  const statCards = [
+    { key: 'total', label: 'Total de Execuções', value: stats.total, Icon: ClipboardList },
+    { key: 'in_progress', label: 'Em Progresso', value: stats.inProgress, Icon: Clock },
+    { key: 'completed', label: 'Completadas', value: stats.completed, Icon: CheckCircle2 },
+    { key: 'abandoned', label: 'Abandonadas', value: stats.abandoned, Icon: PauseCircle },
+  ];
 
-  const getStatusLabel = (status) => {
-    switch(status) {
-      case 'in_progress':
-        return 'Em Progresso';
-      case 'completed':
-        return 'Completo';
-      case 'abandoned':
-        return 'Abandonado';
-      default:
-        return 'Desconhecido';
-    }
-  };
+  const filterItems = [
+    { key: 'all', label: 'Todas', count: stats.total, Icon: ClipboardList },
+    { key: 'in_progress', label: 'Em Progresso', count: stats.inProgress, Icon: Clock },
+    { key: 'completed', label: 'Completadas', count: stats.completed, Icon: CheckCircle2 },
+    { key: 'abandoned', label: 'Abandonadas', count: stats.abandoned, Icon: PauseCircle },
+  ];
+
+  const getStatusMeta = (status) =>
+    STATUS_META[status] || { label: 'Desconhecido', Icon: ClipboardList };
+
+  const getStatusLabel = (status) => getStatusMeta(status).label;
 
   if (loading) {
     return (
@@ -80,71 +82,50 @@ const MyExecutions = () => {
       {error && <div className={styles.alert}>{error}</div>}
 
       {/* Stats Cards */}
+      <div className={styles.sectionLabel}>Resumo</div>
       <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>📊</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{stats.total}</div>
-            <div className={styles.statLabel}>Total de Execuções</div>
+        {statCards.map(({ key, label, value, Icon }) => (
+          <div key={key} className={styles.statCard}>
+            <span className={styles.statIcon}>
+              <Icon size={20} strokeWidth={2} />
+            </span>
+            <div className={styles.statContent}>
+              <div className={styles.statValue}>{value}</div>
+              <div className={styles.statLabel}>{label}</div>
+            </div>
           </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>⏱️</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{stats.inProgress}</div>
-            <div className={styles.statLabel}>Em Progresso</div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>✅</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{stats.completed}</div>
-            <div className={styles.statLabel}>Completadas</div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>⏸️</div>
-          <div className={styles.statContent}>
-            <div className={styles.statValue}>{stats.abandoned}</div>
-            <div className={styles.statLabel}>Abandonadas</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Filters */}
+      <div className={styles.sectionLabel}>Filtrar por status</div>
       <div className={styles.filters}>
-        <button
-          className={`${styles.filterBtn} ${filter === 'all' ? styles.active : ''}`}
-          onClick={() => setFilter('all')}
-        >
-          Todas ({stats.total})
-        </button>
-        <button
-          className={`${styles.filterBtn} ${filter === 'in_progress' ? styles.active : ''}`}
-          onClick={() => setFilter('in_progress')}
-        >
-          Em Progresso ({stats.inProgress})
-        </button>
-        <button
-          className={`${styles.filterBtn} ${filter === 'completed' ? styles.active : ''}`}
-          onClick={() => setFilter('completed')}
-        >
-          Completadas ({stats.completed})
-        </button>
-        <button
-          className={`${styles.filterBtn} ${filter === 'abandoned' ? styles.active : ''}`}
-          onClick={() => setFilter('abandoned')}
-        >
-          Abandonadas ({stats.abandoned})
-        </button>
+        {filterItems.map(({ key, label, count, Icon }) => {
+          const isActive = filter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`${styles.filterBtn} ${isActive ? styles.active : ''}`}
+              onClick={() => setFilter(key)}
+            >
+              <span className={styles.filterIcon}>
+                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+              </span>
+              <span className={styles.filterLabel}>{label}</span>
+              <span className={styles.filterCount}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Executions List */}
+      <div className={styles.sectionLabel}>Execuções</div>
       {filteredExecutions.length === 0 ? (
         <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>
+            <ClipboardList size={20} strokeWidth={2} />
+          </span>
           <p>
             {filter === 'all'
               ? 'Você ainda não executou nenhum processo'
@@ -156,56 +137,64 @@ const MyExecutions = () => {
         </div>
       ) : (
         <div className={styles.executionsList}>
-          {filteredExecutions.map((execution) => (
-            <div key={execution.id} className={styles.executionCard}>
-              <div className={styles.cardHeader}>
-                <div className={styles.title}>
-                  <span className={styles.statusIcon}>
-                    {getStatusIcon(execution.status)}
-                  </span>
-                  <div className={styles.titleContent}>
-                    <h3>{execution.title}</h3>
-                    <span className={`badge badge-${execution.status}`}>
-                      {getStatusLabel(execution.status)}
+          {filteredExecutions.map((execution) => {
+            const { label: statusLabel, Icon: StatusIcon } = getStatusMeta(execution.status);
+            const isDone = execution.status === 'completed';
+            return (
+              <div key={execution.id} className={styles.executionCard}>
+                <div className={styles.cardHeader}>
+                  <div className={styles.title}>
+                    <span className={`${styles.statusIcon} ${isDone ? styles.statusIconDone : ''}`}>
+                      <StatusIcon size={18} strokeWidth={isDone ? 2.5 : 2} />
                     </span>
+                    <div className={styles.titleContent}>
+                      <h3>{execution.title}</h3>
+                      <span className={`${styles.statusBadge} ${isDone ? styles.statusBadgeDone : ''}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.actions}>
+                    {execution.status === 'in_progress' && (
+                      <Link
+                        to={`/execucoes/${execution.id}`}
+                        className="btn btn-primary btn-small"
+                      >
+                        <Play size={16} strokeWidth={2} /> Continuar
+                        <ChevronRight size={14} strokeWidth={2} className={styles.actionArrow} />
+                      </Link>
+                    )}
+                    {execution.status === 'completed' && (
+                      <Link
+                        to={`/execucoes/${execution.id}`}
+                        className="btn btn-outline btn-small"
+                      >
+                        <CheckCircle2 size={16} strokeWidth={2} /> Visualizar
+                        <ChevronRight size={14} strokeWidth={2} className={styles.actionArrow} />
+                      </Link>
+                    )}
                   </div>
                 </div>
-                <div className={styles.actions}>
-                  {execution.status === 'in_progress' && (
-                    <Link
-                      to={`/execucoes/${execution.id}`}
-                      className="btn btn-primary btn-small"
-                    >
-                      <FiPlay /> Continuar
-                    </Link>
-                  )}
-                  {execution.status === 'completed' && (
-                    <Link
-                      to={`/execucoes/${execution.id}`}
-                      className="btn btn-outline btn-small"
-                    >
-                      <FiCheckCircle /> Visualizar
-                    </Link>
+
+                {execution.description && (
+                  <p className={styles.description}>{execution.description}</p>
+                )}
+
+                <div className={styles.metadata}>
+                  <span className={styles.date}>
+                    <Clock size={14} strokeWidth={2} />
+                    Iniciado em {new Date(execution.started_at).toLocaleString('pt-BR')}
+                  </span>
+                  {execution.completed_at && (
+                    <span className={styles.date}>
+                      <Check size={14} strokeWidth={2} />
+                      Finalizado em {new Date(execution.completed_at).toLocaleString('pt-BR')}
+                    </span>
                   )}
                 </div>
               </div>
-
-              {execution.description && (
-                <p className={styles.description}>{execution.description}</p>
-              )}
-
-              <div className={styles.metadata}>
-                <span className={styles.date}>
-                  🕐 Iniciado em {new Date(execution.started_at).toLocaleString('pt-BR')}
-                </span>
-                {execution.completed_at && (
-                  <span className={styles.date}>
-                    ✓ Finalizado em {new Date(execution.completed_at).toLocaleString('pt-BR')}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
