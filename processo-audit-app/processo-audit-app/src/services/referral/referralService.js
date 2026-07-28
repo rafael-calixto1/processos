@@ -55,9 +55,18 @@ function getIdTipoServico() {
   return id;
 }
 
+// Usado só para liquidar automaticamente o centavo restante depois de renegociar uma fatura
+// pra R$0,01 (ver renegociarFaturaExistente). Não adivinhamos qual caixa financeiro usar —
+// isso é uma decisão de contabilidade do provedor, não algo pra inferir do lado do código.
+function getIdCaixaFinanceiro() {
+  const id = parseInt(process.env.REFERRAL_ID_CAIXA_FINANCEIRO, 10);
+  if (!id) throw new Error('REFERRAL_ID_CAIXA_FINANCEIRO não configurado no .env — necessário para liquidar o centavo restante de faturas removidas via renegociação');
+  return id;
+}
+
 // Builds the correct billing params depending on whether the service uses carnê (which
 // doesn't support proximo_faturamento=true and requires an explicit month/year).
-function buildFaturamentoParams(servico) {
+export function buildFaturamentoParams(servico) {
   const usaCarne = String(servico.carne ?? '').toLowerCase() === 'sim'
     || String(servico.tipo_cobranca ?? '').toLowerCase().includes('postecipada');
 
@@ -83,8 +92,18 @@ function buildFaturamentoParams(servico) {
   };
 }
 
-export async function criarEventoDesconto({ id_cliente_servico, servico, valor, descricao }) {
-  const { params, referencia } = buildFaturamentoParams(servico ?? {});
+// mes_processar/ano_processar: quando informados, miram explicitamente essa competência em
+// vez de deixar buildFaturamentoParams calcular "mês seguinte a partir de agora" — foi essa
+// conta automática que mirou agosto/2026 em vez de julho/2026 no caso do Rafael (indicação
+// #36). Usado pela ferramenta de teste, que deixa o operador escolher a fatura na tela.
+export async function criarEventoDesconto({ id_cliente_servico, servico, valor, descricao, mes_processar, ano_processar }) {
+  const alvoManual = mes_processar != null && ano_processar != null;
+  const { params, referencia } = alvoManual
+    ? {
+        params: { parcelado: false, proximo_faturamento: false, mes_processar: Number(mes_processar), ano_processar: Number(ano_processar) },
+        referencia: `${String(mes_processar).padStart(2, '0')}/${ano_processar}`,
+      }
+    : buildFaturamentoParams(servico ?? {});
 
   const body = {
     id_cliente_servico,
@@ -159,6 +178,9 @@ export async function sincronizarLeads(leads) {
               termo_busca: servico.id_cliente_servico,
               pagina: 0,
               itens_por_pagina: 20,
+              tipo_data: 'data_vencimento',
+              data_inicio: dateStr(-365),
+              data_fim: dateStr(365),
             });
             const faturas = faturasData.faturas ?? [];
 
@@ -219,6 +241,9 @@ export async function sincronizarLeads(leads) {
               termo_busca: servico.id_cliente_servico,
               pagina: 0,
               itens_por_pagina: 20,
+              tipo_data: 'data_vencimento',
+              data_inicio: dateStr(-365),
+              data_fim: dateStr(365),
             });
             const pagas = (faturasData.faturas ?? [])
               .filter(f => f.data_pagamento)
@@ -232,7 +257,7 @@ export async function sincronizarLeads(leads) {
                  WHERE id = ?`,
                 [pagas[0].data_pagamento, lead.id]
               );
-              console.log(`[Indique e Ganhe] Desconto aplicado via sync (webhook não chegou): indicação #${lead.id} | evento Hubsoft #${resultado.idEvento}`);
+              console.log(`[Indique e Ganhe] Desconto aplicado via sync (webhook não chegou): indicação #${lead.id} | evento Hubsoft #${resultado.idEvento}${resultado.descontoAdiado ? ' | ADIADO para a próxima fatura (a atual já existia)' : ''}`);
             }
           } catch (e) {
             console.error(`[Indique e Ganhe] Falha ao aplicar desconto via sync para indicação #${lead.id}:`, e.message);
@@ -417,21 +442,308 @@ async function encontrarIndicacao(codClienteIndicado, statusBusca) {
 }
 
 // Finds the referrer's next unpaid invoice for a given service.
-async function buscarProximaFaturaPendente(idClienteServico) {
+// IMPORTANTE: sem data_inicio/data_fim, a API do Hubsoft aplica o range padrão dela
+// ("10 dias anteriores até a data atual" para data_vencimento) — ou seja, SEM esses
+// parâmetros essa busca só enxerga faturas vencidas nos últimos 10 dias, e é cega para
+// qualquer fatura já gerada com vencimento no futuro (o caso normal de uma fatura em
+// aberto, que costuma vencer dias/semanas à frente, não atrás). Por isso passamos um range
+// bem largo aqui — sem isso, aplicarDesconto()/simularDesconto() concluíam erroneamente que
+// não havia fatura em aberto e deixavam o desconto ser adiado sem avisar ninguém.
+function dateStr(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+async function listarFaturasCliente(idClienteServico) {
   const data = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
     busca: 'id_cliente_servico',
     termo_busca: idClienteServico,
     pagina: 0,
-    itens_por_pagina: 20,
+    itens_por_pagina: 50,
+    tipo_data: 'data_vencimento',
+    data_inicio: dateStr(-90),
+    data_fim: dateStr(365),
+    exibir_fatura_inativa: 'nao',
   });
-  const faturas = data.faturas ?? [];
-  const pendentes = faturas
-    .filter(f => f.fatura_ativa && !f.data_pagamento)
+  return (data.faturas ?? [])
+    .map(f => {
+      const [ano, mes] = String(f.data_vencimento).split('-');
+      return {
+        id_fatura: f.id_fatura,
+        data_vencimento: f.data_vencimento,
+        valor: parseFloat(f.valor),
+        paga: !!f.data_pagamento,
+        fatura_ativa: !!f.fatura_ativa,
+        mes_processar: Number(mes),
+        ano_processar: Number(ano),
+      };
+    })
     .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
-  return pendentes[0] ?? null;
+}
+
+// Finds the referrer's next unpaid invoice for a given service.
+export async function buscarProximaFaturaPendente(idClienteServico) {
+  const faturas = await listarFaturasCliente(idClienteServico);
+  return faturas.find(f => f.fatura_ativa && !f.paga) ?? null;
+}
+
+// Read-only preview of what aplicarDesconto()/criarEventoDesconto() would do for a given
+// cliente/serviço — no writes to Hubsoft, no writes to the local DB. Lets staff check whether
+// a reward would land on the currently open invoice or get deferred to the next one (and by
+// how much) BEFORE actually firing a real evento_faturamento, and optionally pick an explicit
+// target competência (mes_processar/ano_processar) instead of the automatic "next month" guess.
+// Built after the Rafael/Ludimila case (indicação #36), where a reward silently landed on the
+// wrong invoice with no way to see that in advance.
+export async function simularDesconto({ cod_cliente, id_cliente_servico, tipo_recompensa, valor, mes_processar, ano_processar }) {
+  const cliente = await buscarClientePorCodigo(cod_cliente);
+  const servico = (cliente.servicos ?? []).find(s => s.id_cliente_servico === Number(id_cliente_servico));
+  if (!servico) throw new Error(`Serviço ${id_cliente_servico} não encontrado para o cliente ${cod_cliente}`);
+
+  const { desconto_valor: descontoPadrao } = await getConfig();
+  const tipoFinal = tipo_recompensa === 'remover_fatura' ? 'remover_fatura' : 'desconto_valor';
+
+  const faturas = await listarFaturasCliente(servico.id_cliente_servico);
+  const faturasAbertas = faturas.filter(f => f.fatura_ativa && !f.paga);
+  const faturaEmAberto = faturasAbertas[0] ?? null;
+
+  const alvoManual = mes_processar != null && ano_processar != null;
+  let params, referencia;
+  if (alvoManual) {
+    params = { parcelado: false, proximo_faturamento: false, mes_processar: Number(mes_processar), ano_processar: Number(ano_processar) };
+    referencia = `${String(mes_processar).padStart(2, '0')}/${ano_processar}`;
+  } else {
+    ({ params, referencia } = buildFaturamentoParams(servico));
+  }
+
+  // A fatura (existente ou não) que corresponde exatamente ao mês/ano mirado — usada tanto
+  // para precificar "remover_fatura" com o valor real (em vez do valor do plano) quanto para
+  // avisar se essa competência já foi paga (nesse caso o desconto não teria efeito nenhum).
+  const faturaNoAlvo = params.mes_processar
+    ? faturas.find(f => f.mes_processar === params.mes_processar && f.ano_processar === params.ano_processar) ?? null
+    : null;
+
+  let valorAplicado;
+  if (tipoFinal === 'remover_fatura') {
+    valorAplicado = faturaNoAlvo ? faturaNoAlvo.valor : parseFloat(servico.valor);
+    if (isNaN(valorAplicado)) throw new Error(`Não foi possível determinar o valor do plano do serviço ${servico.id_cliente_servico}`);
+  } else {
+    valorAplicado = valor != null ? parseFloat(valor) : descontoPadrao;
+    if (isNaN(valorAplicado) || valorAplicado <= 0) throw new Error('valor inválido');
+  }
+
+  // No modo automático, "adiado" significa que o alvo calculado (mês seguinte) não é o mesmo
+  // mês da fatura que está aberta agora. No modo manual não existe "adiado" — o operador está
+  // mirando exatamente o que escolheu; o que importa ali é avisar se esse alvo já foi pago.
+  const descontoAdiado = !alvoManual && !!faturaEmAberto &&
+    !(faturaEmAberto.mes_processar === params.mes_processar && faturaEmAberto.ano_processar === params.ano_processar);
+
+  // Mecanismo usado para efetivar de verdade:
+  // - a fatura do mês mirado ainda não existe (nem gerada) → evento_faturamento funciona nativamente.
+  // - já existe e está paga → nada pode ser feito, bloqueado.
+  // - já existe e está em aberto → só renegociação consegue mudar o valor dela (ver
+  //   renegociarFaturaExistente). Para "remover_fatura" o Hubsoft recusa deixar o valor final
+  //   em R$0 exato, então o plano é descontar até sobrar R$0,01 e liquidar esse centavo
+  //   automaticamente, sem custo pro cliente.
+  let mecanismo = 'evento_faturamento';
+  let renegociacaoPreview = null;
+  if (faturaNoAlvo?.paga) {
+    mecanismo = 'bloqueado_ja_paga';
+  } else if (faturaNoAlvo) {
+    mecanismo = 'renegociacao';
+    if (tipoFinal === 'remover_fatura') {
+      const descontoRenegociacao = Math.round((faturaNoAlvo.valor - 0.01) * 100) / 100;
+      renegociacaoPreview = {
+        desconto: descontoRenegociacao,
+        valor_final: 0.01,
+        sera_liquidado_automaticamente: true,
+      };
+      if (descontoRenegociacao <= 0) {
+        mecanismo = 'bloqueado_valor_muito_baixo';
+      }
+    } else {
+      if (valorAplicado >= faturaNoAlvo.valor) {
+        mecanismo = 'bloqueado_desconto_maior_que_fatura';
+      }
+      renegociacaoPreview = {
+        desconto: valorAplicado,
+        valor_final: Math.round((faturaNoAlvo.valor - valorAplicado) * 100) / 100,
+        sera_liquidado_automaticamente: false,
+      };
+    }
+  }
+
+  return {
+    cliente: { codigo_cliente: cliente.codigo_cliente, nome: cliente.nome_razaosocial ?? cliente.nome_fantasia ?? '' },
+    servico: {
+      id_cliente_servico: servico.id_cliente_servico,
+      nome: servico.nome,
+      valor: parseFloat(servico.valor),
+      carne: servico.carne,
+      tipo_cobranca: servico.tipo_cobranca,
+    },
+    tipo_recompensa: tipoFinal,
+    valor_a_aplicar: valorAplicado,
+    fatura_em_aberto: faturaEmAberto ? {
+      id_fatura: faturaEmAberto.id_fatura,
+      valor: faturaEmAberto.valor,
+      data_vencimento: faturaEmAberto.data_vencimento,
+    } : null,
+    faturas_disponiveis: faturasAbertas.slice(0, 12).map(f => ({
+      id_fatura: f.id_fatura, data_vencimento: f.data_vencimento, valor: f.valor,
+      mes_processar: f.mes_processar, ano_processar: f.ano_processar,
+    })),
+    alvo: {
+      referencia,
+      mes_processar: params.mes_processar ?? null,
+      ano_processar: params.ano_processar ?? null,
+      proximo_faturamento: params.proximo_faturamento ?? false,
+      escolhido_manualmente: alvoManual,
+    },
+    alvo_fatura_existente: faturaNoAlvo ? {
+      id_fatura: faturaNoAlvo.id_fatura, valor: faturaNoAlvo.valor,
+      data_vencimento: faturaNoAlvo.data_vencimento, paga: faturaNoAlvo.paga,
+    } : null,
+    mecanismo,
+    renegociacao_preview: renegociacaoPreview,
+    desconto_adiado: descontoAdiado,
+  };
+}
+
+async function buscarFaturaDetalhada(idFatura) {
+  // Mesma pegadinha de sempre: sem data_inicio/data_fim o Hubsoft filtra por um range padrão
+  // de +-10 dias a partir de hoje (ver listarFaturasCliente/buscarProximaFaturaPendente) — uma
+  // fatura de carnê com vencimento daqui a mais de 10 dias "some" da busca sem esse range.
+  const data = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
+    busca: 'id_fatura',
+    termo_busca: idFatura,
+    pagina: 0,
+    itens_por_pagina: 1,
+    tipo_resultado: 'completo',
+    tipo_data: 'data_vencimento',
+    data_inicio: dateStr(-365),
+    data_fim: dateStr(365),
+  });
+  const fatura = (data.faturas ?? [])[0];
+  if (!fatura) throw new Error(`Fatura ${idFatura} não encontrada`);
+  return fatura;
+}
+
+// Renegocia uma fatura JÁ EXISTENTE (evento_faturamento não consegue mudar o valor dela — ver
+// simularDesconto). A renegociação cancela a fatura original e emite uma nova já com o valor
+// ajustado. Hubsoft recusa efetivar uma renegociação cujo valor final feche em R$0 exato, então
+// para "remover_fatura" deixamos R$0,01 e liquidamos esse centavo automaticamente logo depois
+// (sem custo pro cliente) — decisão tomada explicitamente com o usuário, ciente de que é uma
+// gambiarra: fica um registro de "pago R$0,01" na fatura nova do cliente.
+export async function renegociarFaturaExistente({ id_fatura, id_cliente_servico, tipo_recompensa, valor, descricao }) {
+  const fatura = await buscarFaturaDetalhada(id_fatura);
+  if (fatura.data_pagamento) throw new Error(`Fatura ${id_fatura} já está paga — nada a fazer`);
+
+  const idEmpresa = fatura?.cobrancas?.[0]?.composicao?.dados_cadastrais?.empresa?.id_empresa;
+  const idFormaCobranca = fatura?.forma_cobranca?.id_forma_cobranca;
+  const idCliente = fatura?.cliente?.id_cliente;
+  if (!idEmpresa || !idFormaCobranca || !idCliente) {
+    throw new Error(`Não foi possível determinar empresa/forma_cobranca/cliente da fatura ${id_fatura} para renegociar`);
+  }
+
+  const valorFatura = parseFloat(fatura.valor);
+  const zerar = tipo_recompensa === 'remover_fatura';
+  const desconto = zerar ? Math.round((valorFatura - 0.01) * 100) / 100 : parseFloat(valor);
+
+  if (isNaN(desconto) || desconto <= 0) throw new Error(`Desconto inválido para a fatura ${id_fatura} (valor R$ ${valorFatura})`);
+  if (desconto >= valorFatura) throw new Error(`O desconto (R$ ${desconto}) precisa ser menor que o valor da fatura (R$ ${valorFatura})`);
+
+  const body = {
+    vencimento: fatura.data_vencimento,
+    faturas: 'definir_faturas',
+    quantidade_parcelas: 1,
+    ids_faturas: [Number(id_fatura)],
+    tipo_dados_cliente: 'id_cliente',
+    dados_cliente: idCliente,
+    cliente_servico: Number(id_cliente_servico),
+    forma_cobranca: idFormaCobranca,
+    empresa: idEmpresa,
+    descontos: desconto,
+    encargos: 0,
+    observacao: descricao,
+  };
+
+  const res = await hubsoft.post('api/v1/integracao/financeiro/renegociacao/efetivar', body);
+  if (res?.status === 'error') throw new Error(`Hubsoft (renegociação): ${res.msg}`);
+
+  const valorEsperadoNova = Math.round((valorFatura - desconto) * 100) / 100;
+
+  // A resposta do efetivar não traz o id_fatura da fatura nova — localizamos ela pelo par
+  // (id_cliente_servico + valor esperado), pegando a mais recente cadastrada hoje.
+  const buscaNova = await hubsoft.get('api/v1/integracao/financeiro/fatura', {
+    busca: 'id_cliente_servico',
+    termo_busca: id_cliente_servico,
+    pagina: 0,
+    itens_por_pagina: 20,
+    tipo_data: 'data_cadastro',
+    data_inicio: dateStr(0),
+    data_fim: dateStr(0),
+  });
+  const novaFatura = (buscaNova.faturas ?? [])
+    .filter(f => !f.data_pagamento && Math.abs(parseFloat(f.valor) - valorEsperadoNova) < 0.02)
+    .sort((a, b) => b.id_fatura - a.id_fatura)[0];
+
+  if (!novaFatura) {
+    return {
+      renegociado: true,
+      liquidado: false,
+      aviso: 'Renegociação efetuada, mas não foi possível localizar automaticamente a fatura nova para liquidar o centavo restante — verifique manualmente no Hubsoft.',
+      faturas_geradas: res.faturas_que_foram_geradas ?? [],
+    };
+  }
+
+  if (!zerar) {
+    return {
+      renegociado: true,
+      liquidado: false,
+      fatura_original: { id_fatura: fatura.id_fatura, valor: valorFatura },
+      nova_fatura: { id_fatura: novaFatura.id_fatura, valor: parseFloat(novaFatura.valor), data_vencimento: novaFatura.data_vencimento },
+    };
+  }
+
+  const liq = await hubsoft.post('api/v1/integracao/financeiro/fatura/liquidar', {
+    id_fatura: novaFatura.id_fatura,
+    id_caixa_financeiro: getIdCaixaFinanceiro(),
+    data_pagamento: dateStr(0),
+    valor_pago: parseFloat(novaFatura.valor),
+    meio_pagamento: 'dinheiro',
+  });
+
+  if (liq?.status === 'error') {
+    return {
+      renegociado: true,
+      liquidado: false,
+      aviso: `Renegociação ok, mas falha ao liquidar o centavo restante: ${liq.msg}`,
+      fatura_original: { id_fatura: fatura.id_fatura, valor: valorFatura },
+      nova_fatura: { id_fatura: novaFatura.id_fatura, valor: parseFloat(novaFatura.valor) },
+    };
+  }
+
+  return {
+    renegociado: true,
+    liquidado: true,
+    fatura_original: { id_fatura: fatura.id_fatura, valor: valorFatura },
+    nova_fatura: { id_fatura: novaFatura.id_fatura, valor: parseFloat(novaFatura.valor), data_vencimento: novaFatura.data_vencimento },
+    recibo: liq.recibo,
+  };
 }
 
 // Applies the reward to the referrer (discount event or full invoice removal) and marks the indicacao as 'ativo'.
+//
+// IMPORTANT (per Hubsoft support): financeiro/evento_faturamento with proximo_faturamento=true
+// only ever lands on the next invoice the billing run *generates* — it can never modify an
+// invoice that already exists. So if the referrer already has an open (already-generated,
+// unpaid) invoice at the moment the reward is granted, the event skips it and lands on the
+// cycle after that. There is no REST endpoint in the Hubsoft API to discount an
+// already-issued invoice (only a manual "Adicionar Desconto > Abater na Fatura" action in the
+// Hubsoft UI does that). So we detect this case, always price the reward off the recurring
+// plan value (never off an already-generated invoice's value — that invoice cannot be
+// touched), and flag it so the panel tells the truth about which cycle the reward lands on.
 async function aplicarDesconto(indicacao, codClienteIndicado) {
   let servico;
   if (indicacao.id_cliente_servico) {
@@ -451,24 +763,27 @@ async function aplicarDesconto(indicacao, codClienteIndicado) {
     nomeExibicao = cliHub.nome_razaosocial || cliHub.nome || nomeExibicao;
   } catch (_) { /* usa nome do banco */ }
 
+  // A fatura pendente (já gerada e em aberto agora) nunca pode ser alterada pelo evento de
+  // faturamento — ela só existe para sabermos se o desconto vai ficar adiado, e para exibir
+  // qual fatura NÃO vai ser afetada.
+  const faturaEmAberto = await buscarProximaFaturaPendente(servico.id_cliente_servico);
+  const descontoAdiado = !!faturaEmAberto;
+  const avisoAdiamento = descontoAdiado
+    ? ` (a fatura em aberto no momento, vencimento ${faturaEmAberto.data_vencimento}, já havia sido gerada e não é afetada — vale a partir da próxima)`
+    : '';
+
   let DESCONTO_VALOR;
   let descricaoEvento;
 
   if (tipo_recompensa === 'remover_fatura') {
-    const fatura = await buscarProximaFaturaPendente(servico.id_cliente_servico);
-    if (fatura) {
-      DESCONTO_VALOR = parseFloat(fatura.valor);
-      descricaoEvento = `Indique e Ganhe — fatura removida pela indicação de ${nomeExibicao} (fatura #${fatura.id_fatura})`;
-    } else {
-      // Sem fatura pendente agora (ex: ainda não foi gerada) — manda o desconto para a próxima
-      // fatura que for faturada, usando o valor do plano como referência.
-      DESCONTO_VALOR = parseFloat(servico.valor);
-      if (isNaN(DESCONTO_VALOR)) throw new Error(`Não foi possível determinar o valor do plano do serviço ${servico.id_cliente_servico} para aplicar o desconto`);
-      descricaoEvento = `Indique e Ganhe — próxima fatura removida pela indicação de ${nomeExibicao}`;
-    }
+    // Sempre usa o valor do plano: o evento só pode mirar uma fatura que ainda não foi gerada,
+    // então o valor da fatura já existente (se houver) é irrelevante para o cálculo.
+    DESCONTO_VALOR = parseFloat(servico.valor);
+    if (isNaN(DESCONTO_VALOR)) throw new Error(`Não foi possível determinar o valor do plano do serviço ${servico.id_cliente_servico} para aplicar o desconto`);
+    descricaoEvento = `Indique e Ganhe — próxima fatura removida pela indicação de ${nomeExibicao}${avisoAdiamento}`;
   } else {
     DESCONTO_VALOR = indicacao.valor_desconto ? parseFloat(indicacao.valor_desconto) : descontoPadrao;
-    descricaoEvento = `Desconto Indique e Ganhe — indicação de ${nomeExibicao} ativado`;
+    descricaoEvento = `Desconto Indique e Ganhe — indicação de ${nomeExibicao} ativado${avisoAdiamento}`;
   }
 
   const { id_evento_faturamento, fatura_referencia, data_faturamento, data_vencimento } = await criarEventoDesconto({
@@ -485,14 +800,23 @@ async function aplicarDesconto(indicacao, codClienteIndicado) {
       valor_desconto = ?,
       id_evento_faturamento = ?,
       fatura_referencia = ?,
+      desconto_adiado = ?,
       data_faturamento = ?,
       data_vencimento = ?,
       updated_at = NOW()
      WHERE id = ?`,
-    [nomeExibicao, DESCONTO_VALOR, id_evento_faturamento, fatura_referencia, data_faturamento, data_vencimento, indicacao.id]
+    [nomeExibicao, DESCONTO_VALOR, id_evento_faturamento, fatura_referencia, descontoAdiado ? 1 : 0, data_faturamento, data_vencimento, indicacao.id]
   );
 
-  return { indicacao, idEvento: id_evento_faturamento, valorDesconto: DESCONTO_VALOR, fatura_referencia, data_faturamento, data_vencimento };
+  return {
+    indicacao,
+    idEvento: id_evento_faturamento,
+    valorDesconto: DESCONTO_VALOR,
+    fatura_referencia,
+    data_faturamento,
+    data_vencimento,
+    descontoAdiado,
+  };
 }
 
 // Called when a referred client is activated. Depending on the rule:

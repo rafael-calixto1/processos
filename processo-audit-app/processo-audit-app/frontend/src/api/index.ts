@@ -697,6 +697,16 @@ export const referralAPI = {
     return res.json();
   },
 
+  simularDesconto: async (data: JSONValue) => {
+    const res = await fetch(`${API_URL}/referral/simular-desconto`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   getCliente: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/cliente/${id}`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
