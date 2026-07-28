@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, ClipboardList, LayoutDashboard } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
 import styles from './Fleet.module.css';
 import MaintenanceDashboard from './MaintenanceDashboard';
 
@@ -17,6 +17,8 @@ const MaintenanceHistory = ({ cars, types }) => {
   const [records,      setRecords]      = useState([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
+  const [search,       setSearch]       = useState('');
+  const [searchInput,  setSearchInput]  = useState('');
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
 
@@ -33,6 +35,7 @@ const MaintenanceHistory = ({ cars, types }) => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
+      if (search) params.set('search', search);
       const res  = await fetch(`/api/fleet/maintenance/history?${params}`);
       const json = await res.json();
       setRecords(json.maintenanceHistory || []);
@@ -42,9 +45,15 @@ const MaintenanceHistory = ({ cars, types }) => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
+
+  // Debounce da busca; volta para a primeira página a cada novo termo
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const openAdd  = () => { setEditId(null); setForm(emptyHistoryForm); setShowForm(true); };
   const openEdit = r => {
@@ -125,8 +134,17 @@ const MaintenanceHistory = ({ cars, types }) => {
     <div>
       {error && <div className={styles.errorState}>{error}</div>}
 
-      <div className={styles.filterRow}>
-        <div style={{ flex: 1 }} />
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrap}>
+          <Search size={16} strokeWidth={2} className={styles.searchIcon} />
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder="Buscar por placa, marca ou modelo…"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+          />
+        </div>
         <button className={styles.btnPrimary} onClick={openAdd}>
           <Plus size={16} /> Novo Registro
         </button>
@@ -188,8 +206,17 @@ const MaintenanceHistory = ({ cars, types }) => {
       ) : records.length === 0 ? (
         <div className={styles.emptyState}>
           <ClipboardList size={40} color="var(--border-color)" style={{ marginBottom: '0.75rem' }} />
-          <p>Nenhum registro de manutenção.</p>
-          <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Manutenção</button>
+          {search ? (
+            <>
+              <p>Nenhum registro para “{search}”.</p>
+              <button className={styles.btnSecondary} onClick={() => setSearchInput('')}>Limpar busca</button>
+            </>
+          ) : (
+            <>
+              <p>Nenhum registro de manutenção.</p>
+              <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Manutenção</button>
+            </>
+          )}
         </div>
       ) : (
         <div className={styles.tableContainer}>
@@ -200,28 +227,26 @@ const MaintenanceHistory = ({ cars, types }) => {
                   <th>Veículo</th>
                   <th>Tipo</th>
                   <th>Data</th>
-                  <th>Km</th>
-                  <th>Custo</th>
+                  <th className={styles.numCol}>Km</th>
+                  <th className={styles.numCol}>Custo</th>
                   <th>Observação</th>
-                  <th>Ações</th>
+                  <th className={styles.actionsCol}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map(r => (
                   <tr key={r.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{getCarLabel(r.car_id)}</td>
+                    <td className={styles.vehicleName}>{getCarLabel(r.car_id)}</td>
                     <td>
-                      <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
-                        {getTypeName(r.maintenance_type_id)}
-                      </span>
+                      <span className={styles.typeBadge}>{getTypeName(r.maintenance_type_id)}</span>
                     </td>
                     <td>{fmtDate(r.maintenance_date)}</td>
-                    <td>{r.maintenance_kilometers != null ? Number(r.maintenance_kilometers).toLocaleString('pt-BR') : '—'}</td>
-                    <td>{r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</td>
-                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td className={styles.numCol}>{r.maintenance_kilometers != null ? `${Number(r.maintenance_kilometers).toLocaleString('pt-BR')} km` : '—'}</td>
+                    <td className={styles.numCol}>{r.total_cost != null ? `R$ ${Number(r.total_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</td>
+                    <td className={styles.noteCell} title={r.observation || ''}>
                       {r.observation || '—'}
                     </td>
-                    <td>
+                    <td className={styles.actionsCol}>
                       <div className={styles.actionBtns}>
                         <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
                         <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
@@ -246,9 +271,7 @@ const MaintenanceHistory = ({ cars, types }) => {
                 </div>
 
                 <div className={styles.fuelingCardTop}>
-                  <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
-                    {getTypeName(r.maintenance_type_id)}
-                  </span>
+                  <span className={styles.typeBadge}>{getTypeName(r.maintenance_type_id)}</span>
                   <span className={styles.statusCardMuted}>{fmtDate(r.maintenance_date)}</span>
                 </div>
 
@@ -352,14 +375,29 @@ const formatDays = days => {
   return `${days} ${days === 1 ? 'dia' : 'dias'}`;
 };
 
-const recurrenceLabel = t => {
-  if (!t.recurrence_mode) return '—';
-  const parts = [];
-  if ((t.recurrence_mode === 'km' || t.recurrence_mode === 'both') && t.recurrency)
-    parts.push(`a cada ${Number(t.recurrency).toLocaleString('pt-BR')} km`);
-  if ((t.recurrence_mode === 'date' || t.recurrence_mode === 'both') && t.recurrency_date)
-    parts.push(`a cada ${formatDays(t.recurrency_date)}`);
-  return parts.join(' ou ') || '—';
+/* Intervalo por distância e por tempo em pills separados */
+const RecurrencePills = ({ type: t }) => {
+  const hasKm   = (t.recurrence_mode === 'km'   || t.recurrence_mode === 'both') && t.recurrency;
+  const hasDate = (t.recurrence_mode === 'date' || t.recurrence_mode === 'both') && t.recurrency_date;
+
+  if (!hasKm && !hasDate) return <span className={styles.recurrenceNone}>—</span>;
+
+  return (
+    <div className={styles.recurrenceGroup}>
+      {hasKm && (
+        <span className={`${styles.recurrencePill} ${styles.recurrencePillKm}`}>
+          <Gauge size={12} strokeWidth={2.5} />
+          {Number(t.recurrency).toLocaleString('pt-BR')} km
+        </span>
+      )}
+      {hasDate && (
+        <span className={`${styles.recurrencePill} ${styles.recurrencePillTime}`}>
+          <CalendarClock size={12} strokeWidth={2.5} />
+          {formatDays(t.recurrency_date)}
+        </span>
+      )}
+    </div>
+  );
 };
 
 const MaintenanceTypes = ({ types, onRefresh }) => {
@@ -574,8 +612,8 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
               <tbody>
                 {types.map(t => (
                   <tr key={t.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t.name}</td>
-                    <td style={{ color: 'var(--text-medium)', fontSize: '0.875rem' }}>{recurrenceLabel(t)}</td>
+                    <td className={styles.vehicleName}>{t.name}</td>
+                    <td><RecurrencePills type={t} /></td>
                     <td>
                       <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
                         {t.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -608,7 +646,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
                   <span className={`${styles.statusBadge} ${t.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
                     {t.status === 'active' ? 'Ativo' : 'Inativo'}
                   </span>
-                  <span className={styles.statusCardMuted}>{recurrenceLabel(t)}</span>
+                  <RecurrencePills type={t} />
                 </div>
               </div>
             ))}

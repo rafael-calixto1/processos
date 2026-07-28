@@ -572,11 +572,33 @@ router.get('/maintenance/history', async (req, res) => {
     const limit  = parseInt(req.query.limit) || 15;
     const page   = parseInt(req.query.page)  || 1;
     const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
 
-    const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM fleet_maintenance_history');
+    // Busca por placa, marca ou modelo do veículo — precisa do JOIN com fleet_cars
+    let where = '';
+    const params = [];
+    if (search) {
+      where = `WHERE c.license_plate LIKE ? OR c.make LIKE ? OR c.model LIKE ?
+               OR CONCAT(c.make, ' ', c.model) LIKE ?`;
+      const like = `%${search}%`;
+      params.push(like, like, like, like);
+    }
+
+    const [[{ total }]] = await pool.execute(
+      `SELECT COUNT(*) AS total
+         FROM fleet_maintenance_history h
+         LEFT JOIN fleet_cars c ON c.id = h.car_id
+         ${where}`,
+      params
+    );
     const [maintenanceHistory] = await pool.execute(
-      'SELECT * FROM fleet_maintenance_history ORDER BY maintenance_date DESC, id DESC LIMIT ? OFFSET ?',
-      [limit, offset]
+      `SELECT h.*
+         FROM fleet_maintenance_history h
+         LEFT JOIN fleet_cars c ON c.id = h.car_id
+         ${where}
+        ORDER BY h.maintenance_date DESC, h.id DESC
+        LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
     res.json({ maintenanceHistory, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
