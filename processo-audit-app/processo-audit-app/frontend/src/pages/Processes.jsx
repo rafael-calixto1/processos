@@ -2,10 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
-import { FiPlus, FiEdit2, FiTrash2, FiEye, FiCamera, FiFileText } from 'react-icons/fi';
+import {
+  Plus, Pencil, Trash2, Eye, Camera, FileDown, Search, Building2, Layers, X,
+  CheckCircle2, FileText, Archive,
+} from 'lucide-react';
 import styles from './Processes.module.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+const STATUS_META = {
+  active:   { label: 'Ativo',     Icon: CheckCircle2, variant: 'statusActive'   },
+  draft:    { label: 'Rascunho',  Icon: FileText,     variant: 'statusDraft'    },
+  archived: { label: 'Arquivado', Icon: Archive,      variant: 'statusArchived' },
+};
 
 const Processes = () => {
   const [processes, setProcesses] = useState([]);
@@ -231,13 +240,13 @@ const Processes = () => {
                 onClick={handleExportPDF}
                 style={{ marginRight: '10px' }}
               >
-                <FiFileText /> Exportar PDF
+                <FileDown size={16} /> Exportar PDF
               </button>
               <button
                 className={`btn btn-primary`}
                 onClick={() => setShowModal(true)}
               >
-                <FiPlus /> Novo Processo
+                <Plus size={16} /> Novo Processo
               </button>
             </>
           )}
@@ -249,8 +258,9 @@ const Processes = () => {
       {/* Filtros e Busca */}
       <div className={styles.filtersArea}>
         <div className={styles.searchBar}>
+          <Search size={16} strokeWidth={2} className={styles.searchIcon} />
           <input
-            type="text"
+            type="search"
             placeholder="Buscar por título ou descrição..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -305,42 +315,56 @@ const Processes = () => {
             <div key={process.id} className={styles.processItem}>
               <div className={styles.processInfo}>
                 <h3>{process.title}</h3>
-                <p>{process.description}</p>
+                {process.description && <p>{process.description}</p>}
                 <div className={styles.metadata}>
-                  <span className={`badge badge-${process.status}`}>
-                    {process.status === 'active' ? '✅ Ativo' : 
-                     process.status === 'draft' ? '📝 Rascunho' : 
-                     '📦 Arquivado'}
+                  {(() => {
+                    const meta = STATUS_META[process.status] ?? STATUS_META.draft;
+                    const StatusIcon = meta.Icon;
+                    return (
+                      <span className={`${styles.statusBadge} ${styles[meta.variant]}`}>
+                        <StatusIcon size={12} strokeWidth={2.5} />
+                        {meta.label}
+                      </span>
+                    );
+                  })()}
+                  <span className={styles.dept}>
+                    <Building2 size={12} strokeWidth={2} />
+                    {process.department_name}
                   </span>
-                  <span className={styles.dept}>🏢 {process.department_name}</span>
-                  <span className={styles.steps}>{process.steps?.length || 0} passos</span>
+                  <span className={styles.steps}>
+                    <Layers size={12} strokeWidth={2.5} />
+                    {process.steps?.length || 0} passos
+                  </span>
                 </div>
               </div>
 
               <div className={styles.actions}>
                 <Link
                   to={`/processos/${process.id}`}
-                  className={`btn btn-outline btn-small`}
+                  className={styles.iconBtn}
                   title="Visualizar"
+                  aria-label={`Visualizar ${process.title}`}
                 >
-                  <FiEye />
+                  <Eye size={16} strokeWidth={2} />
                 </Link>
                 {(user?.role === 'admin' || user?.role === 'manager') && (
                   <>
                     <Link
                       to={`/processos/${process.id}/edit`}
-                      className={`btn btn-outline btn-small`}
+                      className={styles.iconBtn}
                       title="Editar"
+                      aria-label={`Editar ${process.title}`}
                     >
-                      <FiEdit2 />
+                      <Pencil size={16} strokeWidth={2} />
                     </Link>
                     {user?.role === 'admin' && (
                       <button
-                        className={`btn btn-danger btn-small`}
+                        className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
                         onClick={() => handleDeleteProcess(process.id)}
                         title="Inativar"
+                        aria-label={`Inativar ${process.title}`}
                       >
-                        <FiTrash2 />
+                        <Trash2 size={16} strokeWidth={2} />
                       </button>
                     )}
                   </>
@@ -383,8 +407,9 @@ const Processes = () => {
               <button
                 className={styles.closeBtn}
                 onClick={() => setShowModal(false)}
+                aria-label="Fechar"
               >
-                ✕
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
 
@@ -455,7 +480,7 @@ const Processes = () => {
                           onClick={() => handleRemoveStep(idx)}
                           className="btn btn-danger btn-small"
                         >
-                          <FiTrash2 />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
@@ -490,7 +515,7 @@ const Processes = () => {
 
                   <div className={styles.stepPhotoSection}>
                     <label htmlFor="step-photo" className={styles.photoBtn}>
-                      <FiCamera /> {newStep.photo_url ? '📸 Alterar Foto' : '➕ Foto de Instrução'}
+                      <Camera size={15} /> {newStep.photo_url ? 'Alterar Foto' : 'Foto de Instrução'}
                     </label>
                     <input
                       type="file"
@@ -513,7 +538,7 @@ const Processes = () => {
                     className="btn btn-secondary btn-small"
                     disabled={uploading}
                   >
-                    <FiPlus /> Adicionar Passo
+                    <Plus size={15} /> Adicionar Passo
                   </button>
                 </div>
               </div>
