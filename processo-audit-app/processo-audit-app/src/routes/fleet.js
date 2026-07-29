@@ -131,6 +131,50 @@ router.get('/cars', async (req, res) => {
   }
 });
 
+/*
+   Preventive-maintenance overview for every vehicle.
+   Returns, per car, the last maintenance performed for each active
+   maintenance type together with its recurrence rule, so the client
+   can compute the OK / Em breve / Vencida status for lists and cards.
+*/
+router.get('/cars/maintenance-overview', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         c.id AS car_id,
+         mt.id AS type_id, mt.name, mt.recurrence_mode, mt.recurrency, mt.recurrency_date,
+         lm.maintenance_date       AS last_date,
+         lm.maintenance_kilometers AS last_km
+       FROM fleet_cars c
+       CROSS JOIN fleet_maintenance_types mt
+       LEFT JOIN fleet_maintenance_history lm ON lm.id = (
+         SELECT id FROM fleet_maintenance_history
+         WHERE maintenance_type_id = mt.id AND car_id = c.id
+         ORDER BY maintenance_date DESC, id DESC LIMIT 1
+       )
+       WHERE mt.status = 'active'
+       ORDER BY c.id, mt.name`
+    );
+
+    const overview = {};
+    for (const r of rows) {
+      (overview[r.car_id] ||= []).push({
+        id:              r.type_id,
+        name:            r.name,
+        recurrence_mode: r.recurrence_mode,
+        recurrency:      r.recurrency,
+        recurrency_date: r.recurrency_date,
+        last_date:       r.last_date,
+        last_km:         r.last_km,
+      });
+    }
+
+    res.json({ overview });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/cars/:id/detail', async (req, res) => {
   try {
     const [[car]] = await pool.execute(
