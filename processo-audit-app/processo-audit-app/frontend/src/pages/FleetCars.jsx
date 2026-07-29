@@ -1,87 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye, CheckCircle2, AlertTriangle, AlertCircle, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye } from 'lucide-react';
 import styles from './Fleet.module.css';
-
-/* ─── Maintenance status helpers ─── */
-const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
-
-const calcStatus = (item, currentKm) => {
-  if (!item.recurrence_mode) return 'none';
-  const now = today();
-  let worst = 'green';
-
-  const worse = (a, b) => {
-    const rank = { red: 3, yellow: 2, green: 1, none: 0 };
-    return rank[a] >= rank[b] ? a : b;
-  };
-
-  if (item.recurrence_mode === 'km' || item.recurrence_mode === 'both') {
-    if (item.recurrency) {
-      if (item.last_km == null) {
-        worst = worse(worst, 'yellow');
-      } else {
-        const rem = (Number(item.last_km) + Number(item.recurrency)) - Number(currentKm || 0);
-        if (rem <= 0)    worst = worse(worst, 'red');
-        else if (rem <= 1000) worst = worse(worst, 'yellow');
-      }
-    }
-  }
-
-  if (item.recurrence_mode === 'date' || item.recurrence_mode === 'both') {
-    if (item.recurrency_date) {
-      if (!item.last_date) {
-        worst = worse(worst, 'yellow');
-      } else {
-        const next = new Date(item.last_date);
-        next.setDate(next.getDate() + Number(item.recurrency_date));
-        const days = Math.floor((next - now) / 86400000);
-        if (days <= 0)  worst = worse(worst, 'red');
-        else if (days <= 30) worst = worse(worst, 'yellow');
-      }
-    }
-  }
-
-  return worst;
-};
-
-const STATUS_STYLE = {
-  red:    { bg: 'rgba(220,38,38,0.08)',   border: 'rgba(220,38,38,0.35)',   color: '#b91c1c',  icon: AlertCircle   },
-  yellow: { bg: 'rgba(234,179,8,0.10)',   border: 'rgba(234,179,8,0.40)',   color: '#92400e',  icon: AlertTriangle },
-  green:  { bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.30)',   color: '#15803d',  icon: CheckCircle2  },
-  none:   { bg: 'var(--bg-card)',          border: 'var(--border-color)',    color: 'var(--text-medium)', icon: Clock },
-};
-
-const fmtDays = days => {
-  if (!days) return null;
-  if (days % 30 === 0) { const n = days/30; return `${n} ${n===1?'mês':'meses'}`; }
-  if (days % 7  === 0) { const n = days/7;  return `${n} ${n===1?'semana':'semanas'}`; }
-  return `${days} ${days===1?'dia':'dias'}`;
-};
-
-const nextDueText = (item, currentKm) => {
-  const lines = [];
-  if ((item.recurrence_mode==='km'||item.recurrence_mode==='both') && item.recurrency) {
-    const base = item.last_km != null ? Number(item.last_km) : 0;
-    const next = base + Number(item.recurrency);
-    const rem  = next - Number(currentKm || 0);
-    lines.push(rem > 0
-      ? `Km: faltam ${Number(rem).toLocaleString('pt-BR')} km (próx. aos ${Number(next).toLocaleString('pt-BR')} km)`
-      : `Km: vencido há ${Math.abs(rem).toLocaleString('pt-BR')} km`);
-  }
-  if ((item.recurrence_mode==='date'||item.recurrence_mode==='both') && item.recurrency_date) {
-    if (!item.last_date) {
-      lines.push(`Data: nunca realizado (a cada ${fmtDays(item.recurrency_date)})`);
-    } else {
-      const next = new Date(item.last_date);
-      next.setDate(next.getDate() + Number(item.recurrency_date));
-      const days = Math.floor((next - today()) / 86400000);
-      lines.push(days > 0
-        ? `Data: faltam ${days} dias (${next.toLocaleDateString('pt-BR')})`
-        : `Data: vencido há ${Math.abs(days)} dias`);
-    }
-  }
-  return lines;
-};
+import { calcStatus, worstStatus, STATUS_STYLE, nextDueText } from './fleetMaintenanceStatus';
 
 /* ─── Car Detail Modal ─── */
 const CarDetailModal = ({ carId, onClose }) => {
@@ -234,6 +154,7 @@ const FleetCars = () => {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewId,       setViewId]       = useState(null);
+  const [overview,     setOverview]     = useState({});
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
@@ -257,6 +178,15 @@ const FleetCars = () => {
   }, [page, sortField, sortOrder, statusFilter]);
 
   useEffect(() => { fetchCars(); }, [fetchCars]);
+
+  const fetchOverview = useCallback(() => {
+    fetch('/api/fleet/cars/maintenance-overview')
+      .then(r => r.json())
+      .then(j => setOverview(j.overview || {}))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
   useEffect(() => {
     fetch('/api/fleet/drivers?limit=500')
@@ -326,6 +256,7 @@ const FleetCars = () => {
       }
       closeForm();
       fetchCars();
+      fetchOverview();
     } catch (e) {
       setError('Erro ao salvar: ' + e.message);
     } finally {
@@ -339,6 +270,7 @@ const FleetCars = () => {
       await fetch(`/api/fleet/cars/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchCars();
+      fetchOverview();
     } catch (e) {
       setError('Erro ao excluir: ' + e.message);
     }
@@ -450,6 +382,7 @@ const FleetCars = () => {
                 </th>
                 <th>Km Atual</th>
                 <th>Motorista</th>
+                <th>Manutenção</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -463,6 +396,22 @@ const FleetCars = () => {
                   <td>{car.license_plate}</td>
                   <td>{car.current_kilometers != null ? Number(car.current_kilometers).toLocaleString('pt-BR') : '—'}</td>
                   <td>{getDriverName(car.driver_id)}</td>
+                  <td>
+                    {(() => {
+                      const st = worstStatus(overview[car.id], car.current_kilometers);
+                      const s = STATUS_STYLE[st];
+                      const Icon = s.icon;
+                      return (
+                        <span
+                          className={styles.statusBadge}
+                          title="Status de manutenção preventiva"
+                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <Icon size={13} /> {s.label}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td>
                     <span className={`${styles.statusBadge} ${car.status === 'active' ? styles.statusActive : styles.statusInactive}`}>
                       {car.status === 'active' ? 'Ativo' : 'Inativo'}

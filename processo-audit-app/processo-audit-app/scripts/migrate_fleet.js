@@ -89,6 +89,7 @@ const migrate = async () => {
       CREATE TABLE IF NOT EXISTS fleet_maintenance_types (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
+        recurrence_mode ENUM('km','date','both'),
         recurrency INT,
         recurrency_date INT,
         status ENUM('active','inactive') DEFAULT 'active',
@@ -104,6 +105,7 @@ const migrate = async () => {
         maintenance_type_id INT,
         maintenance_date DATE NOT NULL,
         maintenance_kilometers DECIMAL(10,0),
+        total_cost DECIMAL(10,2),
         observation TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (car_id) REFERENCES fleet_cars(id) ON DELETE CASCADE,
