@@ -358,14 +358,14 @@ thead {
 }
 
 th {
-  background-color: var(--primary-light);
+  background-color: var(--accent-color);
   padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--accent-color);
+  color: var(--secondary-color);
   border-bottom: 2px solid var(--secondary-color);
 }
 
@@ -666,4 +666,136 @@ main > div > div > [class*="_header_"] [class*="headerIcon"] {
   main > div > div > [class*="_head_"] {
     padding: 1rem;
   }
+}
+
+
+/* ═══════════════ Tabelas e formulários — identidade Conexão Web ═══════════════
+   Seletores com :is() para superar os estilos de cada módulo sem editar cada página. */
+
+/* ── Tabelas ── */
+main table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+main :is(table, [class*="_table"]) th {
+  background: linear-gradient(180deg, #2f5520, var(--accent-color));
+  color: var(--secondary-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 3px solid var(--secondary-color);
+  white-space: nowrap;
+}
+
+main :is(table, [class*="_table"]) th:first-child { border-top-left-radius: var(--radius-md); }
+main :is(table, [class*="_table"]) th:last-child { border-top-right-radius: var(--radius-md); }
+
+main :is(table, [class*="_table"]) td {
+  border-bottom: 1px solid #e6efe1;
+  color: var(--text-dark);
+}
+
+main :is(table, [class*="_table"]) tbody tr:nth-child(even) td {
+  background-color: #f8fbf6;
+}
+
+main :is(table, [class*="_table"]) tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+main :is(table, [class*="_table"]) tbody tr:hover td {
+  background-color: #f1fbd9;
+}
+
+main :is(table, [class*="_table"]) tbody tr:hover td:first-child {
+  box-shadow: inset 4px 0 0 var(--secondary-color);
+}
+
+/* ── Rótulos e campos ── */
+main :is([class*="_formGroup"], [class*="_field"], .form-group) label {
+  color: var(--accent-color);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+main :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"]),
+main :is([class*="_formGroup"], [class*="_field"], .form-group) :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"]) {
+  border-color: #cfdcc8;
+  border-radius: 12px;
+  background-color: #fbfdf9;
+  color: var(--text-dark);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+main :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"]):hover,
+main :is([class*="_formGroup"], [class*="_field"], .form-group) :is(input, select, textarea):hover {
+  border-color: #9fc590;
+}
+
+main :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"]):focus,
+main :is([class*="_formGroup"], [class*="_field"], .form-group) :is(input, select, textarea):focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(187, 248, 4, 0.4);
+}
+
+main :is(input, textarea)::placeholder {
+  color: #9fb096;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--primary-color);
+}
+
+main select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230ba52b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* ── Busca em formato de pílula ── */
+main :is([class*="_searchInput"], [class*="_searchBar"] input, [class*="_searchWrap"] input) {
+  border-radius: 9999px;
+}
+
+/* ── Botões de formulário em pílula ── */
+main :is([class*="_btnPrimary"], [class*="_btnSecondary"], [class*="_btnCancel"], [class*="_btnDanger"], [class*="_submitBtn"], [class*="_uploadBtn"]) {
+  border-radius: 9999px;
+}
+
+main :is([class*="_btnPrimary"], [class*="_submitBtn"]):not(:disabled):hover {
+  box-shadow: 0 6px 18px -4px rgba(11, 165, 43, 0.55);
+}
+
+/* ── Paginação ── */
+main [class*="_pageBtn"] {
+  border-radius: 9999px;
+}
+
+main [class*="_pageBtn"]:not(:disabled):hover {
+  background: var(--secondary-color);
+  border-color: var(--secondary-dark);
+  color: var(--accent-color);
+}
+
+/* ── Modais ── */
+[class*="_overlay"], [class*="_modalOverlay"], [class*="_backdrop"] {
+  background: rgba(18, 48, 10, 0.6) !important;
+  backdrop-filter: blur(3px);
+}
+
+[class*="_modal_"], [class*="_modal "], .modal {
+  border-radius: var(--radius-xl) !important;
+  border-top: 4px solid var(--secondary-color);
+  box-shadow: 0 30px 70px -12px rgba(18, 48, 10, 0.55) !important;
+}
+
+[class*="_modalHeader"] {
+  border-bottom: 1px solid #e6efe1;
+}
+
+[class*="_modalHeader"] :is(h1, h2, h3) {
+  color: var(--accent-color);
 }
