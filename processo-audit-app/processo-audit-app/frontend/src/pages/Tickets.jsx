@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, X, Trash2, MessageSquare, Send, LayoutList, Columns,
-  Bug, CheckSquare2, BookOpen, Zap, Calendar, Clock, Tag, Pencil, Check,
+  Bug, CheckSquare2, BookOpen, Zap, Calendar, Clock, Tag, Pencil, Check, Inbox,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ticketAPI, labelAPI, departmentAPI } from '../api';
@@ -87,7 +87,13 @@ const Badge = ({ type, value }) => {
   const label = type === 'priority' ? PRIORITY_LABELS : STATUS_LABELS;
   const c = map[value] || { bg: '#f1f5f9', color: '#64748b' };
   return (
-    <span style={{ background: c.bg, color: c.color, padding: '2px 8px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: c.bg, color: c.color,
+      padding: '2px 8px', borderRadius: 'var(--radius-full)',
+      fontSize: '0.6875rem', fontWeight: 700, lineHeight: 1.5,
+      whiteSpace: 'nowrap', letterSpacing: '0.01em',
+    }}>
       {label[value] || value}
     </span>
   );
@@ -99,7 +105,7 @@ const TypeIcon = ({ type, size = 14 }) => {
   return (
     <span title={TYPE_LABELS[type] || type} style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: size + 6, height: size + 6, borderRadius: 4,
+      width: size + 8, height: size + 8, borderRadius: 'var(--radius-sm)',
       background: cfg.bg, color: cfg.color, flexShrink: 0,
     }}>
       <Icon size={size} strokeWidth={2.2} />
@@ -112,11 +118,12 @@ const Avatar = ({ name, size = 24 }) => {
   const initials = name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
   return (
     <div title={name} style={{
-      width: size, height: size, borderRadius: '50%',
-      background: 'linear-gradient(135deg, #0ba52b, #058020)',
+      width: size, height: size, borderRadius: 'var(--radius-full)',
+      background: 'linear-gradient(135deg, var(--primary-color), var(--primary-dark))',
       color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: Math.round(size * 0.38), fontWeight: 700, flexShrink: 0,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      border: '1.5px solid var(--surface-color)',
+      boxShadow: 'var(--shadow-sm)',
     }}>
       {initials}
     </div>
@@ -127,10 +134,17 @@ const DueDateChip = ({ due_date, status }) => {
   if (!due_date) return null;
   const overdue = isOverdue(due_date, status);
   const soon    = isDueSoon(due_date, status);
-  const color   = overdue ? '#dc2626' : soon ? '#d97706' : '#475569';
-  const bg      = overdue ? '#fef2f2' : soon ? '#fffbeb' : '#f8fafc';
+  const color   = overdue ? 'var(--error)'       : soon ? 'var(--warning)'       : 'var(--text-medium)';
+  const bg      = overdue ? 'var(--error-light)' : soon ? 'var(--warning-light)' : 'var(--background-color)';
+  const title   = overdue ? 'Data limite vencida' : soon ? 'Vence em breve' : 'Data limite';
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: bg, color, fontSize: '0.7rem', fontWeight: 600, padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+    <span title={title} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      background: bg, color,
+      border: `1px solid ${overdue || soon ? 'transparent' : 'var(--border-color)'}`,
+      fontSize: '0.6875rem', fontWeight: 600, lineHeight: 1.5,
+      padding: '2px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
+    }}>
       <Calendar size={10} />{fmtDateShort(due_date)}{overdue && ' ⚠'}
     </span>
   );
@@ -141,8 +155,8 @@ const LabelChip = ({ label }) => (
     display: 'inline-flex', alignItems: 'center',
     background: label.color + '22', color: label.color,
     border: `1px solid ${label.color}55`,
-    fontSize: '0.68rem', fontWeight: 700, padding: '1px 7px',
-    borderRadius: 99, whiteSpace: 'nowrap', letterSpacing: '0.01em',
+    fontSize: '0.6875rem', fontWeight: 700, lineHeight: 1.5, padding: '1px 7px',
+    borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap', letterSpacing: '0.01em',
   }}>
     {label.name}
   </span>
@@ -390,6 +404,8 @@ export default function Tickets() {
 
   const dragTicket  = useRef(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [draggingId,  setDraggingId]  = useState(null);
+  const [dragFromCol, setDragFromCol] = useState(null);
 
   const LIMIT      = 20;
   const totalPages = Math.ceil(total / LIMIT) || 1;
@@ -447,11 +463,21 @@ export default function Tickets() {
   /* ── Drag-and-drop ── */
   const handleDragStart = (e, ticket) => {
     dragTicket.current = ticket;
+    setDraggingId(ticket.id);
+    setDragFromCol(ticket.status);
     e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragEnd = () => {
+    dragTicket.current = null;
+    setDraggingId(null);
+    setDragFromCol(null);
+    setDragOverCol(null);
   };
   const handleDrop = async (e, newStatus) => {
     e.preventDefault();
     setDragOverCol(null);
+    setDraggingId(null);
+    setDragFromCol(null);
     const ticket = dragTicket.current;
     dragTicket.current = null;
     if (!ticket || ticket.status === newStatus) return;
@@ -778,7 +804,7 @@ export default function Tickets() {
       {/* ── Header ── */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Tickets</h1>
+          <h1>Tickets</h1>
           <p className={styles.pageSubtitle}>Gerencie solicitações e chamados entre usuários</p>
         </div>
         <div className={styles.headerActions}>
@@ -928,6 +954,7 @@ export default function Tickets() {
               boardColumns.map(col => {
                 const sc = STATUS_COLORS[col.status];
                 const isOver = dragOverCol === col.status;
+                const showDropHint = isOver && dragFromCol && dragFromCol !== col.status && col.tickets.length > 0;
                 return (
                   <div key={col.status}
                     className={`${styles.kanbanColumn} ${isOver ? styles.kanbanColumnOver : ''}`}
@@ -937,47 +964,69 @@ export default function Tickets() {
                   >
                     <div className={styles.kanbanColHeader}>
                       <div className={styles.kanbanColTitleRow}>
-                        <div className={styles.kanbanColDot} style={{ background: sc.accent }} />
+                        <span className={styles.kanbanColDot} style={{ background: sc.accent }} />
                         <span className={styles.kanbanColTitle}>{STATUS_LABELS[col.status]}</span>
                       </div>
                       <span className={styles.kanbanColCount} style={{ background: sc.bg, color: sc.color }}>{col.tickets.length}</span>
                     </div>
                     <div className={styles.kanbanCards}>
                       {col.tickets.length === 0 ? (
-                        <div className={`${styles.kanbanEmpty} ${isOver ? styles.kanbanEmptyOver : ''}`}>Arraste tickets aqui</div>
+                        <div className={`${styles.kanbanEmpty} ${isOver ? styles.kanbanEmptyOver : ''}`}>
+                          <span className={styles.kanbanEmptyIcon}><Inbox size={20} strokeWidth={1.6} /></span>
+                          <span className={styles.kanbanEmptyText}>
+                            {isOver ? 'Solte para mover' : 'Arraste tickets aqui'}
+                          </span>
+                        </div>
                       ) : (
-                        col.tickets.map(ticket => (
-                          <div key={ticket.id}
-                            className={`${styles.kanbanCard} ${selected === ticket.id ? styles.kanbanCardSelected : ''}`}
-                            style={{ borderLeft: `3px solid ${PRIORITY_BORDER[ticket.priority] || '#e5e7eb'}` }}
-                            draggable
-                            onDragStart={e => handleDragStart(e, ticket)}
-                            onDragEnd={() => { dragTicket.current = null; setDragOverCol(null); }}
-                            onClick={() => openDetail(ticket)}
-                          >
-                            <div className={styles.kanbanCardTop}>
-                              <TypeIcon type={ticket.type} size={12} />
-                              <span className={styles.kanbanCardId}>#{ticket.id}</span>
+                        <>
+                          {col.tickets.map(ticket => (
+                            <div key={ticket.id}
+                              className={[
+                                styles.kanbanCard,
+                                selected === ticket.id ? styles.kanbanCardSelected : '',
+                                draggingId === ticket.id ? styles.kanbanCardDragging : '',
+                              ].filter(Boolean).join(' ')}
+                              style={{ '--prio': PRIORITY_BORDER[ticket.priority] || 'var(--border-color)' }}
+                              draggable
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Ticket #${ticket.id}: ${ticket.title}`}
+                              onDragStart={e => handleDragStart(e, ticket)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => openDetail(ticket)}
+                              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(ticket); } }}
+                            >
+                              <div className={styles.kanbanCardTop}>
+                                <TypeIcon type={ticket.type} size={12} />
+                                <span className={styles.kanbanCardId}>#{ticket.id}</span>
+                              </div>
+                              <div className={styles.kanbanCardTitle}>{ticket.title}</div>
+                              {ticket.labels?.length > 0 && (
+                                <div className={styles.kanbanCardLabels}>
+                                  {ticket.labels.slice(0, 3).map(l => <LabelChip key={l.id} label={l} />)}
+                                  {ticket.labels.length > 3 && (
+                                    <span className={styles.kanbanLabelOverflow}>+{ticket.labels.length - 3}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className={styles.kanbanCardFooter}>
+                                <div className={styles.kanbanCardTags}>
+                                  <Badge type="priority" value={ticket.priority} />
+                                  <DueDateChip due_date={ticket.due_date ? String(ticket.due_date).slice(0, 10) : null} status={ticket.status} />
+                                </div>
+                                <div className={styles.kanbanCardMeta}>
+                                  {ticket.comment_count > 0 && (
+                                    <span className={styles.kanbanCommentCount} title={`${ticket.comment_count} comentário(s)`}>
+                                      <MessageSquare size={11} />{ticket.comment_count}
+                                    </span>
+                                  )}
+                                  {ticket.assigned_to_name && <Avatar name={ticket.assigned_to_name} size={22} />}
+                                </div>
+                              </div>
                             </div>
-                            <div className={styles.kanbanCardTitle}>{ticket.title}</div>
-                            {ticket.labels?.length > 0 && (
-                              <div className={styles.kanbanCardLabels}>
-                                {ticket.labels.slice(0, 3).map(l => <LabelChip key={l.id} label={l} />)}
-                                {ticket.labels.length > 3 && <span style={{ fontSize: '0.65rem', color: 'var(--text-light)' }}>+{ticket.labels.length - 3}</span>}
-                              </div>
-                            )}
-                            <div className={styles.kanbanCardFooter}>
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Badge type="priority" value={ticket.priority} />
-                                <DueDateChip due_date={ticket.due_date ? String(ticket.due_date).slice(0, 10) : null} status={ticket.status} />
-                              </div>
-                              <div className={styles.kanbanCardMeta}>
-                                {ticket.comment_count > 0 && <span className={styles.kanbanCommentCount}><MessageSquare size={11} />{ticket.comment_count}</span>}
-                                {ticket.assigned_to_name && <Avatar name={ticket.assigned_to_name} size={22} />}
-                              </div>
-                            </div>
-                          </div>
-                        ))
+                          ))}
+                          {showDropHint && <div className={styles.kanbanDropHint} aria-hidden="true" />}
+                        </>
                       )}
                     </div>
                   </div>
@@ -1010,7 +1059,7 @@ export default function Tickets() {
                       onClick={() => openDetail(t)}
                     >
                       <div className={styles.ticketCardTop}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div className={styles.kanbanCardTop}>
                           <TypeIcon type={t.type} size={12} />
                           <span className={styles.ticketId}>#{t.id}</span>
                         </div>
@@ -1022,15 +1071,15 @@ export default function Tickets() {
                       </div>
                       <div className={styles.ticketTitle}>{t.title}</div>
                       {t.labels?.length > 0 && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: '0.375rem' }}>
+                        <div className={styles.ticketLabels}>
                           {t.labels.map(l => <LabelChip key={l.id} label={l} />)}
                         </div>
                       )}
                       <div className={styles.ticketMeta}>
                         <span>Por <strong>{t.created_by_name}</strong></span>
-                        {t.department_name && <span className={styles.metaDept}>· <strong>{t.department_name}</strong></span>}
+                        {t.department_name && <span className={styles.metaDept}>{t.department_name}</span>}
                         {t.assigned_to_name && <span>→ <strong>{t.assigned_to_name}</strong></span>}
-                        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span className={styles.metaCount} title={`${t.comment_count} comentário(s)`}>
                           <MessageSquare size={12} /> {t.comment_count}
                         </span>
                         <span>{fmtDate(t.created_at)}</span>

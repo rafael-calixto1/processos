@@ -14,11 +14,30 @@ import {
   Save, Trash2, Undo2, Redo2, PlayCircle, Box, StopCircle,
   X, Copy, Plus, CheckCircle2, AlertCircle, Info, ChevronDown,
   GitBranch, Magnet, LayoutGrid, Layers, ExternalLink, Maximize2, Minimize2, Menu, MoveRight,
+  HelpCircle, PanelLeftClose, PanelLeftOpen, Expand, Shrink,
 } from 'lucide-react';
 import { visualProcessAPI, departmentAPI } from '../api/index';
 import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
+
+const NODE_PALETTE = [
+  { type: 'startNode',      label: 'Início',       Icon: PlayCircle,   variant: 'palStart',   hint: 'Ponto de entrada do fluxo' },
+  { type: 'processNode',    label: 'Etapa',        Icon: Box,          variant: 'palStep',    hint: 'Atividade ou tarefa' },
+  { type: 'gatewayNode',    label: 'Decisão',      Icon: GitBranch,    variant: 'palGateway', hint: 'Ramificação condicional' },
+  { type: 'endNode',        label: 'Fim',          Icon: StopCircle,   variant: 'palEnd',     hint: 'Encerramento do fluxo' },
+  { type: 'subFlowNode',    label: 'Sub-fluxo',    Icon: Layers,       variant: 'palSub',     hint: 'Contêiner de etapas' },
+  { type: 'linkedFlowNode', label: 'Chamar Fluxo', Icon: ExternalLink, variant: 'palLinked',  hint: 'Referência a outro fluxo' },
+];
+
+const SHORTCUTS = [
+  { keys: ['Del'],            action: 'Remover nó ou conexão selecionada' },
+  { keys: ['Ctrl', 'Z'],      action: 'Desfazer' },
+  { keys: ['Ctrl', 'Y'],      action: 'Refazer' },
+  { keys: ['Arrastar'],       action: 'Conectar nós pelas alças laterais' },
+  { keys: ['Clique'],         action: 'Selecionar e editar um nó' },
+  { keys: ['Esc'],            action: 'Sair do modo tela cheia' },
+];
 
 const nodeTypes = { startNode: StartNode, processNode: ProcessNode, endNode: EndNode, gatewayNode: GatewayNode, subFlowNode: SubFlowNode, linkedFlowNode: LinkedFlowNode };
 
@@ -59,6 +78,9 @@ export default function VisualProcesses() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 768);
+  const [paletteOpen, setPaletteOpen] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Undo / Redo
   const [past, setPast] = useState([]);
@@ -66,6 +88,7 @@ export default function VisualProcesses() {
 
   // Stale-closure-safe ref for keyboard handler
   const selectedRef = useRef(null);
+  const containerRef = useRef(null);
   selectedRef.current = selectedElement;
 
   // ── Toast ──────────────────────────────────────────────
@@ -76,6 +99,30 @@ export default function VisualProcesses() {
   }, []);
 
   // ── History ─────────────────────────────────────────────
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const active = document.fullscreenElement || document.webkitFullscreenElement;
+    if (active) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    } else {
+      (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+    }
+  }, []);
+
+  // O usuário pode sair com Esc ou F11: o estado segue o navegador, não o clique
+  useEffect(() => {
+    const sync = () => setIsFullscreen(
+      Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+    );
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
+  }, []);
+
   const takeSnapshot = useCallback(() => {
     setPast(p => {
       const snap = {
@@ -639,7 +686,10 @@ export default function VisualProcesses() {
   const selectedNodeType = selectedElement?.type;
 
   return (
-    <div className={styles.container}>
+    <div
+      ref={containerRef}
+      className={`${styles.container} ${isFullscreen ? styles.containerFullscreen : ''}`}
+    >
       {/* ── Top header ── */}
       <div className={styles.header}>
         <div className={styles.titleRow}>
@@ -650,6 +700,19 @@ export default function VisualProcesses() {
             className={styles.titleInput}
             placeholder="Título do fluxo..."
           />
+
+          {/* Contadores como pills, junto ao título */}
+          <div className={styles.headerMeta}>
+            <span className={styles.metaChip}>
+              <span className={styles.metaDot} style={{ background: 'var(--primary-color)' }} />
+              {nodes.length} {nodes.length === 1 ? 'nó' : 'nós'}
+            </span>
+            <span className={styles.metaChip}>
+              <span className={styles.metaDot} style={{ background: 'var(--text-muted)' }} />
+              {edges.length} {edges.length === 1 ? 'conexão' : 'conexões'}
+            </span>
+          </div>
+
           <div className={styles.flowControls}>
             <div className={styles.selectWrap}>
               <select
@@ -672,55 +735,40 @@ export default function VisualProcesses() {
               <Plus size={14} />
               Novo
             </button>
+            <button
+              className={styles.helpBtn}
+              onClick={() => setShowShortcuts(true)}
+              data-tip="Atalhos do teclado"
+              aria-label="Atalhos do teclado"
+            >
+              <HelpCircle size={16} />
+            </button>
           </div>
-        </div>
-        <div className={styles.headerMeta}>
-          <span className={styles.metaChip}>
-            <span className={styles.metaDot} style={{ background: '#0ba52b' }} />
-            {nodes.length} nós
-          </span>
-          <span className={styles.metaChip}>
-            <span className={styles.metaDot} style={{ background: '#9ca3af' }} />
-            {edges.length} conexões
-          </span>
-          <span className={styles.metaHint}>
-            Arraste nós para conectar · Clique para editar · <kbd>Del</kbd> remove · <kbd>Ctrl+Z</kbd> desfaz
-          </span>
         </div>
       </div>
 
-      {/* ── Toolbar (desktop) ── */}
+      {/* ── Toolbar de utilidades (desktop) ── */}
       {!isMobile && (
         <div className={styles.toolbar}>
-          <div className={styles.tbGroup}>
-            <button className={`${styles.tbNode} ${styles.tbNodeStart}`} onClick={() => onAddNode('startNode')} title="Adicionar nó Início">
-              <PlayCircle size={13} /> Início
-            </button>
-            <button className={`${styles.tbNode} ${styles.tbNodeStep}`} onClick={() => onAddNode('processNode')} title="Adicionar etapa">
-              <Box size={13} /> Etapa
-            </button>
-            <button className={`${styles.tbNode} ${styles.tbNodeGateway}`} onClick={() => onAddNode('gatewayNode')} title="Adicionar decisão">
-              <GitBranch size={13} /> Decisão
-            </button>
-            <button className={`${styles.tbNode} ${styles.tbNodeEnd}`} onClick={() => onAddNode('endNode')} title="Adicionar nó Fim">
-              <StopCircle size={13} /> Fim
-            </button>
-            <button className={`${styles.tbNode} ${styles.tbNodeSub}`} onClick={() => onAddNode('subFlowNode')} title="Adicionar sub-fluxo (contêiner)">
-              <Layers size={13} /> Sub-fluxo
-            </button>
-            <button className={`${styles.tbNode} ${styles.tbNodeLinked}`} onClick={() => onAddNode('linkedFlowNode')} title="Chamar outro fluxo">
-              <ExternalLink size={13} /> Chamar Fluxo
-            </button>
-          </div>
+          <button
+            className={styles.tbTool}
+            onClick={() => setPaletteOpen(v => !v)}
+            data-tip={paletteOpen ? 'Ocultar paleta de nós' : 'Mostrar paleta de nós'}
+            aria-label="Alternar paleta de nós"
+          >
+            {paletteOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          </button>
 
           <div className={styles.tbDivider} />
 
           <div className={styles.tbGroup}>
-            <button className={styles.tbTool} onClick={undo} disabled={!past.length} title="Desfazer (Ctrl+Z)">
-              <Undo2 size={13} /> Desfazer
+            <button className={styles.tbTool} onClick={undo} disabled={!past.length}
+              data-tip="Desfazer · Ctrl+Z" aria-label="Desfazer">
+              <Undo2 size={16} />
             </button>
-            <button className={styles.tbTool} onClick={redo} disabled={!future.length} title="Refazer (Ctrl+Y)">
-              <Redo2 size={13} /> Refazer
+            <button className={styles.tbTool} onClick={redo} disabled={!future.length}
+              data-tip="Refazer · Ctrl+Y" aria-label="Refazer">
+              <Redo2 size={16} />
             </button>
           </div>
 
@@ -730,42 +778,87 @@ export default function VisualProcesses() {
             <button
               className={`${styles.tbTool} ${snapToGrid ? styles.tbToolActive : ''}`}
               onClick={() => setSnapToGrid(v => !v)}
-              title="Encaixar ao grid durante arraste"
+              data-tip="Encaixar ao grid"
+              aria-label="Encaixar ao grid"
+              aria-pressed={snapToGrid}
             >
-              <Magnet size={13} /> Snap
+              <Magnet size={16} />
             </button>
-            <button className={styles.tbTool} onClick={autoLayout} title="Organizar nós de cima para baixo">
-              <LayoutGrid size={13} /> Vertical
+            <button className={styles.tbTool} onClick={autoLayout}
+              data-tip="Organizar na vertical" aria-label="Organizar na vertical">
+              <LayoutGrid size={16} />
             </button>
-            <button className={styles.tbTool} onClick={autoLayoutLR} title="Organizar nós da esquerda para direita">
-              <MoveRight size={13} /> Lateral
+            <button className={styles.tbTool} onClick={autoLayoutLR}
+              data-tip="Organizar na horizontal" aria-label="Organizar na horizontal">
+              <MoveRight size={16} />
             </button>
           </div>
 
           <div className={styles.tbDivider} />
 
-          <div className={styles.tbGroup}>
-            <button className={styles.tbSave} onClick={onSave} disabled={saving}>
-              <Save size={13} /> {saving ? 'Salvando…' : 'Salvar'}
-            </button>
-            {selectedFlowId && (
-              <button className={styles.tbDelete} onClick={onDeleteFlow}>
-                <Trash2 size={13} /> Inativar
-              </button>
-            )}
-          </div>
+          <button
+            className={`${styles.tbTool} ${isFullscreen ? styles.tbToolActive : ''}`}
+            onClick={toggleFullscreen}
+            data-tip={isFullscreen ? 'Sair da tela cheia · Esc' : 'Tela cheia'}
+            aria-label={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            aria-pressed={isFullscreen}
+          >
+            {isFullscreen ? <Shrink size={16} /> : <Expand size={16} />}
+          </button>
 
           <div className={styles.tbSpacer} />
 
-          <div className={styles.tbHints}>
-            <span><kbd>Del</kbd> remover</span>
-            <span><kbd>Ctrl+Z/Y</kbd> desfazer/refazer</span>
+          <div className={styles.tbGroup}>
+            {selectedFlowId && (
+              <button className={styles.tbDelete} onClick={onDeleteFlow}
+                data-tip="Inativar fluxo" aria-label="Inativar fluxo">
+                <Trash2 size={16} />
+              </button>
+            )}
+            <button className={styles.tbSave} onClick={onSave} disabled={saving}>
+              <Save size={15} /> {saving ? 'Salvando…' : 'Salvar'}
+            </button>
           </div>
         </div>
       )}
 
       {/* ── Canvas area ── */}
       <div className={styles.mainArea}>
+        {/* ── Paleta de nós (desktop) ── */}
+        {!isMobile && paletteOpen && (
+          <aside className={styles.palette}>
+            <div className={styles.paletteHead}>
+              <span>Blocos</span>
+              <button
+                className={styles.paletteCollapse}
+                onClick={() => setPaletteOpen(false)}
+                data-tip="Ocultar paleta"
+                aria-label="Ocultar paleta"
+              >
+                <PanelLeftClose size={14} />
+              </button>
+            </div>
+            <div className={styles.paletteBody}>
+              {NODE_PALETTE.map(({ type, label, Icon, variant, hint }) => (
+                <button
+                  key={type}
+                  className={`${styles.paletteItem} ${styles[variant]}`}
+                  onClick={() => onAddNode(type)}
+                  title={hint}
+                >
+                  <span className={styles.paletteIcon}>
+                    <Icon size={16} strokeWidth={2} />
+                  </span>
+                  <span className={styles.paletteText}>
+                    <span className={styles.paletteLabel}>{label}</span>
+                    <span className={styles.paletteHint}>{hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
+
         <div className={styles.flowWrapper}>
           {loading ? (
             <div className={styles.loadingOverlay}>
@@ -874,10 +967,6 @@ export default function VisualProcesses() {
                       </div>
 
                       <div className={styles.panelDivider} />
-                      <div className={styles.panelHints}>
-                        <span><kbd>Del</kbd> remover selecionado</span>
-                        <span><kbd>Ctrl+Z / Y</kbd> desfazer/refazer</span>
-                      </div>
                     </div>
                   )}
                 </Panel>
@@ -1132,6 +1221,34 @@ export default function VisualProcesses() {
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
             <button className={styles.closeModal} onClick={() => setLightboxUrl(null)}>&times;</button>
             <img src={lightboxUrl} alt="Ampliado" className={styles.modalImage} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Atalhos do teclado ── */}
+      {showShortcuts && (
+        <div className={styles.modal} onClick={() => setShowShortcuts(false)}>
+          <div className={styles.shortcutsModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.shortcutsHead}>
+              <h3>Atalhos do teclado</h3>
+              <button
+                className={styles.shortcutsClose}
+                onClick={() => setShowShortcuts(false)}
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <ul className={styles.shortcutsList}>
+              {SHORTCUTS.map(({ keys, action }) => (
+                <li key={action}>
+                  <span className={styles.shortcutKeys}>
+                    {keys.map(k => <kbd key={k}>{k}</kbd>)}
+                  </span>
+                  <span className={styles.shortcutAction}>{action}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
