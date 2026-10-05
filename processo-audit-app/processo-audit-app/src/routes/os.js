@@ -1,0 +1,94 @@
+import express from 'express';
+import pool from '../config/database.js';
+import { verifyToken, checkRole } from '../middlewares/auth.js';
+import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
+import * as svc from '../services/estoqueService.js';
+
+const router = express.Router();
+router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque', 'tecnico']));
+
+const staff = checkRole(['admin', 'estoque']);
+const actorOf = (req) => ({ id: req.userId, role: req.userRole, tecnicoId: req.tecnicoId });
+
+const carregarOS = async (req) => {
+  const [[os]] = await pool.query(
+    `SELECT o.*, t.nome AS tecnico_nome, t.empresa AS tecnico_empresa, u.name AS criado_por_nome
+     FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id LEFT JOIN users u ON u.id = o.criado_por
+     WHERE o.id = ?`, [req.params.id]);
+  if (!os) throw new svc.ServiceError(404, 'OS não encontrada');
+  svc.assertAcessoOS(os, actorOf(req));
+  return os;
+};
+
+router.get('/', handle(async (req, res) => {
+  const where = [];
+  const params = [];
+  if (req.userRole === 'tecnico') {
+    if (!req.tecnicoId) throw new svc.ServiceError(403, 'Seu usuário não está vinculado a um técnico');
+    where.push('o.tecnico_id = ?'); params.push(req.tecnicoId);
+  } else if (req.query.tecnico_id) { where.push('o.tecnico_id = ?'); params.push(req.query.tecnico_id); }
+  if (req.query.status) { where.push('o.status = ?'); params.push(req.query.status); }
+  const [rows] = await pool.query(
+    `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,
+       t.nome AS tecnico_nome FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY o.id DESC LIMIT 300`, params);
+  res.json(rows);
+}));
+
+router.post('/', staff, handle(async (req, res) => {
+  res.status(201).json(await svc.criarOS(req.body, req.userId));
+}));
+
+router.get('/:id', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  const [materiais] = await pool.query(
+    `SELECT m.id, m.quantidade, m.criado_em, m.observacao, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade,
+       u.name AS usuario_nome,
+       (SELECT e.id FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id) AS estorno_id
+     FROM estoque_movimentacoes m JOIN estoque_lotes l ON l.id = m.lote_id JOIN estoque_itens i ON i.id = m.item_id
+     LEFT JOIN users u ON u.id = m.criado_por
+     WHERE m.os_id = ? AND m.tipo = 'baixa_os' ORDER BY m.id`, [os.id]);
+  const [historico] = await pool.query(
+    `SELECT h.*, u.name AS usuario_nome FROM os_historico_status h LEFT JOIN users u ON u.id = h.usuario_id
+     WHERE h.os_id = ? ORDER BY h.id`, [os.id]);
+  const totais = { metros: 0, pecas: 0 };
+  for (const m of materiais) if (!m.estorno_id) totais[m.unidade === 'metros' ? 'metros' : 'pecas'] += Number(m.quantidade);
+  res.json({ ...os, materiais, historico, totais });
+}));
+
+router.put('/:id', staff, handle(async (req, res) => {
+  const os = await carregarOS(req);
+  if (['concluida', 'cancelada'].includes(os.status)) throw new svc.ServiceError(409, 'OS encerrada é somente leitura');
+  const b = req.body;
+  if (!b.cliente || !String(b.cliente).trim()) throw new svc.ServiceError(400, 'Informe o cliente');
+  let numero = os.numero;
+  if (b.numero !== undefined && Number(b.numero) !== os.numero) {
+    if (req.userRole !== 'admin') throw new svc.ServiceError(403, 'Somente o administrador altera o número da OS');
+    numero = Number(b.numero);
+    if (!Number.isInteger(numero) || numero <= 0) throw new svc.ServiceError(400, 'Número inválido');
+  }
+  await pool.query(
+    'UPDATE ordens_servico SET numero=?, cliente=?, endereco=?, prazo=?, prioridade=?, descricao=? WHERE id=?',
+    [numero, b.cliente.trim(), b.endereco || null, b.prazo || null, b.prioridade || os.prioridade, b.descricao || null, os.id]);
+  res.json({ ok: true });
+}));
+
+router.post('/:id/materiais', handle(async (req, res) => {
+  res.status(201).json(await svc.baixarEmOS({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
+}));
+
+router.post('/:id/fechar', handle(async (req, res) => {
+  res.json(await svc.fecharOS({ os_id: Number(req.params.id) }, actorOf(req)));
+}));
+
+router.post('/:id/cancelar', staff, handle(async (req, res) => {
+  res.json(await svc.cancelarOS({ os_id: Number(req.params.id) }, req.userId));
+}));
+
+router.post('/:id/estornos', staff, handle(async (req, res) => {
+  const [[mov]] = await pool.query('SELECT os_id FROM estoque_movimentacoes WHERE id = ?', [req.body.movimentacao_id]);
+  if (!mov || mov.os_id !== Number(req.params.id)) throw new svc.ServiceError(404, 'Baixa não encontrada nesta OS');
+  res.status(201).json(await svc.estornarBaixa(req.body, req.userId));
+}));
+
+export default router;

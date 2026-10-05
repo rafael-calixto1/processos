@@ -278,6 +278,8 @@
 
 .admin { background: #dbeafe; color: #1d4ed8; }
 .manager { background: var(--warning-light); color: #92400e; }
+.estoque { background: var(--success-light); color: #166534; }
+.tecnico { background: var(--violet-light); color: var(--violet); }
 .viewer { background: #f3f4f6; color: #4b5563; }
 
 .deptBadges {

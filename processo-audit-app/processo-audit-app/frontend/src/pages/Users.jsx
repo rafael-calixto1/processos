@@ -195,6 +195,8 @@ const Users = () => {
               >
                 <option value="viewer">Visualizador</option>
                 <option value="manager">Gestor</option>
+                <option value="estoque">Estoque (almoxarife)</option>
+                <option value="tecnico">Técnico de campo</option>
                 <option value="admin">Administrador</option>
               </select>
             </div>
@@ -266,6 +268,8 @@ const Users = () => {
                     >
                       <option value="viewer">Visualizador</option>
                       <option value="manager">Gestor</option>
+                      <option value="estoque">Estoque (almoxarife)</option>
+                      <option value="tecnico">Técnico de campo</option>
                       <option value="admin">Administrador</option>
                     </select>
                   ) : (
