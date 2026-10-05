@@ -539,8 +539,8 @@ const PublicReferral = ({ branding }) => {
         )}
       </div>
 
-      <div className={styles.footer} style={{ textAlign: 'center', marginTop: '24px', color: '#a0aec0', fontSize: '0.8rem' }}>
-        © {new Date().getFullYear()} {branding?.company_name || 'Sua Empresa'}. Todos os direitos reservados.
+      <div className={styles.footer}>
+        © {new Date().getFullYear()} {branding?.company_name || 'Conexão Web Telecom'}. Todos os direitos reservados.
       </div>
     </div>
   );
