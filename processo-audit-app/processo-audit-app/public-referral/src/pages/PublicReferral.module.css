@@ -13,7 +13,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   padding: 32px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  border-top: 5px solid var(--secondary-color);
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -24,6 +25,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.logo {
+  width: 230px;
+  max-width: 80%;
+  height: auto;
+  margin: 0 auto 8px;
+  display: block;
 }
 
 .icon {
@@ -41,7 +50,7 @@
 .title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--text-dark);
+  color: var(--accent-color);
 }
 
 .subtitle {
@@ -93,10 +102,11 @@
 
 .btnSubmit {
   padding: 14px;
-  background: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: #fff;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(11, 165, 43, 0.3);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -109,7 +119,8 @@
 }
 
 .btnSubmit:hover:not(:disabled) {
-  background: var(--primary-dark);
+  background: var(--secondary-color);
+  color: var(--accent-color);
   transform: translateY(-1px);
 }
 
@@ -146,8 +157,8 @@
 .successIcon {
   width: 80px;
   height: 80px;
-  background: #ecfdf5;
-  color: #059669;
+  background: var(--secondary-color);
+  color: var(--accent-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -189,7 +200,7 @@
   padding: 10px;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: 9999px;
   color: var(--text-dark);
   font-size: 0.875rem;
   font-weight: 600;

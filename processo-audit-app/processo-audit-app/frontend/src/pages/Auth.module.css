@@ -5,7 +5,7 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background-color: #f0f7f1;
+  background: #274518 url('/fundo-app.png') center / cover no-repeat;
 }
 
 .card {
@@ -18,17 +18,16 @@
   z-index: 10;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.8);
+  border-top: 4px solid var(--secondary-color);
 }
 
 .logo {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 1.5rem;
+  width: 220px;
+  max-width: 80%;
+  height: auto;
+  margin: 0 auto 1.25rem;
   display: block;
   object-fit: contain;
-  background-color: var(--primary-light);
-  padding: 10px;
-  border-radius: var(--radius-md);
 }
 
 .title {
@@ -145,6 +144,7 @@
 }
 
 .blob1, .blob2, .blob3 {
+  display: none;
   position: absolute;
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   opacity: 0.15;
@@ -192,8 +192,7 @@
   }
 
   .logo {
-    width: 56px;
-    height: 56px;
+    width: 180px;
   }
 
   .blob1, .blob2, .blob3 {

@@ -11,7 +11,9 @@
   top: 0;
   z-index: 100;
   height: var(--header-height);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(100deg, #12300a 0%, var(--accent-color) 60%, #1d6a1f 130%);
+  border-bottom: 3px solid var(--secondary-color);
+  box-shadow: 0 4px 18px rgba(18, 48, 10, 0.35);
 }
 
 .headerContent {
@@ -65,12 +67,10 @@
 }
 
 .logoImage {
-  height: 36px;
-  width: 36px;
+  height: 52px;
+  width: auto;
+  margin: -6px 0;
   object-fit: contain;
-  background: white;
-  padding: 4px;
-  border-radius: 8px;
   flex-shrink: 0;
 }
 
@@ -88,12 +88,14 @@
 }
 
 .logoText {
-  font-weight: 700;
-  font-size: 1.0625rem;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--secondary-color);
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(187, 248, 4, 0.4);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── Header Right ────────────────────────────── */
@@ -126,16 +128,16 @@
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  color: white;
+  background: var(--secondary-color);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: var(--accent-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.8rem;
   letter-spacing: 0.02em;
   flex-shrink: 0;
@@ -170,12 +172,16 @@
 /* ── Sidebar ─────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-width);
-  background-color: var(--surface-color);
-  border-right: 1px solid var(--border-color);
+  background: linear-gradient(180deg, #17380f 0%, #102a0a 100%);
+  border-right: 1px solid rgba(187, 248, 4, 0.12);
   overflow-y: auto;
   overflow-x: hidden;
   transition: width 0.25s ease, opacity 0.25s ease;
   flex-shrink: 0;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(187, 248, 4, 0.25);
 }
 
 /* Desktop: clicking toggle hides sidebar */
@@ -202,12 +208,13 @@
 }
 
 .navSectionLabel {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.675rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-light);
-  padding: 0.75rem 0.875rem 0.25rem;
+  letter-spacing: 0.14em;
+  color: var(--secondary-color);
+  opacity: 0.7;
+  padding: 1.25rem 0.875rem 0.375rem;
 }
 
 .navItem {
@@ -215,10 +222,10 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.875rem;
-  color: var(--text-medium);
+  color: rgba(255, 255, 255, 0.78);
   text-decoration: none;
   transition: var(--transition);
-  border-radius: var(--radius);
+  border-radius: var(--radius-full);
   font-weight: 500;
   font-size: 0.875rem;
   position: relative;
@@ -226,26 +233,20 @@
 }
 
 .navItem:hover {
-  background-color: var(--primary-light);
-  color: var(--primary-color);
+  background-color: rgba(187, 248, 4, 0.1);
+  color: var(--secondary-color);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: -2px;
 }
 
 .navItem.active {
-  background-color: var(--primary-light);
-  color: var(--primary-color);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(11, 165, 43, 0.18);
-}
-
-.navItem.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12%;
-  bottom: 12%;
-  width: 3px;
-  background-color: var(--primary-color);
-  border-radius: 0 2px 2px 0;
+  background-color: var(--secondary-color);
+  color: var(--accent-color);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(187, 248, 4, 0.25);
 }
 
 .navIcon {
@@ -265,7 +266,7 @@
 }
 
 .activeArrow {
-  opacity: 0.6;
+  opacity: 0.7;
   flex-shrink: 0;
 }
 
@@ -277,7 +278,7 @@
 }
 
 .content {
-  max-width: 1400px;
+  max-width: 1920px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
   animation: pageIn 0.22s ease-out;
@@ -312,7 +313,6 @@
     width: 240px;
     transform: translateX(-100%);
     z-index: 100;
-    border-right: 1px solid var(--border-color);
     box-shadow: var(--shadow-lg);
   }
 

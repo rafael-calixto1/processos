@@ -534,8 +534,8 @@
   align-items: center;
   gap: 7px;
   padding: 8px 18px;
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: var(--primary-light);
+  color: var(--accent-color);
   border: 1px solid #ddd6fe;
   border-radius: var(--radius);
   font-size: 0.875rem;

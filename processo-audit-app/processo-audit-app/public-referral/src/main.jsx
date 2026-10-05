@@ -17,11 +17,11 @@ const BrandingProviderPlaceholder = ({ children }) => {
   return (
     <div style={{ 
       '--primary-color': branding?.primary_color || '#0ba52b',
-      '--primary-light': branding?.primary_light || '#ecfdf5',
-      '--primary-dark': branding?.primary_dark || '#098a24',
+      '--primary-light': branding?.primary_light || '#e6f9ec',
+      '--primary-dark': branding?.primary_dark || '#089124',
       '--secondary-color': branding?.secondary_color || '#bbf804',
       '--accent-color': branding?.accent_color || '#274518',
-      '--background-color': branding?.background_color || '#f4f7f6',
+      '--background-color': '#f2f6f0',
       '--surface-color': '#ffffff',
       '--text-dark': '#1a202c',
       '--text-medium': '#4a5568',
@@ -29,9 +29,9 @@ const BrandingProviderPlaceholder = ({ children }) => {
       '--text-muted': '#a0aec0',
       '--border-color': '#e2e8f0',
       '--border-light': '#edf2f7',
-      '--radius-md': '8px',
-      '--radius-lg': '12px',
-      '--radius-xl': '20px',
+      '--radius-md': '10px',
+      '--radius-lg': '16px',
+      '--radius-xl': '22px',
       '--transition': 'all 0.2s ease-in-out',
       '--shadow-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
     }}>

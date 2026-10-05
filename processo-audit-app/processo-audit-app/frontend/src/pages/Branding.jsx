@@ -107,10 +107,10 @@ const Branding = () => {
 
   return (
     <div className={styles.container}>
-      <h1>Configurações de Branding</h1>
-      <p className={styles.subtitle}>
-        Customize a identidade visual da sua empresa
-      </p>
+      <div className="cw-banner">
+        <h1>Configurações de Branding</h1>
+        <p>Customize a identidade visual da sua empresa</p>
+      </div>
 
       {error && <div className={styles.alert}>{error}</div>}
       {success && <div className={styles.success}>{success}</div>}

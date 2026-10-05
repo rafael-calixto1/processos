@@ -29,17 +29,12 @@ const Login = () => {
   };
 
   return (
-    <div 
-      className={styles.container}
-      style={{ backgroundColor: branding?.background_color || '#ffffff' }}
-    >
+    <div className={styles.container}>
       <div className={styles.card}>
-        {branding?.logo_url && (
-          <img src={branding.logo_url} alt="Logo" className={styles.logo} />
-        )}
-        
+        <img src="/logo-cw-full.png" alt={branding?.company_name || 'Conexão Web'} className={styles.logo} />
+
         <h1 className={styles.title}>
-          {branding?.company_name || 'Processo Audit'}
+          {branding?.company_name || 'Conexão Web'}
         </h1>
         <p className={styles.subtitle}>Sistema de Gerenciamento de Processos</p>
 
