@@ -1,9 +1,44 @@
 import React, { useState } from 'react';
 import { authAPI } from '../api/index';
 import styles from './Settings.module.css';
-import { FiLock, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiLock, FiCheck, FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 
-const Settings = () => {
+/* ── Campo de senha com botão de exibir/ocultar ── */
+const PasswordField = ({ id, label, value, onChange, placeholder, hint, autoComplete }) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className={styles.formGroup}>
+      <label htmlFor={id}>{label}</label>
+      <div className={styles.inputWrap}>
+        <input
+          id={id}
+          name={id}
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          required
+        />
+        <button
+          type="button"
+          className={styles.toggleBtn}
+          onClick={() => setVisible(v => !v)}
+          aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}
+          aria-pressed={visible}
+          title={visible ? 'Ocultar senha' : 'Mostrar senha'}
+        >
+          {visible ? <FiEyeOff /> : <FiEye />}
+        </button>
+      </div>
+      {hint && <span className={styles.hint}>{hint}</span>}
+    </div>
+  );
+};
+
+/* ── Seção: Segurança ── */
+const SecuritySection = () => {
   const [passwords, setPasswords] = useState({
     currentPassword: '',
     newPassword: '',
@@ -17,6 +52,8 @@ const Settings = () => {
     const { name, value } = e.target;
     setPasswords({ ...passwords, [name]: value });
   };
+
+  const isComplete = Object.values(passwords).every(v => v.trim() !== '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,78 +88,96 @@ const Settings = () => {
   };
 
   return (
-    <div className={styles.container}>
-      <h1>Configurações da Conta</h1>
-      <p className={styles.subtitle}>Gerencie sua conta e segurança</p>
-
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <FiLock className={styles.icon} />
-          <h2>Alterar Senha</h2>
+    <>
+      {error && (
+        <div className={styles.error} role="alert">
+          <FiAlertCircle /> {error}
         </div>
-        
-        {error && (
-          <div className={styles.error}>
-            <FiAlertCircle /> {error}
-          </div>
-        )}
-        {success && (
-          <div className={styles.success}>
-            <FiCheck /> {success}
-          </div>
-        )}
+      )}
+      {success && (
+        <div className={styles.success} role="status">
+          <FiCheck /> {success}
+        </div>
+      )}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.formGroup}>
-            <label htmlFor="currentPassword">Senha Atual</label>
-            <input
-              id="currentPassword"
-              name="currentPassword"
-              type="password"
-              value={passwords.currentPassword}
-              onChange={handleChange}
-              required
-              placeholder="Digite sua senha atual"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <PasswordField
+          id="currentPassword"
+          label="Senha Atual"
+          value={passwords.currentPassword}
+          onChange={handleChange}
+          placeholder="Digite sua senha atual"
+          autoComplete="current-password"
+        />
 
-          <div className={styles.formGroup}>
-            <label htmlFor="newPassword">Nova Senha</label>
-            <input
-              id="newPassword"
-              name="newPassword"
-              type="password"
-              value={passwords.newPassword}
-              onChange={handleChange}
-              required
-              placeholder="Digite a nova senha"
-            />
-          </div>
+        <PasswordField
+          id="newPassword"
+          label="Nova Senha"
+          value={passwords.newPassword}
+          onChange={handleChange}
+          placeholder="Digite a nova senha"
+          hint="Use pelo menos 6 caracteres."
+          autoComplete="new-password"
+        />
 
-          <div className={styles.formGroup}>
-            <label htmlFor="confirmPassword">Confirmar Nova Senha</label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={passwords.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Repita a nova senha"
-            />
-          </div>
+        <PasswordField
+          id="confirmPassword"
+          label="Confirmar Nova Senha"
+          value={passwords.confirmPassword}
+          onChange={handleChange}
+          placeholder="Repita a nova senha"
+          autoComplete="new-password"
+        />
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={loading}
+        <div className={styles.formActions}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading || !isComplete}
           >
-            {loading ? 'Alterando...' : 'Atualizar Senha'}
+            {loading
+              ? <><span className={styles.btnSpinner} aria-hidden="true" /> Alterando...</>
+              : 'Atualizar Senha'}
           </button>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </>
   );
 };
+
+/* Novos grupos (Perfil, Notificações…) entram aqui como mais um item. */
+const SETTINGS_SECTIONS = [
+  {
+    id: 'security',
+    title: 'Alterar Senha',
+    description: 'Mantenha sua conta protegida atualizando sua senha periodicamente.',
+    Icon: FiLock,
+    Component: SecuritySection,
+  },
+];
+
+const Settings = () => (
+  <div className={styles.container}>
+    <div className={styles.pageHeader}>
+      <h1>Configurações da Conta</h1>
+      <p className={styles.subtitle}>Gerencie sua conta e segurança</p>
+    </div>
+
+    <div className={styles.sections}>
+      {SETTINGS_SECTIONS.map(({ id, title, description, Icon, Component }) => (
+        <section key={id} className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionIcon}><Icon /></span>
+            <div className={styles.sectionHeading}>
+              <h2>{title}</h2>
+              {description && <p className={styles.sectionDesc}>{description}</p>}
+            </div>
+          </div>
+          <Component />
+        </section>
+      ))}
+    </div>
+  </div>
+);
 
 export default Settings;
