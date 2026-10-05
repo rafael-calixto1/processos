@@ -13,6 +13,10 @@ import ticketRoutes from './src/routes/tickets.js';
 import labelRoutes from './src/routes/labels.js';
 import hubsoftRoutes from './src/routes/hubsoft.js';
 import referralRoutes from './src/routes/referral.js';
+import estoqueRoutes from './src/routes/estoque.js';
+import osRoutes from './src/routes/os.js';
+import painelRoutes from './src/routes/painel.js';
+import { tecnicosRouter, fornecedoresRouter, equipamentosRouter } from './src/routes/cadastros.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
 
 dotenv.config();
@@ -60,6 +64,12 @@ app.use('/api', ticketRoutes);
 app.use('/api', labelRoutes);
 app.use('/api/hubsoft', hubsoftRoutes);
 app.use('/api/referral', referralRoutes);
+app.use('/api/estoque', estoqueRoutes);
+app.use('/api/os', osRoutes);
+app.use('/api/painel', painelRoutes);
+app.use('/api/tecnicos', tecnicosRouter);
+app.use('/api/fornecedores', fornecedoresRouter);
+app.use('/api/equipamentos', equipamentosRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

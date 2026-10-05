@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BrandingProvider } from './context/BrandingContext';
@@ -27,6 +27,16 @@ import HubsoftLoginSearch from './pages/HubsoftLoginSearch';
 import ConsultaFatura from './pages/ConsultaFatura';
 import Referral from './pages/Referral';
 import Leads from './pages/Leads';
+const EstoqueItens = lazy(() => import('./pages/EstoqueItens'));
+const EstoqueEntrada = lazy(() => import('./pages/EstoqueEntrada'));
+const EstoqueRetirada = lazy(() => import('./pages/EstoqueRetirada'));
+const EstoqueDevolucao = lazy(() => import('./pages/EstoqueDevolucao'));
+const EstoquePosse = lazy(() => import('./pages/EstoquePosse'));
+const EstoqueCadastros = lazy(() => import('./pages/EstoqueCadastros'));
+const EstoqueEquipamentos = lazy(() => import('./pages/EstoqueEquipamentos'));
+const PainelEstoque = lazy(() => import('./pages/PainelEstoque'));
+const OrdensServico = lazy(() => import('./pages/OrdensServico'));
+const OrdemServicoDetalhe = lazy(() => import('./pages/OrdemServicoDetalhe'));
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -75,6 +85,31 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+// Restringe a rota a perfis específicos (o backend aplica as mesmas regras)
+const RoleRoute = ({ roles, children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><div className="spinner" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!roles.includes(user.role)) return <Navigate to={user.role === 'tecnico' ? '/os' : '/dashboard'} replace />;
+  return <Layout><Suspense fallback={<div className="spinner" />}>{children}</Suspense></Layout>;
+};
+
+const STAFF = ['admin', 'estoque'];
+const WITH_TECNICO = ['admin', 'estoque', 'tecnico'];
+const stockRoutes = [
+  ['/estoque/painel', PainelEstoque, STAFF],
+  ['/estoque/itens', EstoqueItens, STAFF],
+  ['/estoque/entrada', EstoqueEntrada, STAFF],
+  ['/estoque/retirada', EstoqueRetirada, STAFF],
+  ['/estoque/devolucao', EstoqueDevolucao, WITH_TECNICO],
+  ['/estoque/posse', EstoquePosse, WITH_TECNICO],
+  ['/estoque/posse/:id', EstoquePosse, STAFF],
+  ['/estoque/equipamentos', EstoqueEquipamentos, STAFF],
+  ['/estoque/cadastros', EstoqueCadastros, STAFF],
+  ['/os', OrdensServico, WITH_TECNICO],
+  ['/os/:id', OrdemServicoDetalhe, WITH_TECNICO],
+];
+
 function AppContent() {
   const { user } = useAuth();
 
@@ -101,7 +136,7 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <Layout>
-              <Dashboard />
+              {user?.role === 'tecnico' ? <Navigate to="/os" replace /> : <Dashboard />}
             </Layout>
           </ProtectedRoute>
         }
@@ -348,6 +383,11 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+
+      {/* Estoque e Ordens de Serviço */}
+      {stockRoutes.map(([path, Page, roles]) => (
+        <Route key={path} path={path} element={<RoleRoute roles={roles}><Page /></RoleRoute>} />
+      ))}
 
       {/* Rotas não encontradas */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

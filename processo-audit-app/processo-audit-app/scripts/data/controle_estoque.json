@@ -1,0 +1,3166 @@
+{
+ "itens": [
+  {
+   "nome": "CONECTOR FAST SC/APC - P/ FIBRA OPTICA (VERDE) (FASTWIRELESS)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "BATERIA DE LITIO ZTE R311",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "BUCHA DE ACABAMENTO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "tipo": "Insumo",
+   "minimo": 500.0
+  },
+  {
+   "nome": "CAIXA DE EMENDA 12FO SVT-2 BANDEJAS 2F FCX12F-PQ-VT - 2FLEX",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM LETRA B",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM LETRA D",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM LETRA L",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM LETRA N",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 0",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 1",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 2",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 3",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 4",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 5",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 6",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 7",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 8",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM NUMERO 9",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CARENAGEM PARA AR CONDICIONADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CEO 00003 01 CAIXA EMENDA OPT 24F (AER/SUBT) V.01",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CLIVADOR DE PRECISAO 1 PASSO P/FIBRAS OPTICAS CT-08 FUJICURA",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "COLA QUENTE",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CONECTOR FAST SC/APC - P/ FIBRA OPTICA (VERDE) (2FLEX)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CONFINAMENTO DE 01 CORREDOR QU",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CONJUNTO LEITOS - CW TELECOM",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CONVERSOR DE MIDIA TP-LINK MC220L GIGABIT SFP",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CORDAO OPTICO SC/APC-SC/UPC-SM-3MM-02,5M(SIMPLEX)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CORDAO OPTICO SC/UPC-SC/UPC-SM-3MM-02,5M(SIMPLEX)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CRUZETA RESERVA DE CABO - CG3",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "Capacete de segurança",
+   "tipo": "EPI",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*16 AZUL",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*16 DESCONECTORIZADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*16 VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*2 AZUL",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*2 DESCONECTORIZADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*2 VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*4 AZUL",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*4 DESCONECTORIZADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*4 VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*8 AZUL",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*8 DESCONECTORIZADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC- SPLITTER 1*8 VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "DO-PLC-SPLITTER 1*8 DESCONECTORIZADO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "ENFORCA GATO / ABRAÇADEIRA",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FECHO DE ACO INOX DE 3/4",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FITA DE ACO 3/4 PROV",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FITA ISOLANTE (PRETA)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FITA ISOLANTE (VERDE)",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FONTE NOBREAK 24V/6A RETIFICADORA RACK OU BANCADA",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "FORRO DATA CEILING - CW TELECO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "GBIC 1.25G BIDI SFP 1550/1310NM 10 KM DDM",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "GER PARA 4 MAQUINAS DE AR DE 3",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "GRAMPO GRI CABO",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "IDENTIFICADOR P/ DROP OPTICO VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "LATERAL FIXA 44UX1100 SIMPLES",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "LATERAL MOVEL 44UX1100MM SIMPL",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "MAQUINA DE ESPINAR",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "MAQUINA DE FUSÃO FIBRA OPTICA INNO VIEW 6S",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "MINI CAIXA DE EMENDA OPTICA 12FO AER/SUBT",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "MINI RACK MONTADO 5U X 370MM M RM 537 - INTELBRAS",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PASSA FIO",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PDU DC 20 DISJUNTORES  SENDO 2",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PDU MONO/BIFASICO 12 TOM NBR20",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PE PROTETOR DE EMENDA 60X1.0MM (RI)",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PILHA RECARREGAVEL AA 2500MAH C/2",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PILHA RECARREGAVEL AAA 1000MAH C/2",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "PINO JACK RJ-45 8X8 CAT5E CONEX 1000 C/ 50 PC",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "RACK NO TOOLS 44UX600X1100MM,",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "RS485 CONNECTING CABLE 2M FOR R311",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "SCC800-S2",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "SWITCH 8 PORTAS - SG 800 Q+ INTELBRAS",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "TAMPA CEGA ABS ANTI-CHAMA V0 P",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "TINTA PARA METAL SPRAY VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "TINTA PARA PLASTICO E ACRILICO SPRAY VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "TINTA PARA SPRAY VERDE",
+   "tipo": "Insumo",
+   "minimo": 20.0
+  },
+  {
+   "nome": "XFS-FS-MINI-MAQUINA DE FUSAO",
+   "tipo": "Patrimônio",
+   "minimo": 20.0
+  },
+  {
+   "nome": "CABO 6FO",
+   "tipo": "-",
+   "minimo": 12000.0
+  },
+  {
+   "nome": "CABO 12FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "CABO 24FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "CABO 36FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "CABO 48FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "CABO 72FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "CABO 144FO",
+   "tipo": null,
+   "minimo": 500.0
+  },
+  {
+   "nome": "ROLDANA PLASTICA VERDE PRESLEY",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "BAP 03",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "BAP 04",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "ANEL T HORIZONTAL (ANEL DE CTO)",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "PARAFUSO DE BAP",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "ARRUELA PARA BAP",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "PORCA PARA BAP",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "CORDOALHA",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "CORDOALHA DIELÉTRICA",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "CIA-10",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "PLAQUETA DE IDENTIFICACAO",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "ARAME DE ESPINAR",
+   "tipo": null,
+   "minimo": 20.0
+  },
+  {
+   "nome": "ALÇA AZUL",
+   "tipo": null,
+   "minimo": 100.0
+  },
+  {
+   "nome": "CAIXA TERMINAL ÓPTICA CTO MULTI 8",
+   "tipo": null,
+   "minimo": null
+  },
+  {
+   "nome": "CTO POCKET 12F",
+   "tipo": null,
+   "minimo": null
+  },
+  {
+   "nome": "CAIXA DE EMENDA ÓPTICA 24 A 96 FIBRAS SVT (CEO MULTI 4 SAÍDAS)",
+   "tipo": null,
+   "minimo": null
+  },
+  {
+   "nome": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "tipo": null,
+   "minimo": null
+  },
+  {
+   "nome": "ACOPLADOR VERDE",
+   "tipo": null,
+   "minimo": null
+  },
+  {
+   "nome": "CARACTER ADESIVO 15MM LETRA V",
+   "tipo": null,
+   "minimo": 2.0
+  },
+  {
+   "nome": "(CTO PEQUENA) CAIXA TERMINAL ÓPTICA NAP POP",
+   "tipo": null,
+   "minimo": null
+  }
+ ],
+ "fornecedores": [
+  {
+   "nome": "PRYSMIAN",
+   "cnpj": "61.150.751/0001-89",
+   "contato": null
+  },
+  {
+   "nome": "PRESLEY",
+   "cnpj": null,
+   "contato": null
+  },
+  {
+   "nome": "CDR",
+   "cnpj": null,
+   "contato": null
+  }
+ ],
+ "tecnicos": [
+  {
+   "nome": "JOEL",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "DOUGLAS",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "DIOGO",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "LUIZ",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "JONATHAN",
+   "tipo": "TERCEIRIZADA",
+   "obs": null
+  },
+  {
+   "nome": "PAI DO JONATHAN",
+   "tipo": "TERCEIRIZADA",
+   "obs": "NÃO PRESTA MAIS SERVIÇOS"
+  },
+  {
+   "nome": "PETERSON JESUS",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "GIOVANI",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "MICHAEL",
+   "tipo": "TECNICO",
+   "obs": null
+  },
+  {
+   "nome": "PAULINHO",
+   "tipo": "TERCEIRIZADA",
+   "obs": null
+  }
+ ],
+ "compras": [
+  {
+   "ordem": 11,
+   "data": "2026-08-28",
+   "material": "CABO 6FO",
+   "qtd": 51000.0,
+   "fornecedor": "PRYSMIAN",
+   "obs": "comprado por Denis",
+   "nf": "35265550021000570445618181226707086115075100913",
+   "tipo_volume": "BOBINA",
+   "qtd_volumes": 17.0,
+   "medida": 3000.0
+  },
+  {
+   "ordem": 12,
+   "data": "2026-08-28",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 1000.0,
+   "fornecedor": "CDR",
+   "obs": "já tinha em estoque",
+   "nf": null,
+   "tipo_volume": null,
+   "qtd_volumes": null,
+   "medida": null
+  },
+  {
+   "ordem": 13,
+   "data": "2026-08-29",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 1380.0,
+   "fornecedor": "CDR",
+   "obs": "balanço de estoque",
+   "nf": null,
+   "tipo_volume": null,
+   "qtd_volumes": null,
+   "medida": null
+  },
+  {
+   "ordem": 14,
+   "data": "2026-08-29",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 28.0,
+   "fornecedor": "CDR",
+   "obs": "balanço de estoque",
+   "nf": null,
+   "tipo_volume": null,
+   "qtd_volumes": null,
+   "medida": null
+  },
+  {
+   "ordem": 15,
+   "data": "2026-08-29",
+   "material": "CABO 12FO",
+   "qtd": 9000.0,
+   "fornecedor": "PRYSMIAN",
+   "obs": "balanço de estoque",
+   "nf": null,
+   "tipo_volume": "BOBINA",
+   "qtd_volumes": 3.0,
+   "medida": 3000.0
+  },
+  {
+   "ordem": 16,
+   "data": "2026-09-09",
+   "material": "CARACTER ADESIVO 15MM LETRA V",
+   "qtd": 5.0,
+   "fornecedor": "CDR",
+   "obs": "comprado por Rafael",
+   "nf": "35261550011000038135912028121221091132176100016",
+   "tipo_volume": "UNIDADE",
+   "qtd_volumes": null,
+   "medida": null
+  },
+  {
+   "ordem": 17,
+   "data": "2026-09-09",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 1000.0,
+   "fornecedor": "CDR",
+   "obs": "comprado por Rafael",
+   "nf": "35261550011000038135912028121221091132176100016",
+   "tipo_volume": "UNIDADE",
+   "qtd_volumes": null,
+   "medida": null
+  },
+  {
+   "ordem": 18,
+   "data": "2026-09-09",
+   "material": "ALÇA AZUL",
+   "qtd": 200.0,
+   "fornecedor": "CDR",
+   "obs": "comprado por Rafael",
+   "nf": "35261550011000038135912028121221091132176100016",
+   "tipo_volume": "UNIDADE",
+   "qtd_volumes": null,
+   "medida": null
+  }
+ ],
+ "lotes": [
+  {
+   "codigo": "N72024",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N65552",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N72025",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N74424",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N65549",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-06",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-07",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-08",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-09",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-10",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-11",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-12",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-13",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-14",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-15",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-16",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-011-17",
+   "material": "CABO 6FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N65548",
+   "material": "CABO 12FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "N71680",
+   "material": "CABO 12FO",
+   "qtd": 3000.0
+  },
+  {
+   "codigo": "BOB-015-03",
+   "material": "CABO 12FO",
+   "qtd": 3000.0
+  }
+ ],
+ "retiradas": [
+  {
+   "linha": 11,
+   "data": "2026-06-19",
+   "material": "CABO 6FO",
+   "qtd": 300.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 12,
+   "data": "2026-06-19",
+   "material": "",
+   "qtd": 6.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 13,
+   "data": "2026-08-10",
+   "material": "ALÇA AZUL",
+   "qtd": 16.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 14,
+   "data": "2026-08-10",
+   "material": "TINTA PARA SPRAY VERDE",
+   "qtd": 1.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 15,
+   "data": "2026-08-10",
+   "material": "DO-PLC- SPLITTER 1*4 VERDE",
+   "qtd": 1.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 16,
+   "data": "2026-08-11",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 3.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 17,
+   "data": "2026-08-13",
+   "material": "DO-PLC- SPLITTER 1*8 VERDE",
+   "qtd": 2.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 18,
+   "data": "2026-08-13",
+   "material": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "qtd": 10.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 19,
+   "data": "2026-08-18",
+   "material": "CABO 12FO",
+   "qtd": 308.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 20,
+   "data": "2026-08-22",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 1.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 21,
+   "data": "2026-08-22",
+   "material": "PLAQUETA DE IDENTIFICACAO",
+   "qtd": 20.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 22,
+   "data": "2026-08-22",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 23,
+   "data": "2026-08-22",
+   "material": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 24,
+   "data": "2026-08-22",
+   "material": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 25,
+   "data": "2026-08-22",
+   "material": "DO-PLC- SPLITTER 1*16 VERDE",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 26,
+   "data": "2026-08-24",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 15.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 27,
+   "data": "2026-08-27",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 12.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 28,
+   "data": "2026-08-27",
+   "material": "BAP 03",
+   "qtd": 7.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 29,
+   "data": "2026-08-27",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 13.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 30,
+   "data": "2026-08-27",
+   "material": "PORCA PARA BAP",
+   "qtd": 13.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 31,
+   "data": "2026-08-27",
+   "material": "CIA-10",
+   "qtd": 22.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 32,
+   "data": "2026-09-02",
+   "material": "DO-PLC- SPLITTER 1*16 VERDE",
+   "qtd": 3.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 33,
+   "data": "2026-09-02",
+   "material": "ACOPLADOR VERDE",
+   "qtd": 16.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 39,
+   "data": "2026-08-31",
+   "material": "DO-PLC- SPLITTER 1*8 VERDE",
+   "qtd": 4.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 40,
+   "data": "2026-08-31",
+   "material": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "qtd": 8.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 41,
+   "data": "2026-09-01",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 2.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 42,
+   "data": "2026-09-01",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 43,
+   "data": "2026-09-01",
+   "material": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "qtd": 8.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 44,
+   "data": "2026-09-01",
+   "material": "DO-PLC- SPLITTER 1*8 VERDE",
+   "qtd": 3.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 45,
+   "data": "2026-09-01",
+   "material": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "qtd": 4.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 46,
+   "data": "2026-09-01",
+   "material": "CAIXA TERMINAL ÓPTICA CTO MULTI 8",
+   "qtd": 1.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 47,
+   "data": "2026-09-01",
+   "material": "CAIXA DE EMENDA ÓPTICA 24 A 96 FIBRAS SVT (CEO MULTI 4 SAÍDAS)",
+   "qtd": 1.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 48,
+   "data": "2026-09-01",
+   "material": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "qtd": 6.0,
+   "usuario": "PETERSON JESUS",
+   "lote": null
+  },
+  {
+   "linha": 49,
+   "data": "2026-09-02",
+   "material": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "qtd": 10.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 50,
+   "data": "2026-09-02",
+   "material": "DO-PLC- SPLITTER 1*16 VERDE",
+   "qtd": 3.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 51,
+   "data": "2026-09-02",
+   "material": "ACOPLADOR VERDE",
+   "qtd": 24.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 52,
+   "data": "2026-09-02",
+   "material": "ANEL T HORIZONTAL (ANEL DE CTO)",
+   "qtd": 20.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 53,
+   "data": "2026-08-31",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 54,
+   "data": "2026-08-31",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 250.0,
+   "usuario": "JOEL",
+   "lote": null
+  },
+  {
+   "linha": 58,
+   "data": "2026-09-02",
+   "material": "CABO 12FO",
+   "qtd": 3000.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 59,
+   "data": "2026-09-03",
+   "material": "FITA ISOLANTE (VERDE)",
+   "qtd": 2.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 60,
+   "data": "2026-09-03",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 16.0,
+   "usuario": "LUIZ",
+   "lote": null
+  },
+  {
+   "linha": 61,
+   "data": "2026-09-05",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 41.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 62,
+   "data": "2026-09-05",
+   "material": "BAP 03",
+   "qtd": 6.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 63,
+   "data": "2026-09-05",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 20.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 64,
+   "data": "2026-09-05",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 65,
+   "data": "2026-09-11",
+   "material": "DO-PLC- SPLITTER 1*8 VERDE",
+   "qtd": 1.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 66,
+   "data": "2006-09-11",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 30.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 67,
+   "data": "2026-09-15",
+   "material": "(CTO PEQUENA) CAIXA TERMINAL ÓPTICA NAP POP",
+   "qtd": 6.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 68,
+   "data": "2026-09-15",
+   "material": "CAIXA DE EMENDA ÓPTICA 24 A 96 FIBRAS SVT (CEO MULTI 4 SAÍDAS)",
+   "qtd": 4.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 69,
+   "data": "2026-09-17",
+   "material": "KIT 00008 DERIVADOR PARA CEO SVT",
+   "qtd": 6.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 70,
+   "data": "2026-09-17",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 3.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 71,
+   "data": "2026-09-17",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 90.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 72,
+   "data": "2026-09-17",
+   "material": "ANEL T HORIZONTAL (ANEL DE CTO)",
+   "qtd": 20.0,
+   "usuario": "DOUGLAS",
+   "lote": null
+  },
+  {
+   "linha": 73,
+   "data": "2026-09-18",
+   "material": "CTO / CAIXA TERMINAL ÓPTICA (GRANDE)",
+   "qtd": 2.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 74,
+   "data": "2026-09-19",
+   "material": "CORDOALHA",
+   "qtd": 1000.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 75,
+   "data": "2026-09-19",
+   "material": "BAP 03",
+   "qtd": 70.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 76,
+   "data": "2026-09-19",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 70.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 77,
+   "data": "2026-09-19",
+   "material": "ARRUELA PARA BAP",
+   "qtd": 70.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 78,
+   "data": "2026-09-19",
+   "material": "CABO 72FO",
+   "qtd": 922.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 80,
+   "data": "2026-09-19",
+   "material": "CIA-10",
+   "qtd": 40.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 81,
+   "data": "2026-09-29",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 100.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 82,
+   "data": "2026-09-29",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 21.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 83,
+   "data": "2026-09-29",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 2.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 84,
+   "data": "2026-09-29",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 50.0,
+   "usuario": "DIOGO",
+   "lote": null
+  },
+  {
+   "linha": 85,
+   "data": "2026-09-29",
+   "material": "DO-PLC- SPLITTER 1*8 VERDE",
+   "qtd": 3.0,
+   "usuario": "PETERSON JESUS",
+   "lote": null
+  }
+ ],
+ "terceirizada": [
+  {
+   "linha": 11,
+   "data": "2026-04-18",
+   "material": "CABO 6FO",
+   "qtd": 300.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 12,
+   "data": "2026-04-18",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 50.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 13,
+   "data": "2026-04-22",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 250.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 14,
+   "data": "2026-04-22",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 15,
+   "data": "2026-04-22",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 120.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 16,
+   "data": "2026-04-22",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 4.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 17,
+   "data": "2026-04-22",
+   "material": "PLAQUETA DE IDENTIFICACAO",
+   "qtd": 100.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 18,
+   "data": "2026-04-22",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 19,
+   "data": "2026-04-24",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 20,
+   "data": "2026-04-24",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 250.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 21,
+   "data": "2026-04-28",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 22,
+   "data": "2026-04-28",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 120.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 23,
+   "data": "2026-04-28",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 24,
+   "data": "2026-05-19",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 25,
+   "data": "2026-05-19",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 4.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 26,
+   "data": "2026-05-26",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 5.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 27,
+   "data": "2026-05-26",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 275.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 28,
+   "data": "2026-05-28",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 20.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 29,
+   "data": "2026-05-28",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 30,
+   "data": "2026-05-28",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 150.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 31,
+   "data": "2026-05-29",
+   "material": "ALÇA AZUL",
+   "qtd": 25.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 32,
+   "data": "2026-05-29",
+   "material": "CABO 48FO",
+   "qtd": 300.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 33,
+   "data": "2026-02-06",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 20.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 34,
+   "data": "2026-12-06",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 35,
+   "data": "2026-06-19",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 36,
+   "data": "2026-02-06",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 20.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 37,
+   "data": "2026-12-06",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 3.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 38,
+   "data": "2026-12-06",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 100.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 39,
+   "data": "2026-06-25",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 450.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 40,
+   "data": "2026-06-25",
+   "material": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "qtd": 3000.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 41,
+   "data": "2026-06-25",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 4.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 42,
+   "data": "2026-06-25",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 400.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 43,
+   "data": "2026-06-25",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 44,
+   "data": "2026-07-14",
+   "material": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "qtd": 2394.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 45,
+   "data": "2026-07-14",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 12.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 46,
+   "data": "2026-07-27",
+   "material": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "qtd": 350.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 47,
+   "data": "2026-07-28",
+   "material": "CORDOALHA",
+   "qtd": 500.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 48,
+   "data": "2026-07-28",
+   "material": "CIA-10",
+   "qtd": 100.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 49,
+   "data": "2026-07-28",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 400.0,
+   "usuario": "PAI DO JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 50,
+   "data": "2026-07-07",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 20.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 51,
+   "data": "2026-08-18",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 86.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 52,
+   "data": "2026-08-20",
+   "material": "CABO 48FO",
+   "qtd": 1205.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 53,
+   "data": "2026-08-20",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 10.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 54,
+   "data": "2026-08-20",
+   "material": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "qtd": 6000.0,
+   "usuario": "JOEL",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 55,
+   "data": "2026-08-22",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 250.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 56,
+   "data": "2026-08-22",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 57,
+   "data": "2026-08-22",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 3.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 58,
+   "data": "2026-08-22",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 59,
+   "data": "2026-08-22",
+   "material": "BAP 04",
+   "qtd": 40.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 60,
+   "data": "2026-08-22",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 40.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 61,
+   "data": "2026-08-22",
+   "material": "PORCA PARA BAP",
+   "qtd": 40.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 62,
+   "data": "2026-08-22",
+   "material": "CIA-10",
+   "qtd": 40.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 63,
+   "data": "2026-08-22",
+   "material": "CABO OPTICO GELEADO SM 6FO FIG 8 DROP METRO 2KM - TRANSCI",
+   "qtd": 3000.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 64,
+   "data": "2026-08-22",
+   "material": "CABO 12FO",
+   "qtd": 1622.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 65,
+   "data": "2026-08-22",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 3.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 66,
+   "data": "2026-08-22",
+   "material": "PLAQUETA DE IDENTIFICACAO",
+   "qtd": 110.0,
+   "usuario": "",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 68,
+   "data": "2026-08-28",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 69,
+   "data": "2026-08-28",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 180.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 70,
+   "data": "2026-08-28",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 71,
+   "data": "2026-08-22",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 110.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 72,
+   "data": "2026-08-22",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 178.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 73,
+   "data": "2026-08-22",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 60.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 74,
+   "data": "2026-08-22",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 54.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 75,
+   "data": "2026-08-22",
+   "material": "BAP 03",
+   "qtd": 29.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 76,
+   "data": "2026-08-22",
+   "material": "CIA-10",
+   "qtd": 18.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 77,
+   "data": "2026-08-22",
+   "material": "CABO 12FO",
+   "qtd": 1622.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 78,
+   "data": "2026-08-22",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 29.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 79,
+   "data": "2026-08-22",
+   "material": "PARAFUSO DE BAP",
+   "qtd": 29.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 80,
+   "data": "2026-08-22",
+   "material": "PORCA PARA BAP",
+   "qtd": 29.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 81,
+   "data": "2026-08-22",
+   "material": "CABO 6FO",
+   "qtd": 2075.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 82,
+   "data": "2026-08-22",
+   "material": "CABO 12FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "obs": null
+  },
+  {
+   "linha": 83,
+   "data": "2026-08-22",
+   "material": "CABO 12FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": "N71680",
+   "obs": null
+  },
+  {
+   "linha": 84,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": "N72024",
+   "obs": "PEGO POR JOEL"
+  },
+  {
+   "linha": 85,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 150.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": "PEGO POR JOEL"
+  },
+  {
+   "linha": 86,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": "PEGO POR JOEL"
+  },
+  {
+   "linha": 87,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": "PEGO POR JOEL"
+  },
+  {
+   "linha": 88,
+   "data": "2026-09-11",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": "N65552",
+   "obs": null
+  },
+  {
+   "linha": 89,
+   "data": "2026-09-11",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 90,
+   "data": "2026-09-11",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 120.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 91,
+   "data": "2026-09-11",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 250.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 92,
+   "data": "2026-09-15",
+   "material": "CABO 6FO",
+   "qtd": 3007.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "obs": null
+  },
+  {
+   "linha": 93,
+   "data": "2026-09-15",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 94,
+   "data": "2026-09-15",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 120.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 95,
+   "data": "2026-09-15",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 96,
+   "data": "2026-09-15",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 250.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 97,
+   "data": "2026-09-17",
+   "material": "CABO 6FO",
+   "qtd": 3006.0,
+   "usuario": "JONATHAN",
+   "lote": "N74424",
+   "obs": null
+  },
+  {
+   "linha": 98,
+   "data": "2026-09-17",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 120.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 99,
+   "data": "2026-09-17",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 100,
+   "data": "2026-10-05",
+   "material": "CABO 6FO",
+   "qtd": 3000.0,
+   "usuario": "JONATHAN",
+   "lote": "N65549",
+   "obs": null
+  },
+  {
+   "linha": 101,
+   "data": "2026-10-05",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 120.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 102,
+   "data": "2026-10-05",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 100.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 103,
+   "data": "2026-10-05",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  },
+  {
+   "linha": 104,
+   "data": "2026-10-05",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 1.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "obs": null
+  }
+ ],
+ "devolucoes": [
+  {
+   "linha": 11,
+   "data": "2026-08-28",
+   "material": "CABO 6FO",
+   "qtd": 200.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 12,
+   "data": "2026-08-24",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 290.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 13,
+   "data": "2026-08-24",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 72.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 14,
+   "data": "2026-08-24",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 46.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 15,
+   "data": "2026-08-24",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 18.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 16,
+   "data": "2026-08-24",
+   "material": "CIA-10",
+   "qtd": 22.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 17,
+   "data": "2026-08-24",
+   "material": "BAP 03",
+   "qtd": 11.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 18,
+   "data": "2026-08-24",
+   "material": "PORCA PARA BAP",
+   "qtd": 11.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 19,
+   "data": "2026-08-24",
+   "material": "PORCA PARA BAP",
+   "qtd": 11.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 20,
+   "data": "2026-08-24",
+   "material": "ARAME DE ESPINAR",
+   "qtd": 1.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 21,
+   "data": "2026-08-24",
+   "material": "CABO 6FO",
+   "qtd": 925.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 22,
+   "data": "2026-08-24",
+   "material": "CABO 12FO",
+   "qtd": 310.0,
+   "usuario": "PAULINHO",
+   "lote": null,
+   "estado": "usado",
+   "obs": null
+  },
+  {
+   "linha": 23,
+   "data": "2026-08-25",
+   "material": "CABO 6FO",
+   "qtd": 300.0,
+   "usuario": "DOUGLAS",
+   "lote": null,
+   "estado": "novo",
+   "obs": null
+  },
+  {
+   "linha": 24,
+   "data": "2026-08-25",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 191.0,
+   "usuario": "DOUGLAS",
+   "lote": null,
+   "estado": "novo",
+   "obs": null
+  },
+  {
+   "linha": 25,
+   "data": "2026-09-02",
+   "material": "CABO 12FO",
+   "qtd": 264.0,
+   "usuario": "JONATHAN",
+   "lote": "N71680",
+   "estado": "novo",
+   "obs": null
+  },
+  {
+   "linha": 26,
+   "data": "2026-08-25",
+   "material": "CABO 12FO",
+   "qtd": 382.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "estado": "novo",
+   "obs": null
+  }
+ ],
+ "baixas": [
+  {
+   "linha": 11,
+   "data": "2026-08-29",
+   "material": "CABO 12FO",
+   "qtd": 1368.0,
+   "usuario": "JONATHAN",
+   "lote": "N71680",
+   "os": "CEO 637",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 12,
+   "data": "2026-08-29",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 57.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 637",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 13,
+   "data": "2026-08-29",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 38.4,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 637",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 14,
+   "data": "2026-08-29",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 32.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 637",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 15,
+   "data": "2026-08-29",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 96.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 637",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 16,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 370.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 17,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 25.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 18,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 19.2,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 19,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 16.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 20,
+   "data": "2026-09-04",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 48.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": null,
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 21,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 190.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 22,
+   "data": "2026-09-02",
+   "material": "CABO 12FO",
+   "qtd": 1433.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "os": "CEO AV BRASIL ROMPIMENTO SHIBATA",
+   "obs": "rompimento",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 23,
+   "data": "2026-09-02",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 110.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO AV BRASIL ROMPIMENTO SHIBATA",
+   "obs": "rompimento",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 24,
+   "data": "2026-09-02",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 66.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO AV BRASIL ROMPIMENTO SHIBATA",
+   "obs": "rompimento",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 25,
+   "data": "2026-09-02",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 55.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO AV BRASIL ROMPIMENTO SHIBATA",
+   "obs": "rompimento",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 26,
+   "data": "2026-09-02",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 165.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO AV BRASIL ROMPIMENTO SHIBATA",
+   "obs": "rompimento",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 27,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 1107.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 28,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 54.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 29,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 33.6,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 30,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 28.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 31,
+   "data": "2026-09-04",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 84.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 32,
+   "data": "2026-09-04",
+   "material": "CABO 12FO",
+   "qtd": 262.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 33,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 10.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 34,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 7.2,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 35,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 6.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 36,
+   "data": "2026-09-04",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 18.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 613",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 37,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 1717.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 634",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 38,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 67.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 634",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 39,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 36.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 634",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 40,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 30.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 634",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 41,
+   "data": "2026-09-04",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 90.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 634",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 42,
+   "data": "2026-09-04",
+   "material": "CABO 6FO",
+   "qtd": 1382.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 629",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 43,
+   "data": "2026-09-04",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 67.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 629",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 44,
+   "data": "2026-09-04",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 36.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 629",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 45,
+   "data": "2026-09-04",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 30.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 629",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 46,
+   "data": "2026-09-04",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 90.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 629",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 47,
+   "data": "2026-08-28",
+   "material": "CABO 6FO",
+   "qtd": 1577.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 635",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 48,
+   "data": "2026-08-27",
+   "material": "CABO 6FO",
+   "qtd": 306.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 633",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 49,
+   "data": "2026-08-27",
+   "material": "CABO 12FO",
+   "qtd": 481.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "os": "CEO 633",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 50,
+   "data": "2026-08-27",
+   "material": "CABO 12FO",
+   "qtd": 442.0,
+   "usuario": "JONATHAN",
+   "lote": "N65548",
+   "os": "CEO 614",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 51,
+   "data": "2026-08-27",
+   "material": "CABO 6FO",
+   "qtd": 965.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 614",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 52,
+   "data": "2026-09-11",
+   "material": "CABO 12FO",
+   "qtd": 1368.0,
+   "usuario": "JONATHAN",
+   "lote": "N71680",
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 53,
+   "data": "2026-08-11",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 77.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 54,
+   "data": "2026-09-11",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 48.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 55,
+   "data": "2026-09-11",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 120.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 56,
+   "data": "2026-09-08",
+   "material": "CABO 6FO",
+   "qtd": 1398.0,
+   "usuario": "JONATHAN",
+   "lote": "N72024",
+   "os": "CEO 618",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 57,
+   "data": "2026-09-08",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 61.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 618",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 58,
+   "data": "2026-09-15",
+   "material": "CABO 6FO",
+   "qtd": 1648.0,
+   "usuario": "JONATHAN",
+   "lote": "N65552",
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 59,
+   "data": "2026-09-15",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 80.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 60,
+   "data": "2026-09-15",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 45.6,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 61,
+   "data": "2026-09-15",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 38.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 62,
+   "data": "2026-09-15",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 114.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 63,
+   "data": "2026-09-14",
+   "material": "CABO 6FO",
+   "qtd": 1313.0,
+   "usuario": "JONATHAN",
+   "lote": "N65552",
+   "os": "CEO 610",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 64,
+   "data": "2026-09-14",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 55.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 610",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 65,
+   "data": "2026-09-14",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 43.2,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 610",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 66,
+   "data": "2026-09-14",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 36.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 610",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 67,
+   "data": "2026-09-14",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 108.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 610",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 68,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 632.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 609",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 69,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 345.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 620",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 70,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 350.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 620",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 71,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 540.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 620",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 72,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 100.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 620",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 73,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 563.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 74,
+   "data": "2026-09-16",
+   "material": "CABO 6FO",
+   "qtd": 477.0,
+   "usuario": "JONATHAN",
+   "lote": "N72025",
+   "os": "CEO 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 75,
+   "data": "2026-09-16",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 147.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609 / 620 / 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 76,
+   "data": "2026-09-16",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 102.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609 / 620 / 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 77,
+   "data": "2026-09-16",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 85.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609 / 620 / 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 78,
+   "data": "2026-09-16",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 255.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO 609 / 620 / 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 79,
+   "data": "2026-09-18",
+   "material": "CABO 6FO",
+   "qtd": 1010.0,
+   "usuario": "JONATHAN",
+   "lote": "N74424",
+   "os": "CEO 608",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 80,
+   "data": "2026-09-18",
+   "material": "CABO 6FO",
+   "qtd": 1570.0,
+   "usuario": "JONATHAN",
+   "lote": "N74424",
+   "os": "CEO 564",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 81,
+   "data": "2026-09-18",
+   "material": "CABO 6FO",
+   "qtd": 426.0,
+   "usuario": "JONATHAN",
+   "lote": "N74424",
+   "os": "CEO 628",
+   "obs": "lançamento aéreo\n",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 82,
+   "data": "2026-09-18",
+   "material": "ALCA CABO CCE 6,4 A 7,4 MM BRANCA",
+   "qtd": 151.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO  608 / 564 / 628",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 83,
+   "data": "2026-09-18",
+   "material": "FITA DE ACO 3/4 PROV",
+   "qtd": 103.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO  608 / 564 / 628",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 84,
+   "data": "2026-09-18",
+   "material": "FECHO DE ACO INOX DE 3/4",
+   "qtd": 86.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO  608 / 564 / 628",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  },
+  {
+   "linha": 85,
+   "data": "2026-09-18",
+   "material": "ROLDANA PLASTICA VERDE PRESLEY",
+   "qtd": 258.0,
+   "usuario": "JONATHAN",
+   "lote": null,
+   "os": "CEO  608 / 564 / 628",
+   "obs": "lançamento aéreo",
+   "origem": "terceirizada"
+  }
+ ]
+}

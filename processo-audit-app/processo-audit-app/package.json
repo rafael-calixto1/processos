@@ -8,7 +8,10 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:init": "node scripts/initDb.js",
-    "seed:cameras": "node scripts/seed_suporte_cameras.js"
+    "seed:cameras": "node scripts/seed_suporte_cameras.js",
+    "test": "DB_NAME=processo_audit_test node --test tests/",
+    "migrate:estoque": "node scripts/migrate_estoque.js",
+    "seed:estoque": "node scripts/seed_estoque.js"
   },
   "keywords": [],
   "author": "",

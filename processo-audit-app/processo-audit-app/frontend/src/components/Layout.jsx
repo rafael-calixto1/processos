@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
-  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift, FileSearch
+  CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift, FileSearch,
+  BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -22,6 +23,20 @@ const menuItems = [
   { label: 'Leads', path: '/leads', Icon: Users },
 ];
 
+// Estoque e OS — visibilidade por perfil (o backend aplica as mesmas regras)
+const STAFF = ['admin', 'estoque'];
+const estoqueItems = [
+  { label: 'Painel de uso', path: '/estoque/painel', Icon: BarChart3, roles: STAFF },
+  { label: 'Itens', path: '/estoque/itens', Icon: Package, roles: STAFF },
+  { label: 'Entrada / Compra', path: '/estoque/entrada', Icon: PackagePlus, roles: STAFF },
+  { label: 'Retirada', path: '/estoque/retirada', Icon: PackageMinus, roles: STAFF },
+  { label: 'Devolução', path: '/estoque/devolucao', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
+  { label: 'Ordens de Serviço', path: '/os', Icon: ClipboardList, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minhas OS' } },
+  { label: 'Estoque por técnico', path: '/estoque/posse', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
+  { label: 'Equipamentos', path: '/estoque/equipamentos', Icon: Drill, roles: STAFF },
+  { label: 'Cadastros', path: '/estoque/cadastros', Icon: Contact, roles: STAFF },
+];
+
 const adminItems = [
   { label: 'Branding', path: '/branding', Icon: Palette },
   { label: 'Usuários', path: '/users', Icon: Users },
@@ -35,6 +50,8 @@ const toolItems = [
   { label: 'Integração Hotspot Google Sheet', path: '/ferramentas/hotspot-google-sheets', Icon: Wrench },
   { label: 'Criar Config do Hotspot', path: '/ferramentas/criar-config-hotspot', Icon: Wrench },
 ];
+
+const ROLE_LABELS = { admin: 'Administrador', estoque: 'Estoque', tecnico: 'Técnico', manager: 'Gestor', viewer: 'Visualizador' };
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -53,7 +70,12 @@ const Layout = ({ children }) => {
   const primary = branding?.primary_color || '#0ba52b';
   const secondary = branding?.secondary_color || '#bbf804';
 
-  const allItems = user?.role === 'admin' ? [...menuItems, ...adminItems] : menuItems;
+  const isTecnico = user?.role === 'tecnico';
+  // Técnico de campo só vê o que é dele (OS, posse, devolução)
+  const allItems = isTecnico ? [] : user?.role === 'admin' ? [...menuItems, ...adminItems] : menuItems;
+  const stockItems = estoqueItems
+    .filter((i) => i.roles.includes(user?.role))
+    .map((i) => ({ ...i, label: i.labelByRole?.[user?.role] || i.label }));
 
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -88,7 +110,7 @@ const Layout = ({ children }) => {
             <div className={styles.headerRight}>
               <div className={styles.userInfo}>
                 <span className={styles.userName}>{user.name}</span>
-                <span className={styles.userRole}>{user.role}</span>
+                <span className={styles.userRole}>{ROLE_LABELS[user.role] || user.role}</span>
               </div>
               <div className={styles.avatar} title={user.name}>
                 {initials}
@@ -122,6 +144,31 @@ const Layout = ({ children }) => {
               ))}
             </div>
 
+            {stockItems.length > 0 && (
+              <>
+                <div className={styles.navSectionLabel}>Estoque e OS</div>
+                <div className={styles.navSection}>
+              {stockItems.map(({ label, path, Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
+                  onClick={() => setSidebarOpen(false)}
+                  style={isActive(path) ? { color: primary } : {}}
+                >
+                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                    <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
+                  </span>
+                  <span className={styles.navLabel}>{label}</span>
+                  {isActive(path) && <ChevronRight size={14} className={styles.activeArrow} />}
+                </Link>
+              ))}
+                </div>
+              </>
+            )}
+
+            {!isTecnico && (
+            <>
             <div className={styles.navSectionLabel}>Ferramentas</div>
             <div className={styles.navSection}>
               {toolItems.map(({ label, path, Icon }) => (
@@ -140,6 +187,8 @@ const Layout = ({ children }) => {
                 </Link>
               ))}
             </div>
+            </>
+            )}
           </nav>
         </aside>
 

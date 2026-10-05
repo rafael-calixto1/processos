@@ -412,3 +412,19 @@ Para dúvidas ou problemas:
 
 **Versão:** 1.0.0  
 **Última atualização:** 2024
+
+## Estoque (almoxarifado) e Ordens de Serviço
+
+Perfis novos em `users.role`: `estoque` (almoxarife) e `tecnico` (campo). `admin` acessa tudo.
+
+```bash
+npm run migrate:estoque                  # aplica (idempotente); `node scripts/migrate_estoque.js --down` reverte
+SEED_PASSWORD=... npm run seed:estoque   # só dev: itens, lotes, técnicos, OS e usuários estoque@demo.local / tecnico@demo.local
+npm test                                 # usa o banco `processo_audit_test` (crie antes: CREATE DATABASE processo_audit_test)
+```
+
+- Variáveis: as mesmas do `.env` (DB_*, JWT_SECRET). Os testes só rodam em banco com "test" no nome.
+- **Posse parcial**: `estoque_lotes.saldo_atual` = almoxarifado + soma de `estoque_posse` (lote × técnico). Saldos só mudam via `estoqueService` (transação + `FOR UPDATE`): retirada altera só a posse; baixa em OS reduz posse e saldo; devolução volta ao almoxarifado; estorno devolve à posse de quem consumiu.
+- **Câmera/QR**: `getUserMedia` exige HTTPS ou `localhost`; a digitação manual do código está sempre disponível.
+- Usuário `tecnico` precisa estar vinculado a um registro em Estoque → Cadastros (1:1). Equipes terceirizadas não têm login; o usuário `estoque` lança as baixas por elas.
+- Rotas: `/api/estoque/*`, `/api/os/*`, `/api/tecnicos`, `/api/fornecedores`, `/api/equipamentos`, `/api/painel/uso`.
