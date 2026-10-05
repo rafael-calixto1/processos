@@ -67,9 +67,6 @@ const Layout = ({ children }) => {
 
   const isActive = (path) => location.pathname === path;
 
-  const primary = branding?.primary_color || '#0ba52b';
-  const secondary = branding?.secondary_color || '#bbf804';
-
   const isTecnico = user?.role === 'tecnico';
   // Técnico de campo só vê o que é dele (OS, posse, devolução)
   const allItems = isTecnico ? [] : user?.role === 'admin' ? [...menuItems, ...adminItems] : menuItems;
@@ -83,7 +80,7 @@ const Layout = ({ children }) => {
 
   return (
     <div className={styles.layout}>
-      <header className={styles.header} style={{ backgroundColor: primary, borderBottom: `3px solid ${secondary}` }}>
+      <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button
@@ -94,15 +91,9 @@ const Layout = ({ children }) => {
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            <Link to="/dashboard" className={styles.logo}>
-              {branding?.logo_url ? (
-                <img src={branding.logo_url} alt="Logo" className={styles.logoImage} />
-              ) : (
-                <div className={styles.logoPlaceholder} style={{ color: primary }}>
-                  {branding?.company_name?.charAt(0).toUpperCase() || 'P'}
-                </div>
-              )}
-              <span className={styles.logoText}>{branding?.company_name || 'Processo Audit'}</span>
+            <Link to="/dashboard" className={styles.logo} title={branding?.company_name || 'Conexão Web'}>
+              <img src="/logo-cw-full.png" alt={branding?.company_name || 'Conexão Web'} className={styles.logoImage} />
+              <span className={styles.logoText}>Processos</span>
             </Link>
           </div>
 
@@ -133,9 +124,8 @@ const Layout = ({ children }) => {
                   to={path}
                   className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                   onClick={() => setSidebarOpen(false)}
-                  style={isActive(path) ? { color: primary } : {}}
                 >
-                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                  <span className={styles.navIcon}>
                     <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
                   </span>
                   <span className={styles.navLabel}>{label}</span>
@@ -154,9 +144,8 @@ const Layout = ({ children }) => {
                   to={path}
                   className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                   onClick={() => setSidebarOpen(false)}
-                  style={isActive(path) ? { color: primary } : {}}
                 >
-                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                  <span className={styles.navIcon}>
                     <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
                   </span>
                   <span className={styles.navLabel}>{label}</span>
@@ -177,9 +166,8 @@ const Layout = ({ children }) => {
                   to={path}
                   className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                   onClick={() => setSidebarOpen(false)}
-                  style={isActive(path) ? { color: primary } : {}}
                 >
-                  <span className={styles.navIcon} style={isActive(path) ? { color: primary } : {}}>
+                  <span className={styles.navIcon}>
                     <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
                   </span>
                   <span className={styles.navLabel}>{label}</span>

@@ -276,7 +276,7 @@
   letter-spacing: 0.02em;
 }
 
-.admin { background: #dbeafe; color: #1d4ed8; }
+.admin { background: var(--accent-color); color: var(--secondary-color); }
 .manager { background: var(--warning-light); color: #92400e; }
 .estoque { background: var(--success-light); color: #166534; }
 .tecnico { background: var(--violet-light); color: var(--violet); }

@@ -5,7 +5,7 @@
   --secondary-color: #bbf804;
   --secondary-dark: #a3dc02;
   --accent-color: #274518;
-  --background-color: #f5f7f5;
+  --background-color: #f2f6f0;
   --surface-color: #ffffff;
   --text-dark: #1a1a1a;
   --text-medium: #374151;
@@ -29,10 +29,10 @@
   --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.06);
   --shadow-primary: 0 4px 14px rgba(11, 165, 43, 0.25);
   --radius-sm: 6px;
-  --radius: 8px;
+  --radius: 10px;
   --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
   --radius-full: 9999px;
   --transition: all 0.2s ease;
   --transition-slow: all 0.35s ease;
@@ -74,7 +74,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #b7c9b0;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -83,9 +83,9 @@ body {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.25;
-  color: var(--text-dark);
+  color: var(--accent-color);
   letter-spacing: -0.01em;
 }
 
@@ -107,7 +107,7 @@ button, .btn {
   font-weight: 500;
   padding: 0.5625rem 1.125rem;
   border: 1.5px solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: var(--transition);
   display: inline-flex;
@@ -358,15 +358,15 @@ thead {
 }
 
 th {
-  background-color: #f9fafb;
+  background-color: var(--primary-light);
   padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-light);
-  border-bottom: 1px solid var(--border-color);
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--secondary-color);
 }
 
 td {
@@ -380,7 +380,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background-color: #fafffe;
+  background-color: #f4fbe6;
 }
 
 tbody tr:last-child td {
@@ -574,4 +574,96 @@ tbody tr:last-child td {
   height: 5px;
   border-right: 2px solid rgba(0, 0, 0, 0.2);
   border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+/* ── Banner de página (identidade Conexão Web) ───────────────
+   Aplica-se ao cabeçalho de cada página (filho direto da raiz da página). */
+.cw-banner,
+main > div > div > [class*="_header_"],
+main > div > div > [class*="_pageHeader_"],
+main > div > div > [class*="_head_"] {
+  position: relative;
+  overflow: hidden;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(105deg, rgba(18, 48, 10, 0.96) 0%, rgba(39, 69, 24, 0.88) 55%, rgba(11, 165, 43, 0.55) 100%),
+    url('/fundo-app.png') center / cover no-repeat;
+  border-bottom: 3px solid var(--secondary-color);
+  box-shadow: var(--shadow-md);
+  color: #fff;
+}
+
+.cw-banner h1, .cw-banner h2,
+main > div > div > [class*="_header_"] h1,
+main > div > div > [class*="_pageHeader_"] h1,
+main > div > div > [class*="_head_"] h1,
+main > div > div > [class*="_header_"] [class*="itle"],
+main > div > div > [class*="_pageHeader_"] [class*="itle"],
+main > div > div > [class*="_head_"] [class*="itle"] {
+  color: #fff;
+  margin: 0;
+}
+
+.cw-banner p,
+main > div > div > [class*="_header_"] p,
+main > div > div > [class*="_pageHeader_"] p,
+main > div > div > [class*="_head_"] p,
+main > div > div > [class*="_header_"] [class*="ubtitle"],
+main > div > div > [class*="_pageHeader_"] [class*="ubtitle"],
+main > div > div > [class*="_head_"] [class*="_sub_"] {
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0.25rem 0 0;
+}
+
+/* botões dentro do banner: translúcidos; primários em lima */
+.cw-banner button,
+main > div > div > [class*="_header_"] button,
+main > div > div > [class*="_pageHeader_"] button,
+main > div > div > [class*="_head_"] button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+}
+
+.cw-banner button:hover:not(:disabled),
+main > div > div > [class*="_header_"] button:hover:not(:disabled),
+main > div > div > [class*="_pageHeader_"] button:hover:not(:disabled),
+main > div > div > [class*="_head_"] button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.cw-banner button[class*="rimary"],
+main > div > div > [class*="_header_"] button[class*="rimary"],
+main > div > div > [class*="_pageHeader_"] button[class*="rimary"],
+main > div > div > [class*="_head_"] button[class*="rimary"] {
+  background: var(--secondary-color);
+  color: var(--accent-color);
+  border-color: var(--secondary-dark);
+  font-weight: 700;
+}
+
+.cw-banner button[class*="rimary"]:hover:not(:disabled),
+main > div > div > [class*="_header_"] button[class*="rimary"]:hover:not(:disabled),
+main > div > div > [class*="_pageHeader_"] button[class*="rimary"]:hover:not(:disabled),
+main > div > div > [class*="_head_"] button[class*="rimary"]:hover:not(:disabled) {
+  background: var(--secondary-dark);
+  color: var(--accent-color);
+}
+
+main > div > div > [class*="_header_"] [class*="headerIcon"] {
+  background: var(--secondary-color);
+  color: var(--accent-color);
+}
+
+@media (max-width: 480px) {
+  .cw-banner,
+  main > div > div > [class*="_header_"],
+  main > div > div > [class*="_pageHeader_"],
+  main > div > div > [class*="_head_"] {
+    padding: 1rem;
+  }
 }
