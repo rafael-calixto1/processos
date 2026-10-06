@@ -19,6 +19,15 @@ import {
   sincronizarLeads
 } from '../services/referral/referralService.js';
 import { verifyToken } from '../middlewares/auth.js';
+import { buscarPlano } from '../config/planos.js';
+
+const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+const cpfValido = (v) => {
+  const d = soDigitos(v);
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const dv = (n) => { let s = 0; for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i); const r = 11 - (s % 11); return r >= 10 ? 0 : r; };
+  return dv(9) === Number(d[9]) && dv(10) === Number(d[10]);
+};
 
 const router = express.Router();
 
@@ -98,12 +107,22 @@ router.post('/public/register-indication', async (req, res) => {
       bairro,
       cidade,
       estado,
-      email
+      email,
+      plano_codigo
     } = req.body;
 
     if (!referrer_code || !nome || !cpf) {
       return res.status(400).json({ error: 'Código do indicador, nome e CPF são obrigatórios' });
     }
+
+    // CNPJ não entra no fluxo de planos: atendimento comercial envia proposta
+    if (soDigitos(cpf).length === 14) {
+      return res.status(400).json({ error: 'Para empresas (CNPJ), entre em contato para receber uma proposta.' });
+    }
+    if (!cpfValido(cpf)) return res.status(400).json({ error: 'CPF inválido.' });
+
+    const plano = plano_codigo ? buscarPlano(plano_codigo) : null;
+    if (plano_codigo && !plano) return res.status(400).json({ error: 'Plano selecionado inválido.' });
 
     // 1. Validar se o indicador existe
     const indicador = await buscarClientePorCodigo(referrer_code);
@@ -143,8 +162,12 @@ router.post('/public/register-indication', async (req, res) => {
         cpf_indicado,
         telefone_indicado,
         endereco_indicado,
+        plano_codigo,
+        plano_nome,
+        plano_velocidade,
+        plano_valor,
         status
-      ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 'pendente')`,
+      ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente')`,
       [
         indicador.codigo_cliente,
         indicador.nome_razaosocial,
@@ -152,7 +175,11 @@ router.post('/public/register-indication', async (req, res) => {
         nome,
         cpf,
         telefone,
-        [endereco, numero, complemento].filter(Boolean).join(', ') + ` - ${bairro || ''}, ${cidade || ''}/${estado || ''}`
+        [endereco, numero, complemento].filter(Boolean).join(', ') + ` - ${bairro || ''}, ${cidade || ''}/${estado || ''}`,
+        plano?.codigo ?? null,
+        plano?.nome ?? null,
+        plano ? `Contrate ${plano.contrate}, leve ${plano.leve} Mega` : null,
+        plano?.valor ?? null
       ]
     );
 

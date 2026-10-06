@@ -77,6 +77,13 @@ const STATUS_ICONS = {
   manual:               FlaskConical,
 };
 
+const PlanoCell = ({ lead }) => (lead.plano_nome ? (
+  <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.25 }}>
+    <strong>{lead.plano_nome}</strong>
+    <span className={styles.muted}>{lead.plano_velocidade} · R$ {Number(lead.plano_valor).toFixed(2).replace('.', ',')}</span>
+  </span>
+) : <span className={styles.muted}>—</span>);
+
 const StatusBadge = ({ status }) => {
   // Status desconhecido cai no pill neutro em vez de perder a formatação
   const variant = styles['status_' + status] ?? styles.status_default;
@@ -334,6 +341,7 @@ const Leads = () => {
                     <th className={styles.colCpf}>CPF</th>
                     <th className={styles.colPhone}>Telefone</th>
                     <th className={styles.colBairro}>Bairro</th>
+                    <th>Plano escolhido</th>
                     <th className={styles.colIndicador}>Indicador</th>
                     <th className={styles.colDate}>Data</th>
                     <th className={styles.colStatus}>Status</th>
@@ -360,6 +368,9 @@ const Leads = () => {
                         </td>
                         <td className={styles.colBairro}>
                           <span className={styles.muted}>{toTitleCase(bairro) || '—'}</span>
+                        </td>
+                        <td>
+                          <PlanoCell lead={lead} />
                         </td>
                         <td className={styles.colIndicador}>
                           {toTitleCase(lead.nome_indicador)}
@@ -422,6 +433,10 @@ const Leads = () => {
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>Bairro</span>
                         <span className={styles.muted}>{toTitleCase(bairro) || '—'}</span>
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <span className={styles.cardLabel}>Plano</span>
+                        <PlanoCell lead={lead} />
                       </div>
                       <div className={styles.cardMetaItem}>
                         <span className={styles.cardLabel}>Indicador</span>
@@ -504,6 +519,17 @@ const Leads = () => {
                 <Section title="Contato">
                   <Row label="Telefone" value={detailLead.telefone_indicado} mono />
                   <Row label="CPF" value={detailLead.cpf_indicado} mono />
+                </Section>
+
+                <Section title="Plano escolhido">
+                  {detailLead.plano_nome ? (
+                    <>
+                      <Row label="Plano" value={detailLead.plano_nome} />
+                      <Row label="Velocidade" value={detailLead.plano_velocidade} />
+                      <Row label="Valor" value={`R$ ${Number(detailLead.plano_valor).toFixed(2).replace('.', ',')}/mês`} />
+                      <Row label="Fidelidade" value="12 meses (valor não altera após)" />
+                    </>
+                  ) : <Row label="Plano" value="Não informado" />}
                 </Section>
 
                 <Section title="Endereço">
