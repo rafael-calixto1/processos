@@ -18,6 +18,7 @@ import {
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const defaultStart = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
@@ -136,17 +137,15 @@ const FleetDashboard = () => {
         </div>
         <div className={styles.filterRow} style={{ marginBottom: 0 }}>
           <label htmlFor="fleet-start">De</label>
-          <input
+          <DateInput
             id="fleet-start"
-            type="date"
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
             className={styles.dateInput}
           />
           <label htmlFor="fleet-end">Até</label>
-          <input
+          <DateInput
             id="fleet-end"
-            type="date"
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
             className={styles.dateInput}

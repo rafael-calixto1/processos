@@ -4,6 +4,7 @@ import styles from './Fleet.module.css';
 import MaintenanceDashboard from './MaintenanceDashboard';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const LIMIT = 15;
 
 /* ════════════════════════════════════════════════════════
@@ -177,7 +178,7 @@ const MaintenanceHistory = ({ cars, types }) => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
-                <input type="date" className={styles.input} value={form.maintenance_date} onChange={e => setForm({ ...form, maintenance_date: e.target.value })} required />
+                <DateInput className={styles.input} value={form.maintenance_date} onChange={e => setForm({ ...form, maintenance_date: e.target.value })} required />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Km na Manutenção</label>

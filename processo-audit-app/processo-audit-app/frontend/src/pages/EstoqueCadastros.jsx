@@ -12,7 +12,7 @@ const TecnicoForm = ({ inicial, onClose, onSaved, notify }) => {
   const submit = async (e) => {
     e.preventDefault(); setBusy(true);
     try {
-      const body = { ...f, usuario_id: f.tipo === 'interno' && f.usuario_id ? Number(f.usuario_id) : null };
+      const body = { ...f, usuario_id: f.usuario_id ? Number(f.usuario_id) : null };
       if (f.id) await cadastrosAPI.atualizarTecnico(f.id, body); else await cadastrosAPI.criarTecnico(body);
       notify('Cadastro salvo'); onSaved();
     } catch (err) { notify(err.message, 'err'); } finally { setBusy(false); }
@@ -24,8 +24,8 @@ const TecnicoForm = ({ inicial, onClose, onSaved, notify }) => {
         <Field label="Tipo"><Select value={f.tipo} onChange={set('tipo')}><option value="interno">Interno</option><option value="terceirizado">Equipe terceirizada</option></Select></Field>
         {f.tipo === 'terceirizado' && <Field label="Empresa / equipe"><input value={f.empresa || ''} onChange={set('empresa')} /></Field>}
         <Field label="Telefone"><input value={f.telefone || ''} onChange={set('telefone')} /></Field>
-        {f.tipo === 'interno' && (
-          <Field label="Usuário de login (perfil Técnico)" hint="Crie o usuário em Usuários com o papel “Técnico de campo”. Equipes terceirizadas não têm login.">
+        {(
+          <Field label="Usuário de login (perfil Técnico)" hint="Crie o usuário em Usuários com o papel “Técnico de campo” para o técnico/equipe acessar as próprias OS e posse.">
             <Select value={f.usuario_id || ''} onChange={set('usuario_id')}>
               <option value="">Sem vínculo</option>
               {f.usuario_id && !(usuarios.data || []).some((u) => u.id === f.usuario_id) && <option value={f.usuario_id}>{f.usuario_email || 'Usuário atual'}</option>}

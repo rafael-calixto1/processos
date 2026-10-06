@@ -31,6 +31,7 @@ const estoqueItems = [
   { label: 'Entrada / Compra', path: '/estoque/entrada', Icon: PackagePlus, roles: STAFF },
   { label: 'Retirada', path: '/estoque/retirada', Icon: PackageMinus, roles: STAFF },
   { label: 'Devolução', path: '/estoque/devolucao', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
+  { label: 'Aprovar devoluções', path: '/estoque/devolucoes', Icon: CheckSquare, roles: STAFF },
   { label: 'Ordens de Serviço', path: '/os', Icon: ClipboardList, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minhas OS' } },
   { label: 'Estoque por técnico', path: '/estoque/posse', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
   { label: 'Equipamentos', path: '/estoque/equipamentos', Icon: Drill, roles: STAFF },

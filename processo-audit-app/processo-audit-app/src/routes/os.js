@@ -39,6 +39,13 @@ router.post('/', staff, handle(async (req, res) => {
   res.status(201).json(await svc.criarOS(req.body, req.userId));
 }));
 
+// sugestões de serviços já lançados (autocompletar)
+router.get('/servicos/sugestoes', handle(async (req, res) => {
+  const [rows] = await pool.query(
+    'SELECT descricao, COUNT(*) AS n FROM os_servicos GROUP BY descricao ORDER BY n DESC, descricao LIMIT 40');
+  res.json(rows.map((r) => r.descricao));
+}));
+
 router.get('/:id', handle(async (req, res) => {
   const os = await carregarOS(req);
   const [materiais] = await pool.query(
@@ -51,9 +58,12 @@ router.get('/:id', handle(async (req, res) => {
   const [historico] = await pool.query(
     `SELECT h.*, u.name AS usuario_nome FROM os_historico_status h LEFT JOIN users u ON u.id = h.usuario_id
      WHERE h.os_id = ? ORDER BY h.id`, [os.id]);
+  const [servicos] = await pool.query(
+    `SELECT sv.id, sv.descricao, sv.quantidade, sv.criado_em, u.name AS usuario_nome
+     FROM os_servicos sv LEFT JOIN users u ON u.id = sv.criado_por WHERE sv.os_id = ? ORDER BY sv.id`, [os.id]);
   const totais = { metros: 0, pecas: 0 };
   for (const m of materiais) if (!m.estorno_id) totais[m.unidade === 'metros' ? 'metros' : 'pecas'] += Number(m.quantidade);
-  res.json({ ...os, materiais, historico, totais });
+  res.json({ ...os, materiais, servicos: servicos.map((x) => ({ ...x, quantidade: Number(x.quantidade) })), historico, totais });
 }));
 
 router.put('/:id', staff, handle(async (req, res) => {
@@ -75,6 +85,14 @@ router.put('/:id', staff, handle(async (req, res) => {
 
 router.post('/:id/materiais', handle(async (req, res) => {
   res.status(201).json(await svc.baixarEmOS({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
+}));
+
+router.post('/:id/servicos', handle(async (req, res) => {
+  res.status(201).json(await svc.adicionarServico({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
+}));
+
+router.delete('/:id/servicos/:servicoId', handle(async (req, res) => {
+  res.json(await svc.removerServico({ os_id: Number(req.params.id), servico_id: Number(req.params.servicoId) }, actorOf(req)));
 }));
 
 router.post('/:id/fechar', handle(async (req, res) => {

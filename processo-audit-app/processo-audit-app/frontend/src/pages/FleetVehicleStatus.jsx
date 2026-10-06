@@ -13,6 +13,7 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
+import DateInput from '../components/DateInput';
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const defaultStart = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
@@ -106,16 +107,16 @@ const FleetVehicleStatus = () => {
         </div>
         <div className={styles.filterRow} style={{ marginBottom: 0 }}>
           <label htmlFor="status-start">De</label>
-          <input
+          <DateInput
             id="status-start"
-            type="date" value={startDate}
+            value={startDate}
             onChange={e => setStartDate(e.target.value)}
             className={styles.dateInput}
           />
           <label htmlFor="status-end">Até</label>
-          <input
+          <DateInput
             id="status-end"
-            type="date" value={endDate}
+            value={endDate}
             onChange={e => setEndDate(e.target.value)}
             className={styles.dateInput}
           />

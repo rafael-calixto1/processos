@@ -3,46 +3,15 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, CheckCircle2, Undo2 } from 'lucide-react';
 import { osAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
-import { AsyncState, useLoad, useToasts, Modal, Field, LoteInput, ConfirmDialog, ConsequenceBaixa, OsStatusBadge, PrioridadeBadge,
+import { OsFechamentoModal, ServicosCard } from '../components/estoque/OsFechamento';
+import { AsyncState, useLoad, useToasts, Field, ConfirmDialog, OsStatusBadge, PrioridadeBadge,
   fmtData, fmtDataHora, fmtQtd, fmtNum, styles as s } from '../components/estoque/ui';
-
-const AddMaterial = ({ os, onClose, onDone, notify }) => {
-  const [codigo, setCodigo] = useState('');
-  const [lote, setLote] = useState(null);
-  const [qtd, setQtd] = useState('');
-  const [confirmar, setConfirmar] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const max = lote ? (lote.minha_posse ?? lote.posse?.find((p) => p.tecnico_id === os.tecnico_id)?.quantidade) : null;
-  const enviar = async () => {
-    setBusy(true);
-    try { await osAPI.adicionarMaterial(os.id, { codigo: lote.codigo, quantidade: Number(qtd) }); notify('Material lançado na OS'); onDone(); }
-    catch (e) { notify(e.message, 'err'); setConfirmar(false); } finally { setBusy(false); }
-  };
-  return (
-    <Modal title="Adicionar material usado" onClose={onClose}>
-      <form className={s.form} onSubmit={(e) => { e.preventDefault(); setConfirmar(true); }}>
-        <ConsequenceBaixa />
-        <LoteInput value={codigo} onChange={setCodigo} onLote={setLote} />
-        {lote && <div className={`${s.callout} ${s.calloutKeep}`}><span><b className={s.mono}>{lote.codigo}</b> — {lote.item_nome}<br />Em posse de {os.tecnico_nome}: <b>{max != null ? fmtQtd(max, lote.unidade) : 'nenhum'}</b></span></div>}
-        <Field label={`Quantidade usada (${lote?.unidade === 'metros' ? 'metros' : 'peças'})`}>
-          <input type="number" min="0.01" step="0.01" max={max ?? undefined} value={qtd} onChange={(e) => setQtd(e.target.value)} required disabled={!lote} />
-        </Field>
-        <button className={`${s.btn} ${s.btnPrimary}`} disabled={!lote || !qtd}>Revisar baixa</button>
-      </form>
-      {confirmar && (
-        <ConfirmDialog title="Confirmar baixa em OS" danger confirmLabel="Baixar material" busy={busy} onConfirm={enviar} onCancel={() => setConfirmar(false)}>
-          <p style={{ margin: 0 }}>Lançar <b>{fmtQtd(qtd, lote.unidade)}</b> do lote <b className={s.mono}>{lote.codigo}</b> na OS #{os.numero}?</p>
-          <ConsequenceBaixa />
-        </ConfirmDialog>
-      )}
-    </Modal>
-  );
-};
 
 const OrdemServicoDetalhe = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const staff = ['admin', 'estoque'].includes(user?.role);
+  const isTecnico = user?.role === 'tecnico';
   const { loading, error, data: os, reload } = useLoad(() => osAPI.get(id), [id]);
   const [add, setAdd] = useState(false);
   const [fechar, setFechar] = useState(false);
@@ -101,6 +70,7 @@ const OrdemServicoDetalhe = () => {
                   </tr>))}</tbody></table></div>
             </AsyncState>
           </div>
+          <ServicosCard os={os} podeEditar={aberta} onChanged={reload} notify={notify} />
           <div className={s.card}>
             <h2 className={s.cardTitle}>Histórico de status</h2>
             <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>{os.historico.map((h) => (
@@ -109,13 +79,8 @@ const OrdemServicoDetalhe = () => {
         </>)}
       </AsyncState>
 
-      {add && os && <AddMaterial os={os} notify={notify} onClose={() => setAdd(false)} onDone={() => { setAdd(false); reload(); }} />}
-      {fechar && (
-        <ConfirmDialog title="Fechar OS" confirmLabel="Fechar OS" busy={busy} onCancel={() => setFechar(false)}
-          onConfirm={() => exec(() => osAPI.fechar(os.id), 'OS concluída')}>
-          <p style={{ margin: 0 }}>Após fechar, a OS fica <b>somente leitura</b>. Confira se todos os materiais usados foram lançados ({fmtNum(os.totais.metros)} m e {fmtNum(os.totais.pecas)} peças até agora).</p>
-        </ConfirmDialog>
-      )}
+      {add && os && <OsFechamentoModal os={os} isTecnico={isTecnico} notify={notify} onClose={() => setAdd(false)} onDone={() => { setAdd(false); reload(); }} />}
+      {fechar && os && <OsFechamentoModal os={os} isTecnico={isTecnico} fechar notify={notify} onClose={() => setFechar(false)} onDone={() => { setFechar(false); reload(); }} />}
       {cancelar && (
         <ConfirmDialog title="Cancelar OS" danger confirmLabel="Cancelar OS" busy={busy} onCancel={() => setCancelar(false)}
           onConfirm={() => exec(() => osAPI.cancelar(os.id), 'OS cancelada')}><p style={{ margin: 0 }}>A OS será cancelada e ficará somente leitura.</p></ConfirmDialog>

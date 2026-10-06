@@ -33,6 +33,7 @@ const validarItem = (b) => {
   if (!['metros', 'pecas'].includes(b.unidade)) throw new svc.ServiceError(400, 'Unidade deve ser metros ou peças');
   const min = Number(b.estoque_minimo ?? 0);
   if (!Number.isFinite(min) || min < 0) throw new svc.ServiceError(400, 'Estoque mínimo inválido');
+  if (b.unidade === 'pecas' && !Number.isInteger(min)) throw new svc.ServiceError(400, 'Estoque mínimo de itens em unidades deve ser inteiro');
   return min;
 };
 
@@ -115,6 +116,16 @@ router.get('/lotes/:codigo', handle(async (req, res) => {
   res.json({ ...lote, em_posse: Number(lote.em_posse), no_almoxarifado: Number(lote.saldo_atual) - Number(lote.em_posse), posse });
 }));
 
+router.put('/lotes/:id', staff, handle(async (req, res) => {
+  res.json(await svc.editarLote({ lote_id: req.params.id, codigo: req.body.codigo }));
+}));
+router.post('/lotes/:id/descartar', staff, handle(async (req, res) => {
+  res.json(await svc.descartarLote({ lote_id: req.params.id, ...req.body }, req.userId));
+}));
+router.delete('/lotes/:id', staff, handle(async (req, res) => {
+  res.json(await svc.excluirLote({ lote_id: req.params.id }));
+}));
+
 /* ───── Retirada / Devolução ───── */
 router.post('/retiradas', staff, handle(async (req, res) => {
   res.status(201).json(await svc.retirar(req.body, req.userId));
@@ -122,9 +133,42 @@ router.post('/retiradas', staff, handle(async (req, res) => {
 
 router.post('/devolucoes', handle(async (req, res) => {
   const body = { ...req.body };
-  if (req.userRole === 'tecnico') body.tecnico_id = req.tecnicoId; // técnico só devolve o que é dele
-  else if (!['admin', 'estoque'].includes(req.userRole)) throw new svc.ServiceError(403, 'Acesso negado');
+  if (req.userRole === 'tecnico') {
+    // técnico só solicita; a devolução só é efetivada quando admin/estoque aprovar
+    if (!req.tecnicoId) throw new svc.ServiceError(403, 'Seu usuário não está vinculado a um técnico');
+    body.tecnico_id = req.tecnicoId;
+    return res.status(201).json(await svc.solicitarDevolucao(body, req.userId));
+  }
+  if (!['admin', 'estoque'].includes(req.userRole)) throw new svc.ServiceError(403, 'Acesso negado');
   res.status(201).json(await svc.devolver(body, req.userId));
+}));
+
+const DEV_SQL = `SELECT d.id, d.lote_id, d.quantidade, d.condicao, d.observacao, d.status, d.solicitado_em, d.revisado_em, d.motivo_negacao,
+    l.codigo AS lote_codigo, i.id AS item_id, i.nome AS item_nome, i.unidade, t.id AS tecnico_id, t.nome AS tecnico_nome,
+    ur.name AS revisor_nome
+  FROM estoque_devolucoes d JOIN estoque_lotes l ON l.id = d.lote_id JOIN estoque_itens i ON i.id = d.item_id
+  JOIN tecnicos t ON t.id = d.tecnico_id LEFT JOIN users ur ON ur.id = d.revisado_por`;
+
+// Lista de solicitações: técnico vê as dele; admin/estoque veem todas (filtro ?status=pendente|aprovada|negada)
+router.get('/devolucoes', handle(async (req, res) => {
+  const where = [];
+  const params = [];
+  if (req.userRole === 'tecnico') {
+    if (!req.tecnicoId) return res.json([]);
+    where.push('d.tecnico_id = ?'); params.push(req.tecnicoId);
+  } else if (!['admin', 'estoque'].includes(req.userRole)) throw new svc.ServiceError(403, 'Acesso negado');
+  if (['pendente', 'aprovada', 'negada'].includes(req.query.status)) { where.push('d.status = ?'); params.push(req.query.status); }
+  const [rows] = await pool.query(
+    `${DEV_SQL} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY (d.status = 'pendente') DESC, d.id DESC LIMIT 300`, params);
+  res.json(rows.map((r) => ({ ...r, quantidade: Number(r.quantidade) })));
+}));
+
+router.post('/devolucoes/:id/aprovar', staff, handle(async (req, res) => {
+  res.json(await svc.aprovarDevolucao({ id: req.params.id, condicao: req.body?.condicao }, req.userId));
+}));
+
+router.post('/devolucoes/:id/negar', staff, handle(async (req, res) => {
+  res.json(await svc.negarDevolucao({ id: req.params.id, motivo: req.body?.motivo }, req.userId));
 }));
 
 /* ───── Posse ───── */

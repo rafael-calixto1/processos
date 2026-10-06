@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, Wrench } from 'lucide-react';
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const LIMIT = 15;
 const emptyForm = {
   car_id: '', oil_change_date: '', oil_change_kilometers: '',
@@ -162,7 +163,7 @@ const FleetOilChanges = () => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
-                <input type="date" className={styles.input} value={form.oil_change_date} onChange={e => handleFormChange('oil_change_date', e.target.value)} required />
+                <DateInput className={styles.input} value={form.oil_change_date} onChange={e => handleFormChange('oil_change_date', e.target.value)} required />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Km na Troca</label>

@@ -8,6 +8,7 @@ import { ticketAPI, labelAPI, departmentAPI } from '../api';
 import styles from './Tickets.module.css';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 /* ── Constants ── */
 const PRIORITY_LABELS = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' };
 const STATUS_LABELS   = { open: 'Aberto', in_progress: 'Em andamento', resolved: 'Resolvido', closed: 'Fechado' };
@@ -721,7 +722,7 @@ export default function Tickets() {
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Data limite</label>
-              <input type="date" className={styles.input} value={editDueDate}
+              <DateInput className={styles.input} value={editDueDate}
                 onChange={e => { setEditDueDate(e.target.value); handleDetailUpdate({ due_date: e.target.value || null }); }}
               />
             </div>
@@ -877,7 +878,7 @@ export default function Tickets() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data limite</label>
-                <input type="date" className={styles.input} value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+                <DateInput className={styles.input} value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
               </div>
               {labels.length > 0 && (
                 <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>

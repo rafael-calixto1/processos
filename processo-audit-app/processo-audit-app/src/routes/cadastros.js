@@ -35,7 +35,6 @@ const validarTecnico = async (b, id = null) => {
   obrigatorio(b.nome, 'Informe o nome');
   if (!['interno', 'terceirizado'].includes(b.tipo)) throw new ServiceError(400, 'Tipo deve ser interno ou terceirizado');
   if (b.usuario_id) {
-    if (b.tipo === 'terceirizado') throw new ServiceError(400, 'Equipe terceirizada não possui login');
     const [[u]] = await pool.query('SELECT role FROM users WHERE id = ?', [b.usuario_id]);
     if (!u) throw new ServiceError(404, 'Usuário não encontrado');
     if (u.role !== 'tecnico') throw new ServiceError(400, 'O usuário vinculado precisa ter o perfil técnico');

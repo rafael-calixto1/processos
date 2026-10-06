@@ -62,10 +62,16 @@ const Lista = () => {
 
 const Minha = () => {
   const { loading, error, data, reload } = useLoad(() => estoqueAPI.minhaPosse());
+  // Usuário sem cadastro de técnico vinculado não tem estoque: mostra o estado vazio em vez de erro.
+  const semVinculo = /vinculado/i.test(error || '');
   return (
     <div className={s.page}>
       <div><h1 className={s.title}>Minha posse</h1><p className={s.sub}>Materiais que estão com você agora</p></div>
-      <div className={s.card}><AsyncState loading={loading} error={error} onRetry={reload}><TabelaPosse itens={data || []} /></AsyncState></div>
+      <div className={s.card}>
+        <AsyncState loading={loading} error={semVinculo ? null : error} onRetry={reload} empty={semVinculo || (data || []).length === 0} emptyTitle="Você não está com nenhum material no momento">
+          <TabelaPosse itens={data || []} />
+        </AsyncState>
+      </div>
     </div>
   );
 };

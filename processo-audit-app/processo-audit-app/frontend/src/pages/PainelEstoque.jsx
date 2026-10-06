@@ -4,6 +4,7 @@ import { painelAPI } from '../api/estoque';
 import { AsyncState, useLoad, StatusBadge, Bars, fmtNum, fmtQtd, styles as s } from '../components/estoque/ui';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const PainelEstoque = () => {
   const [de, setDe] = useState('');
   const [ate, setAte] = useState('');
@@ -19,8 +20,8 @@ const PainelEstoque = () => {
     <div className={s.page}>
       <div><h1 className={s.title}>Painel de uso</h1><p className={s.sub}>Consumo por técnico, equipe, período e OS</p></div>
       <div className={s.filters}>
-        <div className={s.field}><label htmlFor="de">De</label><input id="de" type="date" value={de} onChange={(e) => setDe(e.target.value)} /></div>
-        <div className={s.field}><label htmlFor="ate">Até</label><input id="ate" type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
+        <div className={s.field}><label htmlFor="de">De</label><DateInput id="de" value={de} onChange={(e) => setDe(e.target.value)} /></div>
+        <div className={s.field}><label htmlFor="ate">Até</label><DateInput id="ate" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
         <div className={s.field}><label htmlFor="tp">Executor</label><Select id="tp" value={tipo} onChange={(e) => setTipo(e.target.value)}><option value="">Técnicos e equipes</option><option value="interno">Técnicos internos</option><option value="terceirizado">Equipes terceirizadas</option></Select></div>
       </div>
       <AsyncState loading={loading} error={error} onRetry={reload}>

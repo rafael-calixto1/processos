@@ -86,7 +86,7 @@ const EstoqueRetirada = () => {
           </div>
         )}
         <Field label={`Quantidade (${un === 'metros' ? 'metros' : 'peças'})`}>
-          <input type="number" min="0.01" step="0.01" max={maxQtd} value={qtd} onChange={(e) => setQtd(e.target.value)} required disabled={!pronto} />
+          <input type="number" min={un === 'metros' ? '0.01' : '1'} step={un === 'metros' ? '0.01' : '1'} max={maxQtd} value={qtd} onChange={(e) => setQtd(e.target.value)} required disabled={!pronto} />
         </Field>
         <Field label="Observação (opcional)"><input value={obs} onChange={(e) => setObs(e.target.value)} /></Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={!pronto || !tecnicoId || !qtd}>Revisar retirada</button>

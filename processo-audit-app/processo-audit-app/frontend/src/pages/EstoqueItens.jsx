@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Pencil, Package } from 'lucide-react';
+import { Plus, Search, Pencil, Package, Trash2, PackageX } from 'lucide-react';
 import { estoqueAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
-import { AsyncState, useLoad, useToasts, Modal, Field, StatusBadge, fmtQtd, fmtNum, fmtDataHora, styles as s } from '../components/estoque/ui';
+import { AsyncState, useLoad, useToasts, Modal, ConfirmDialog, Field, StatusBadge, fmtQtd, fmtNum, fmtDataHora, styles as s } from '../components/estoque/ui';
 import { Select } from '../components/Select/Select';
 
 const TIPOS = { entrada: 'Entrada', retirada: 'Retirada', devolucao: 'Devolução', baixa_os: 'Baixa em OS', estorno: 'Estorno', ajuste: 'Ajuste' };
@@ -27,16 +27,35 @@ const ItemForm = ({ inicial, onSaved, onClose, notify }) => {
         <Field label="Unidade de medida" hint="Metros (cabos) ou peças. Não pode ser trocada depois que o item tem lotes.">
           <Select value={f.unidade} onChange={set('unidade')}><option value="pecas">Peças / unidades</option><option value="metros">Metros</option></Select>
         </Field>
-        <Field label={`Estoque mínimo (${f.unidade === 'metros' ? 'm' : 'un'})`}><input type="number" min="0" step="0.01" value={f.estoque_minimo} onChange={set('estoque_minimo')} /></Field>
+        <Field label={`Estoque mínimo (${f.unidade === 'metros' ? 'm' : 'un'})`}><input type="number" min="0" step={f.unidade === 'metros' ? '0.01' : '1'} value={f.estoque_minimo} onChange={set('estoque_minimo')} /></Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Salvar</button>
       </form>
     </Modal>
   );
 };
 
-const ItemDetalhe = ({ id, onClose }) => {
+const ItemDetalhe = ({ id, onClose, onChanged }) => {
   const { loading, error, data, reload } = useLoad(() => estoqueAPI.item(id), [id]);
+  const { notify, toasts } = useToasts();
+  const [acao, setAcao] = useState(null); // { tipo: 'editar'|'descartar'|'excluir', lote }
+  const [campo, setCampo] = useState({ codigo: '', quantidade: '', motivo: '' });
+  const [busy, setBusy] = useState(false);
+  const abrir = (tipo, lote) => {
+    setCampo({ codigo: lote.codigo, quantidade: String(lote.no_almoxarifado ?? ''), motivo: '' });
+    setAcao({ tipo, lote });
+  };
+  const executar = async () => {
+    const { tipo, lote } = acao; setBusy(true);
+    try {
+      if (tipo === 'editar') await estoqueAPI.editarLote(lote.id, { codigo: campo.codigo });
+      else if (tipo === 'descartar') await estoqueAPI.descartarLote(lote.id, { quantidade: campo.quantidade, motivo: campo.motivo });
+      else await estoqueAPI.excluirLote(lote.id);
+      notify(tipo === 'editar' ? 'Lote atualizado' : tipo === 'descartar' ? 'Saldo descartado' : 'Lote excluído');
+      setAcao(null); reload(); onChanged?.();
+    } catch (err) { notify(err.message, 'err'); } finally { setBusy(false); }
+  };
   return (
+    <>
     <Modal title={data?.nome || 'Item'} onClose={onClose}>
       <AsyncState loading={loading} error={error} onRetry={reload}>
         {data && (
@@ -48,10 +67,15 @@ const ItemDetalhe = ({ id, onClose }) => {
             </dl>
             <h3 className={s.cardTitle}>Lotes</h3>
             <div className={s.tableWrap}><table className={s.table}>
-              <thead><tr><th>Lote</th><th>Saldo</th><th>Com técnicos</th><th>Almoxarifado</th></tr></thead>
+              <thead><tr><th>Lote</th><th>Saldo</th><th>Com técnicos</th><th>Almoxarifado</th><th></th></tr></thead>
               <tbody>{data.lotes.map((l) => (
                 <tr key={l.id}><td data-label="Lote" className={s.mono}>{l.codigo}</td><td data-label="Saldo">{fmtQtd(l.saldo_atual, data.unidade)}</td>
-                  <td data-label="Com técnicos">{fmtQtd(l.em_posse, data.unidade)}</td><td data-label="Almoxarifado">{fmtQtd(l.no_almoxarifado, data.unidade)}</td></tr>
+                  <td data-label="Com técnicos">{fmtQtd(l.em_posse, data.unidade)}</td><td data-label="Almoxarifado">{fmtQtd(l.no_almoxarifado, data.unidade)}</td>
+                  <td data-label="Ações"><div className={s.actions}>
+                    <button className={s.iconBtn} title="Editar código" aria-label="Editar lote" onClick={() => abrir('editar', l)}><Pencil size={16} /></button>
+                    <button className={s.iconBtn} title="Descartar saldo" aria-label="Descartar lote" disabled={!(Number(l.no_almoxarifado) > 0)} onClick={() => abrir('descartar', l)}><PackageX size={16} /></button>
+                    <button className={s.iconBtn} title="Excluir lote" aria-label="Excluir lote" onClick={() => abrir('excluir', l)}><Trash2 size={16} /></button>
+                  </div></td></tr>
               ))}</tbody></table></div>
             <h3 className={s.cardTitle}>Histórico de movimentações</h3>
             <div className={s.tableWrap}><table className={s.table}>
@@ -66,6 +90,24 @@ const ItemDetalhe = ({ id, onClose }) => {
         )}
       </AsyncState>
     </Modal>
+    {acao && (
+      <ConfirmDialog
+        title={acao.tipo === 'editar' ? `Editar lote ${acao.lote.codigo}` : acao.tipo === 'descartar' ? `Descartar saldo de ${acao.lote.codigo}` : `Excluir lote ${acao.lote.codigo}`}
+        confirmLabel={acao.tipo === 'editar' ? 'Salvar' : acao.tipo === 'descartar' ? 'Descartar' : 'Excluir'}
+        danger={acao.tipo !== 'editar'} busy={busy}
+        confirmDisabled={acao.tipo === 'editar' ? !campo.codigo.trim() : acao.tipo === 'descartar' ? !campo.motivo.trim() || !(Number(campo.quantidade) > 0) : false}
+        onConfirm={executar} onCancel={() => setAcao(null)}>
+        {acao.tipo === 'editar' && <Field label="Código do lote"><input value={campo.codigo} onChange={(e) => setCampo({ ...campo, codigo: e.target.value })} /></Field>}
+        {acao.tipo === 'descartar' && (<>
+          <p>Disponível no almoxarifado: <b>{fmtQtd(acao.lote.no_almoxarifado, data.unidade)}</b>. O que está com técnicos não pode ser descartado.</p>
+          <Field label="Quantidade a descartar"><input type="number" min={data.unidade === 'metros' ? '0.01' : '1'} step={data.unidade === 'metros' ? '0.01' : '1'} max={acao.lote.no_almoxarifado} value={campo.quantidade} onChange={(e) => setCampo({ ...campo, quantidade: e.target.value })} /></Field>
+          <Field label="Motivo"><input value={campo.motivo} onChange={(e) => setCampo({ ...campo, motivo: e.target.value })} placeholder="Avaria, perda, vencido…" /></Field>
+        </>)}
+        {acao.tipo === 'excluir' && <p>Só é possível excluir um lote que nunca foi movimentado (cadastrado por engano). Esta ação não pode ser desfeita.</p>}
+      </ConfirmDialog>
+    )}
+    {toasts}
+    </>
   );
 };
 
@@ -113,7 +155,7 @@ const EstoqueItens = () => {
             </tr>))}</tbody></table></div>
       </AsyncState>
       {form && <ItemForm inicial={form} notify={notify} onClose={() => setForm(null)} onSaved={() => { setForm(null); reload(); }} />}
-      {detalhe && <ItemDetalhe id={detalhe} onClose={() => setDetalhe(null)} />}
+      {detalhe && <ItemDetalhe id={detalhe} onClose={() => setDetalhe(null)} onChanged={reload} />}
       {toasts}
     </div>
   );

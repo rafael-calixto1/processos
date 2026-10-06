@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { AsyncState, useLoad, useToasts, Modal, Field, OsStatusBadge, PrioridadeBadge, fmtData, styles as s } from '../components/estoque/ui';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const STATUS = [['', 'Todas'], ['aberta', 'Abertas'], ['em_andamento', 'Em andamento'], ['concluida', 'Concluídas'], ['cancelada', 'Canceladas']];
 const VAZIA = { cliente: '', endereco: '', tecnico_id: '', prazo: '', prioridade: 'normal', descricao: '' };
 
@@ -30,7 +31,7 @@ const NovaOS = ({ onClose, onSaved, notify }) => {
             {(tecs.data || []).filter((t) => t.ativo).map((t) => <option key={t.id} value={t.id}>{t.nome} — {t.tipo === 'interno' ? 'interno' : 'terceirizada'}</option>)}
           </Select>
         </Field>
-        <Field label="Prazo"><input type="date" value={f.prazo} onChange={set('prazo')} /></Field>
+        <Field label="Prazo"><DateInput value={f.prazo} onChange={set('prazo')} /></Field>
         <Field label="Prioridade"><Select value={f.prioridade} onChange={set('prioridade')}><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option></Select></Field>
         <Field label="Descrição"><textarea value={f.descricao} onChange={set('descricao')} /></Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Criar OS</button>
@@ -48,6 +49,8 @@ const OrdensServico = () => {
   const { notify, toasts } = useToasts();
   const { loading, error, data, reload } = useLoad(() => osAPI.list({ status }), [status]);
   const lista = data || [];
+  // Técnico sem cadastro vinculado não tem OS: mostra o estado vazio em vez de erro.
+  const semVinculo = isTecnico && /vinculado/i.test(error || '');
   const atrasada = (o) => o.prazo && !['concluida', 'cancelada'].includes(o.status) && String(o.prazo).slice(0, 10) < new Date().toISOString().slice(0, 10);
 
   return (
@@ -60,7 +63,7 @@ const OrdensServico = () => {
       <div className={s.chips} role="group" aria-label="Filtrar por status">
         {STATUS.map(([v, l]) => <button key={v} className={`${s.chip} ${status === v ? s.chipActive : ''}`} aria-pressed={status === v} onClick={() => setStatus(v)}>{l}</button>)}
       </div>
-      <AsyncState loading={loading} error={error} onRetry={reload} empty={lista.length === 0} emptyTitle="Nenhuma OS encontrada"
+      <AsyncState loading={loading} error={semVinculo ? null : error} onRetry={reload} empty={semVinculo || lista.length === 0} emptyTitle={isTecnico ? 'Você não tem nenhuma OS atribuída no momento' : 'Nenhuma OS encontrada'}
         emptyAction={!isTecnico && <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setNova(true)}><Plus size={16} />Criar OS</button>}>
         <div className={s.tableWrap}><table className={s.table}>
           <thead><tr><th>Nº</th><th>Nome da OS</th>{!isTecnico && <th>Responsável</th>}<th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>

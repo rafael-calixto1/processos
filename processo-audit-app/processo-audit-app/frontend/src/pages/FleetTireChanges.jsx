@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const LIMIT = 15;
 const emptyForm = { car_id: '', tire_change_date: '', tire_change_kilometers: '', observation: '' };
 
@@ -169,7 +170,7 @@ const FleetTireChanges = () => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
-                <input type="date" className={styles.input} value={form.tire_change_date} onChange={e => setForm({ ...form, tire_change_date: e.target.value })} required />
+                <DateInput className={styles.input} value={form.tire_change_date} onChange={e => setForm({ ...form, tire_change_date: e.target.value })} required />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Km na Troca</label>

@@ -14,6 +14,7 @@ import { Coins, Wrench, RotateCcw } from 'lucide-react';
 import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
+import DateInput from '../components/DateInput';
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -103,17 +104,15 @@ const MaintenanceDashboard = () => {
       <div className={styles.toolbar}>
         <div className={styles.toolbarGroup}>
           <label htmlFor="maint-start">De</label>
-          <input
+          <DateInput
             id="maint-start"
-            type="date"
             className={styles.dateInput}
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
           />
           <label htmlFor="maint-end">Até</label>
-          <input
+          <DateInput
             id="maint-end"
-            type="date"
             className={styles.dateInput}
             value={endDate}
             onChange={e => setEndDate(e.target.value)}

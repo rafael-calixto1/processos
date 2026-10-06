@@ -4,6 +4,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
+import DateInput from '../components/DateInput';
 const LIMIT = 15;
 const FUEL_TYPES = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
@@ -467,7 +468,7 @@ const FleetFueling = () => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
-                <input type="date" className={styles.input} value={form.fuel_date} onChange={e => handleFormChange('fuel_date', e.target.value)} required />
+                <DateInput className={styles.input} value={form.fuel_date} onChange={e => handleFormChange('fuel_date', e.target.value)} required />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Km no Abastecimento</label>
