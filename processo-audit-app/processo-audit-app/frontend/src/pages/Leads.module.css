@@ -912,3 +912,36 @@
   .pageControls { justify-content: space-between; gap: 10px; }
   .pageInfo { text-align: center; }
 }
+
+/* ── Histórico (linha do tempo) ── */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.timelineItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-dark, inherit);
+}
+
+.timelineDate {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-medium);
+}
+
+.timelineUser {
+  font-size: 0.75rem;
+  color: var(--text-medium);
+}

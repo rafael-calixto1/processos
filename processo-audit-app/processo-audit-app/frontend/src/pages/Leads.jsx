@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  MoreVertical, Eye, Send, Search, Inbox, X, User,
+  MoreVertical, Eye, Send, History, Search, Inbox, X, User,
   Clock, Hourglass, Forward, CheckCircle2, XCircle, FlaskConical,
 } from 'lucide-react';
 import { referralAPI } from '../api';
@@ -54,6 +54,22 @@ const toTitleCase = (str) => {
   if (!str) return '';
   if (str === str.toUpperCase()) return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   return str;
+};
+
+/* Data e hora completas (parseDate descarta a hora) */
+const fmtDateTime = (value) => {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
+/* "Chrome 131 · Windows" a partir do user-agent */
+const describeDevice = (ua) => {
+  if (!ua) return null;
+  const browser = (ua.match(/(Edg|OPR|Firefox|Chrome|Safari)\/(\d+)/) || []);
+  const name = { Edg: 'Edge', OPR: 'Opera' }[browser[1]] || browser[1];
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : null;
+  return [name && `${name} ${browser[2]}`, os].filter(Boolean).join(' · ') || null;
 };
 
 /* ── Sub-components ── */
@@ -125,7 +141,7 @@ const FaturaAtualStatus = ({ lead }) => {
   return <span className={styles.boletoPendente}>Vence {fmt(venc)}</span>;
 };
 
-const ActionsMenu = ({ lead, onView, onSendCRM }) => {
+const ActionsMenu = ({ lead, onView, onHistory, onSendCRM }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -152,10 +168,14 @@ const ActionsMenu = ({ lead, onView, onSendCRM }) => {
             <Eye size={16} strokeWidth={2} />
             Ver detalhes
           </button>
+          <button className={styles.menuItem} onClick={() => { setOpen(false); onHistory(); }}>
+            <History size={16} strokeWidth={2} />
+            Histórico
+          </button>
           {lead.status === 'pendente' && (
             <button className={`${styles.menuItem} ${styles.menuItemCRM}`} onClick={() => { setOpen(false); onSendCRM(); }}>
               <Send size={16} strokeWidth={2} />
-              Enviar para CRM
+              Informar envio ao CRM
             </button>
           )}
         </div>
@@ -171,10 +191,12 @@ const Leads = () => {
   const [crms, setCrms] = useState([]);
   const [showCrmModal, setShowCrmModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [crmForm, setCrmForm] = useState({ id_crm: '', observacao: '' });
+  const [crmForm, setCrmForm] = useState({ id_crm: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
+  const [historyLead, setHistoryLead] = useState(null);
+  const [historyEvents, setHistoryEvents] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
   const [searchIndicadorId, setSearchIndicadorId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -197,14 +219,20 @@ const Leads = () => {
     } catch { setCrms([]); }
   };
 
-  const handleOpenCRM = (lead) => { setSelectedLead(lead); setCrmForm({ id_crm: '', observacao: '' }); setShowCrmModal(true); };
+  const handleOpenCRM = (lead) => { setSelectedLead(lead); setCrmForm({ id_crm: '' }); setShowCrmModal(true); };
+  const handleOpenHistory = async (lead) => {
+    setHistoryLead(lead);
+    setHistoryEvents(null);
+    try { setHistoryEvents(await referralAPI.getLeadHistory(lead.id)); }
+    catch { setHistoryEvents([]); }
+  };
   const handleOpenDetail = (lead) => { setDetailLead(lead); setShowDetail(true); };
 
   const handleSendToCRM = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await referralAPI.sendLeadToCRM({ id_indicacao: selectedLead.id, id_crm: crmForm.id_crm, observacao: crmForm.observacao });
+      await referralAPI.sendLeadToCRM({ id_indicacao: selectedLead.id, id_crm: crmForm.id_crm, nome_crm: crms.find(c => String(c.id_crm) === String(crmForm.id_crm))?.nome });
       setShowCrmModal(false);
       fetchLeads();
     } catch (err) { alert('Erro: ' + err.message); }
@@ -391,6 +419,7 @@ const Leads = () => {
                           <ActionsMenu
                             lead={lead}
                             onView={() => handleOpenDetail(lead)}
+                            onHistory={() => handleOpenHistory(lead)}
                             onSendCRM={() => handleOpenCRM(lead)}
                           />
                         </td>
@@ -416,6 +445,7 @@ const Leads = () => {
                         <ActionsMenu
                           lead={lead}
                           onView={() => handleOpenDetail(lead)}
+                            onHistory={() => handleOpenHistory(lead)}
                           onSendCRM={() => handleOpenCRM(lead)}
                         />
                       </div>
@@ -577,7 +607,7 @@ const Leads = () => {
                 <div className={styles.detailFooter}>
                   <button className={styles.btnCRMPrimary} onClick={() => { setShowDetail(false); handleOpenCRM(detailLead); }}>
                     <Send size={16} strokeWidth={2} />
-                    Enviar para CRM
+                    Informar envio ao CRM
                   </button>
                 </div>
               )}
@@ -586,12 +616,47 @@ const Leads = () => {
         );
       })()}
 
+      {/* ── Histórico ── */}
+      {historyLead && (
+        <div className={styles.overlay} onClick={() => setHistoryLead(null)}>
+          <div className={styles.crmModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.crmModalHeader}>
+              <h2 className={styles.crmModalTitle}>Histórico</h2>
+              <button className={styles.btnClose} onClick={() => setHistoryLead(null)}>
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+            <div className={styles.crmLeadTag}>
+              <User size={16} strokeWidth={2} />
+              {toTitleCase(historyLead.nome_indicado)}
+            </div>
+            <ol className={styles.timeline}>
+              {historyEvents === null && <li className={styles.timelineItem}>Carregando…</li>}
+              {historyEvents?.length === 0 && <li className={styles.timelineItem}>Sem registros.</li>}
+              {historyEvents?.map((ev, i) => (
+                <li key={`${ev.id}-${i}`} className={styles.timelineItem}>
+                  <span className={styles.timelineDate}>{fmtDateTime(ev.created_at)}</span>
+                  <span>{ev.descricao}</span>
+                  {(ev.usuario_nome || ev.usuario) && (
+                    <span className={styles.timelineUser}>
+                      Atendente: {ev.usuario_nome || ev.usuario}{ev.usuario_nome && ev.usuario ? ` (${ev.usuario})` : ''}
+                    </span>
+                  )}
+                  {ev.ip && <span className={styles.timelineUser}>IP: {ev.ip}</span>}
+                  {describeDevice(ev.user_agent) && <span className={styles.timelineUser}>Dispositivo: {describeDevice(ev.user_agent)}</span>}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+
       {/* ── CRM Modal ── */}
       {showCrmModal && (
         <div className={styles.overlay} onClick={() => setShowCrmModal(false)}>
           <div className={styles.crmModal} onClick={e => e.stopPropagation()}>
             <div className={styles.crmModalHeader}>
-              <h2 className={styles.crmModalTitle}>Enviar para CRM</h2>
+              <h2 className={styles.crmModalTitle}>Informar envio ao CRM</h2>
               <button className={styles.btnClose} onClick={() => setShowCrmModal(false)}>
                 <X size={18} strokeWidth={2} />
               </button>
@@ -603,22 +668,15 @@ const Leads = () => {
             </div>
 
             <form onSubmit={handleSendToCRM} className={styles.crmForm}>
+              <p className={styles.optLabel}>
+                Confirme que você já cadastrou os dados deste lead no CRM do Hubsoft. Nenhum cartão é criado automaticamente.
+              </p>
               <div className={styles.formGroup}>
-                <label>Quadro CRM</label>
+                <label>Funil CRM</label>
                 <Select value={crmForm.id_crm} onChange={(e) => setCrmForm({...crmForm, id_crm: e.target.value})} required>
-                  <option value="">Selecione um quadro…</option>
+                  <option value="">Selecione o funil…</option>
                   {crms.map(crm => <option key={crm.id_crm} value={crm.id_crm}>{crm.nome}</option>)}
                 </Select>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Observação <span className={styles.optLabel}>(opcional)</span></label>
-                <textarea
-                  value={crmForm.observacao}
-                  onChange={(e) => setCrmForm({...crmForm, observacao: e.target.value})}
-                  placeholder="Instruções para o vendedor…"
-                  rows="3"
-                />
               </div>
 
               <div className={styles.crmModalFooter}>
@@ -626,7 +684,7 @@ const Leads = () => {
                   Cancelar
                 </button>
                 <button type="submit" disabled={submitting} className={styles.btnCRMPrimary}>
-                  {submitting ? 'Enviando…' : 'Confirmar Envio'}
+                  {submitting ? 'Salvando…' : 'Confirmar'}
                 </button>
               </div>
             </form>

@@ -31,6 +31,25 @@ const cpfValido = (v) => {
 
 const router = express.Router();
 
+// Histórico do lead: falha ao registrar não deve impedir a ação principal
+async function registrarEvento(req, idIndicacao, tipo, descricao) {
+  try {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || null;
+    const userAgent = (req.headers['user-agent'] || '').slice(0, 500) || null;
+    let nome = null;
+    if (req.userId) {
+      const [[u]] = await pool.execute('SELECT name FROM users WHERE id = ?', [req.userId]);
+      nome = u?.name ?? null;
+    }
+    await pool.execute(
+      'INSERT INTO indicacao_eventos (id_indicacao, tipo, descricao, usuario, usuario_nome, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [idIndicacao, tipo, descricao, req.userEmail ?? null, nome, ip, userAgent]
+    );
+  } catch (err) {
+    console.error('[Leads] Erro ao registrar evento:', err.message);
+  }
+}
+
 // --- ROTAS PÚBLICAS ---
 
 // Verifica se o CPF é de um cliente e retorna seu código de indicação + serviços
@@ -183,6 +202,8 @@ router.post('/public/register-indication', async (req, res) => {
       ]
     );
 
+    await registrarEvento(req, result.insertId, 'recebido', `Indicação recebida pelo portal público (indicador: ${indicador.nome_razaosocial})`);
+
     return res.status(201).json({ ok: true, id: result.insertId });
   } catch (err) {
     console.error('[Referral Public] Erro ao registrar indicação:', err.message);
@@ -213,6 +234,29 @@ router.get('/leads', verifyToken, async (req, res) => {
     // Dispara sincronização sem bloquear a resposta
     sincronizarLeads(rows).catch(e => console.error('[sync leads]', e.message));
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Linha do tempo de um lead
+router.get('/leads/:id/historico', verifyToken, async (req, res) => {
+  try {
+    const [[lead]] = await pool.execute('SELECT id, created_at, updated_at, status, id_crm_destino FROM indicacoes WHERE id = ?', [req.params.id]);
+    if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+
+    const [eventos] = await pool.execute(
+      'SELECT id, tipo, descricao, usuario, usuario_nome, ip, user_agent, created_at FROM indicacao_eventos WHERE id_indicacao = ? ORDER BY created_at ASC, id ASC',
+      [req.params.id]
+    );
+    // Leads anteriores ao histórico não têm o evento de recebimento gravado
+    if (!eventos.some(e => e.tipo === 'recebido')) {
+      eventos.unshift({ id: 0, tipo: 'recebido', descricao: 'Indicação recebida', usuario: null, created_at: lead.created_at });
+    }
+    if (lead.status === 'encaminhado' && !eventos.some(e => e.tipo === 'enviado_crm')) {
+      eventos.push({ id: 0, tipo: 'enviado_crm', descricao: `Atendente informou envio ao CRM — funil #${lead.id_crm_destino}`, usuario: null, created_at: lead.updated_at });
+    }
+    res.json(eventos);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -266,21 +310,25 @@ router.delete('/crm/:id_crm/etapas/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Envia um lead para o CRM do Hubsoft
+// Registra que o atendente enviou o lead ao CRM (a API do Hubsoft não permite criar cartões)
 router.post('/leads/send-to-crm', verifyToken, async (req, res) => {
   try {
-    const { id_indicacao, id_crm } = req.body;
+    const { id_indicacao, id_crm, nome_crm } = req.body;
 
     if (!id_indicacao || !id_crm) {
       return res.status(400).json({ error: 'id_indicacao e id_crm são obrigatórios' });
     }
 
-    await pool.execute(
+    const [upd] = await pool.execute(
       "UPDATE indicacoes SET status = 'encaminhado', id_crm_destino = ?, updated_at = NOW() WHERE id = ? AND status = 'pendente'",
       [id_crm, id_indicacao]
     );
 
-    res.json({ ok: true, message: 'Lead marcado como enviado para o CRM' });
+    if (upd.affectedRows > 0) {
+      await registrarEvento(req, id_indicacao, 'enviado_crm', `Atendente informou envio ao CRM — funil ${nome_crm || `#${id_crm}`}`);
+    }
+
+    res.json({ ok: true, message: 'Envio ao CRM registrado' });
   } catch (err) {
     console.error('[Leads CRM] Erro:', err.message);
     res.status(500).json({ error: err.message });

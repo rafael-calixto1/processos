@@ -774,6 +774,11 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+  getLeadHistory: async (id: string | number) => {
+    const res = await fetch(`${API_URL}/referral/leads/${id}/historico`, { headers: headers(getToken()) });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
   sendLeadToCRM: async (formData: JSONValue) => {
     const res = await fetch(`${API_URL}/referral/leads/send-to-crm`, {
       method: 'POST',
