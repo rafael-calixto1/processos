@@ -16,6 +16,7 @@ import {
   barDataset, makeBarOptions, tooltipStyle, brl,
 } from './fleetCharts';
 import styles from './Fleet.module.css';
+import { Select } from '../components/Select/Select';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -231,7 +232,7 @@ const FleetDashboard = () => {
             <div className={styles.chartCard}>
               <h3 className={styles.chartTitleRow}>
                 <span>Abastecimentos ao Longo do Tempo</span>
-                <select
+                <Select
                   value={groupBy}
                   onChange={e => setGroupBy(e.target.value)}
                   className={styles.chartSelect}
@@ -239,7 +240,7 @@ const FleetDashboard = () => {
                   <option value="day">Dia</option>
                   <option value="week">Semana</option>
                   <option value="month">Mês</option>
-                </select>
+                </Select>
               </h3>
               {fuelingByDate.length === 0 ? (
                 <div className={styles.emptyState}><p>Sem dados</p></div>

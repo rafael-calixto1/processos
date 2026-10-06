@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import { osAPI, cadastrosAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
 import { AsyncState, useLoad, useToasts, Modal, Field, OsStatusBadge, PrioridadeBadge, fmtData, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const STATUS = [['', 'Todas'], ['aberta', 'Abertas'], ['em_andamento', 'Em andamento'], ['concluida', 'Concluídas'], ['cancelada', 'Canceladas']];
 const VAZIA = { cliente: '', endereco: '', tecnico_id: '', prazo: '', prioridade: 'normal', descricao: '' };
@@ -24,13 +25,13 @@ const NovaOS = ({ onClose, onSaved, notify }) => {
         <Field label="Nome da OS"><input value={f.cliente} onChange={set('cliente')} required /></Field>
         <Field label="Endereço"><input value={f.endereco} onChange={set('endereco')} /></Field>
         <Field label="Atribuir a (técnico ou equipe terceirizada)">
-          <select value={f.tecnico_id} onChange={set('tecnico_id')} required>
+          <Select value={f.tecnico_id} onChange={set('tecnico_id')} required>
             <option value="">Selecione…</option>
             {(tecs.data || []).filter((t) => t.ativo).map((t) => <option key={t.id} value={t.id}>{t.nome} — {t.tipo === 'interno' ? 'interno' : 'terceirizada'}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Prazo"><input type="date" value={f.prazo} onChange={set('prazo')} /></Field>
-        <Field label="Prioridade"><select value={f.prioridade} onChange={set('prioridade')}><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option></select></Field>
+        <Field label="Prioridade"><Select value={f.prioridade} onChange={set('prioridade')}><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option></Select></Field>
         <Field label="Descrição"><textarea value={f.descricao} onChange={set('descricao')} /></Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Criar OS</button>
       </form>

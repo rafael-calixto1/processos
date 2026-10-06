@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye } from 'lucide-react';
 import styles from './Fleet.module.css';
 import { calcStatus, worstStatus, STATUS_STYLE, nextDueText } from './fleetMaintenanceStatus';
+import { Select } from '../components/Select/Select';
 
 /* ─── Car Detail Modal ─── */
 const CarDetailModal = ({ carId, onClose }) => {
@@ -288,7 +289,7 @@ const FleetCars = () => {
       {/* Toolbar */}
       <div className={styles.filterRow}>
         <label>Status</label>
-        <select
+        <Select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className={styles.select}
@@ -297,7 +298,7 @@ const FleetCars = () => {
           <option value="">Todos</option>
           <option value="active">Ativo</option>
           <option value="inactive">Inativo</option>
-        </select>
+        </Select>
         <div style={{ flex: 1 }} />
         <button className={styles.btnPrimary} onClick={openAdd}>
           <Plus size={16} /> Novo Veículo
@@ -333,17 +334,17 @@ const FleetCars = () => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Motorista</label>
-                <select className={styles.select} value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })}>
+                <Select className={styles.select} value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })}>
                   <option value="">— Nenhum —</option>
                   {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Status</label>
-                <select className={styles.select} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                <Select className={styles.select} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
-                </select>
+                </Select>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

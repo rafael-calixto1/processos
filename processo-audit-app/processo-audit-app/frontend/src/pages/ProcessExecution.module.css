@@ -99,7 +99,7 @@
 
 .progressFill {
   height: 100%;
-  background-color: var(--secondary-color);
+  background-color: var(--primary-color);
   transition: width 0.5s ease;
   border-radius: var(--radius-full);
 }
@@ -118,7 +118,7 @@
   padding: 1.5rem;
   margin-bottom: 2rem;
   border: 1px solid var(--border-color);
-  border-left: 4px solid var(--secondary-color);
+  border-left: 4px solid var(--primary-color);
 }
 
 .description p {
@@ -145,7 +145,7 @@
 }
 
 .sectionHeader {
-  border-bottom: 2px solid var(--secondary-color);
+  border-bottom: 2px solid var(--primary-color);
   padding-bottom: 0.5rem;
   margin-top: 1rem;
 }

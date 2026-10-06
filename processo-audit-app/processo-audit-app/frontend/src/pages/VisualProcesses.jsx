@@ -20,6 +20,7 @@ import { visualProcessAPI, departmentAPI } from '../api/index';
 import { StartNode, ProcessNode, EndNode, GatewayNode, SubFlowNode, LinkedFlowNode, ICON_OPTIONS } from './CustomNodes';
 import '@xyflow/react/dist/style.css';
 import styles from './VisualProcesses.module.css';
+import { Select } from '../components/Select/Select';
 
 const NODE_PALETTE = [
   { type: 'startNode',      label: 'Início',       Icon: PlayCircle,   variant: 'palStart',   hint: 'Ponto de entrada do fluxo' },
@@ -715,7 +716,7 @@ export default function VisualProcesses() {
 
           <div className={styles.flowControls}>
             <div className={styles.selectWrap}>
-              <select
+              <Select
                 value={selectedFlowId || ''}
                 onChange={(e) => e.target.value && loadFlow(e.target.value)}
                 className={styles.flowSelect}
@@ -724,7 +725,7 @@ export default function VisualProcesses() {
                 {flows.map(f => (
                   <option key={f.id} value={f.id}>{f.title}</option>
                 ))}
-              </select>
+              </Select>
               <ChevronDown size={14} className={styles.selectIcon} />
             </div>
             <button
@@ -1020,7 +1021,7 @@ export default function VisualProcesses() {
                   {selectedNodeType === 'linkedFlowNode' && (
                     <div className={styles.sidebarGroup}>
                       <label>Fluxo referenciado</label>
-                      <select
+                      <Select
                         value={selectedElement.data?.ref_flow_id || ''}
                         onChange={(e) => {
                           const picked = flows.find(f => String(f.id) === e.target.value);
@@ -1042,7 +1043,7 @@ export default function VisualProcesses() {
                             <option key={f.id} value={f.id}>{f.title}</option>
                           ))
                         }
-                      </select>
+                      </Select>
                       <p className={styles.fieldHint}>
                         Este nó representa a chamada de outro fluxo. Use o botão abaixo para navegar até ele.
                       </p>
@@ -1060,7 +1061,7 @@ export default function VisualProcesses() {
                   {selectedNodeType !== 'subFlowNode' && selectedNodeType !== 'linkedFlowNode' && nodes.some(n => n.type === 'subFlowNode') && (
                     <div className={styles.sidebarGroup}>
                       <label>Grupo pai</label>
-                      <select
+                      <Select
                         value={selectedElement?.parentId || ''}
                         onChange={(e) => assignToGroup(selectedElement.id, e.target.value || null)}
                       >
@@ -1071,7 +1072,7 @@ export default function VisualProcesses() {
                             <option key={n.id} value={n.id}>{n.data?.label || 'Sub-fluxo'}</option>
                           ))
                         }
-                      </select>
+                      </Select>
                       <p className={styles.fieldHint}>Agrupar este nó dentro de um sub-fluxo.</p>
                     </div>
                   )}
@@ -1102,7 +1103,7 @@ export default function VisualProcesses() {
                   {selectedNodeType === 'processNode' && (
                     <div className={styles.sidebarGroup}>
                       <label>Departamento</label>
-                      <select
+                      <Select
                         value={selectedElement.data?.department || ''}
                         onChange={(e) => updateNodeData(selectedElement.id, { department: e.target.value })}
                         onFocus={takeSnapshot}
@@ -1121,7 +1122,7 @@ export default function VisualProcesses() {
                             <option value="Diretoria">Diretoria</option>
                           </>
                         )}
-                      </select>
+                      </Select>
                     </div>
                   )}
 

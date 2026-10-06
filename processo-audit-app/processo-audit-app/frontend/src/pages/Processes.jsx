@@ -7,8 +7,8 @@ import {
   CheckCircle2, FileText, Archive,
 } from 'lucide-react';
 import styles from './Processes.module.css';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportProcessListPdf } from '../utils/pdfBrand';
+import { Select } from '../components/Select/Select';
 
 const STATUS_META = {
   active:   { label: 'Ativo',     Icon: CheckCircle2, variant: 'statusActive'   },
@@ -79,63 +79,16 @@ const Processes = () => {
   const handleExportPDF = async () => {
     try {
       setLoading(true);
-      // Fetch all processes with current filters (large limit)
+      // Todos os processos com os filtros atuais (limite alto)
       const response = await processAPI.list(filterDept || null, filterStatus || null, search, 1, 1000);
-      const allProcesses = response.processes;
-
-      const doc = new jsPDF();
-      
-      // Add title
-      doc.setFontSize(18);
-      doc.text('Relatório de Processos', 14, 22);
-      
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      
-      // Add metadata
-      const date = new Date().toLocaleString();
-      doc.text(`Gerado em: ${date}`, 14, 30);
-      doc.text(`Total de processos: ${allProcesses.length}`, 14, 35);
-      
-      // Filters info
-      let filters = [];
-      if (search) filters.push(`Busca: "${search}"`);
+      const filtros = [];
+      if (search) filtros.push(['Busca', `"${search}"`]);
       if (filterDept) {
-        const dept = departments.find(d => d.id === parseInt(filterDept));
-        if (dept) filters.push(`Depto: ${dept.name}`);
+        const dept = departments.find((d) => d.id === parseInt(filterDept));
+        if (dept) filtros.push(['Depto', dept.name]);
       }
-      if (filterStatus) filters.push(`Status: ${filterStatus}`);
-      
-      if (filters.length > 0) {
-        doc.text(`Filtros: ${filters.join(' | ')}`, 14, 40);
-      }
-      
-      // Define table columns
-      const tableColumn = ["ID", "Título", "Departamento", "Status", "Passos"];
-      const tableRows = [];
-
-      allProcesses.forEach(process => {
-        const processData = [
-          process.id,
-          process.title,
-          process.department_name,
-          process.status === 'active' ? 'Ativo' : process.status === 'draft' ? 'Rascunho' : 'Arquivado',
-          process.steps?.length || 0
-        ];
-        tableRows.push(processData);
-      });
-
-      // Generate table
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: filters.length > 0 ? 45 : 40,
-        theme: 'striped',
-        headStyles: { fillColor: [0, 123, 255] },
-        styles: { fontSize: 9 }
-      });
-
-      doc.save(`relatorio_processos_${new Date().getTime()}.pdf`);
+      if (filterStatus) filtros.push(['Status', filterStatus]);
+      await exportProcessListPdf({ processes: response.processes, filtros });
     } catch (err) {
       setError('Erro ao exportar PDF: ' + err.message);
     } finally {
@@ -268,7 +221,7 @@ const Processes = () => {
         </div>
 
         <div className={styles.filters}>
-          <select
+          <Select
             value={filterDept}
             onChange={(e) => {
               const value = e.target.value;
@@ -286,9 +239,9 @@ const Processes = () => {
                 {d.name}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={filterStatus}
             onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
           >
@@ -296,7 +249,7 @@ const Processes = () => {
             <option value="draft">Rascunho</option>
             <option value="active">Ativo</option>
             <option value="archived">Arquivado</option>
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -439,7 +392,7 @@ const Processes = () => {
 
               <div className={styles.formGroup}>
                 <label>Departamento *</label>
-                <select
+                <Select
                   value={formData.department_id}
                   onChange={(e) =>
                     setFormData({ ...formData, department_id: e.target.value })
@@ -452,7 +405,7 @@ const Processes = () => {
                       {d.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               {/* Passos */}

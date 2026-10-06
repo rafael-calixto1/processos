@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { referralAPI } from '../api';
 import styles from './Leads.module.css';
+import { Select } from '../components/Select/Select';
 
 /* ── Helpers ── */
 const parseEndereco = (str) => {
@@ -578,10 +579,10 @@ const Leads = () => {
             <form onSubmit={handleSendToCRM} className={styles.crmForm}>
               <div className={styles.formGroup}>
                 <label>Quadro CRM</label>
-                <select value={crmForm.id_crm} onChange={(e) => setCrmForm({...crmForm, id_crm: e.target.value})} required>
+                <Select value={crmForm.id_crm} onChange={(e) => setCrmForm({...crmForm, id_crm: e.target.value})} required>
                   <option value="">Selecione um quadro…</option>
                   {crms.map(crm => <option key={crm.id_crm} value={crm.id_crm}>{crm.nome}</option>)}
-                </select>
+                </Select>
               </div>
 
               <div className={styles.formGroup}>

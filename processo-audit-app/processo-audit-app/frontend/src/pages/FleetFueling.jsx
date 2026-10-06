@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import styles from './Fleet.module.css';
+import { Select } from '../components/Select/Select';
 
 const LIMIT = 15;
 const FUEL_TYPES = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
@@ -459,10 +460,10 @@ const FleetFueling = () => {
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Veículo *</label>
-                <select className={styles.select} value={form.car_id} onChange={e => handleFormChange('car_id', e.target.value)} required>
+                <Select className={styles.select} value={form.car_id} onChange={e => handleFormChange('car_id', e.target.value)} required>
                   <option value="">— Selecione —</option>
                   {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
@@ -474,9 +475,9 @@ const FleetFueling = () => {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Tipo de Combustível</label>
-                <select className={styles.select} value={form.fuel_type} onChange={e => handleFormChange('fuel_type', e.target.value)}>
+                <Select className={styles.select} value={form.fuel_type} onChange={e => handleFormChange('fuel_type', e.target.value)}>
                   {FUEL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Litros</label>

@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ticketAPI, labelAPI, departmentAPI } from '../api';
 import styles from './Tickets.module.css';
+import { Select } from '../components/Select/Select';
 
 /* ── Constants ── */
 const PRIORITY_LABELS = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' };
@@ -674,49 +675,49 @@ export default function Tickets() {
           <div className={styles.detailControls}>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Tipo</label>
-              <select className={styles.select} value={editType}
+              <Select className={styles.select} value={editType}
                 onChange={e => { setEditType(e.target.value); handleDetailUpdate({ type: e.target.value }); }}>
                 <option value="task">Tarefa</option>
                 <option value="bug">Bug</option>
                 <option value="story">História</option>
                 <option value="feature">Feature</option>
-              </select>
+              </Select>
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Departamento</label>
-              <select className={styles.select} value={editDept}
+              <Select className={styles.select} value={editDept}
                 onChange={e => { setEditDept(e.target.value); handleDetailUpdate({ department_id: e.target.value || null }); }}>
                 <option value="">— Nenhum —</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Status</label>
-              <select className={styles.select} value={editStatus}
+              <Select className={styles.select} value={editStatus}
                 onChange={e => { setEditStatus(e.target.value); handleDetailUpdate({ status: e.target.value }); }}>
                 <option value="open">Aberto</option>
                 <option value="in_progress">Em andamento</option>
                 <option value="resolved">Resolvido</option>
                 <option value="closed">Fechado</option>
-              </select>
+              </Select>
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Prioridade</label>
-              <select className={styles.select} value={editPrio}
+              <Select className={styles.select} value={editPrio}
                 onChange={e => { setEditPrio(e.target.value); handleDetailUpdate({ priority: e.target.value }); }}>
                 <option value="low">Baixa</option>
                 <option value="medium">Média</option>
                 <option value="high">Alta</option>
                 <option value="urgent">Urgente</option>
-              </select>
+              </Select>
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Atribuído para</label>
-              <select className={styles.select} value={editAssign}
+              <Select className={styles.select} value={editAssign}
                 onChange={e => { setEditAssign(e.target.value); handleDetailUpdate({ assigned_to: e.target.value || null }); }}>
                 <option value="">— Nenhum —</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className={styles.controlGroup}>
               <label className={styles.label}>Data limite</label>
@@ -844,35 +845,35 @@ export default function Tickets() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Tipo</label>
-                <select className={styles.select} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                <Select className={styles.select} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
                   <option value="task">Tarefa</option>
                   <option value="bug">Bug</option>
                   <option value="story">História</option>
                   <option value="feature">Feature</option>
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Departamento</label>
-                <select className={styles.select} value={form.department_id} onChange={e => setForm({ ...form, department_id: e.target.value })}>
+                <Select className={styles.select} value={form.department_id} onChange={e => setForm({ ...form, department_id: e.target.value })}>
                   <option value="">— Nenhum —</option>
                   {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Prioridade</label>
-                <select className={styles.select} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                <Select className={styles.select} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
                   <option value="low">Baixa</option>
                   <option value="medium">Média</option>
                   <option value="high">Alta</option>
                   <option value="urgent">Urgente</option>
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Atribuir para</label>
-                <select className={styles.select} value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })}>
+                <Select className={styles.select} value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })}>
                   <option value="">— Nenhum —</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data limite</label>
@@ -915,32 +916,32 @@ export default function Tickets() {
         </div>
         <div className={styles.filterSelects}>
           {viewMode === 'list' && (
-            <select className={styles.select} value={statusF} onChange={e => { setStatusF(e.target.value); setPage(1); }}>
+            <Select className={styles.select} value={statusF} onChange={e => { setStatusF(e.target.value); setPage(1); }}>
               <option value="">Todos os status</option>
               <option value="open">Aberto</option>
               <option value="in_progress">Em andamento</option>
               <option value="resolved">Resolvido</option>
               <option value="closed">Fechado</option>
-            </select>
+            </Select>
           )}
-          <select className={styles.select} value={departmentF} onChange={e => { setDepartmentF(e.target.value); setPage(1); }}>
+          <Select className={styles.select} value={departmentF} onChange={e => { setDepartmentF(e.target.value); setPage(1); }}>
             <option value="">Todos os departamentos</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-          <select className={styles.select} value={typeF} onChange={e => { setTypeF(e.target.value); setPage(1); }}>
+          </Select>
+          <Select className={styles.select} value={typeF} onChange={e => { setTypeF(e.target.value); setPage(1); }}>
             <option value="">Todos os tipos</option>
             <option value="task">Tarefa</option>
             <option value="bug">Bug</option>
             <option value="story">História</option>
             <option value="feature">Feature</option>
-          </select>
-          <select className={styles.select} value={priorityF} onChange={e => { setPriorityF(e.target.value); setPage(1); }}>
+          </Select>
+          <Select className={styles.select} value={priorityF} onChange={e => { setPriorityF(e.target.value); setPage(1); }}>
             <option value="">Todas as prioridades</option>
             <option value="urgent">Urgente</option>
             <option value="high">Alta</option>
             <option value="medium">Média</option>
             <option value="low">Baixa</option>
-          </select>
+          </Select>
         </div>
       </div>
 

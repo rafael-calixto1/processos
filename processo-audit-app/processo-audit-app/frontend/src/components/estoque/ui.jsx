@@ -233,6 +233,9 @@ export const Bars = ({ rows, fmt = fmtNum }) => {
   );
 };
 
+
+export { Combobox } from '../Select/Select';
+
 export const Field = ({ label, children, hint, className = '' }) => (
   <div className={`${s.field} ${className}`}><label>{label}</label>{children}{hint && <span className={s.hint}>{hint}</span>}</div>
 );

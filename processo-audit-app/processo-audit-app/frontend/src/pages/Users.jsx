@@ -3,6 +3,7 @@ import { authAPI, departmentAPI } from '../api/index';
 import DepartmentSelector from '../components/DepartmentSelector';
 import styles from './Users.module.css';
 import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUserPlus, FiLock } from 'react-icons/fi';
+import { Select } from '../components/Select/Select';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -189,7 +190,7 @@ const Users = () => {
             </div>
             <div className={styles.formGroup}>
               <label>Papel / Acesso</label>
-              <select 
+              <Select 
                 value={newUser.role}
                 onChange={(e) => setNewUser({...newUser, role: e.target.value})}
               >
@@ -198,7 +199,7 @@ const Users = () => {
                 <option value="estoque">Estoque (almoxarife)</option>
                 <option value="tecnico">Técnico de campo</option>
                 <option value="admin">Administrador</option>
-              </select>
+              </Select>
             </div>
             
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
@@ -261,7 +262,7 @@ const Users = () => {
                 <td data-label="Email">{user.email}</td>
                 <td data-label="Papel">
                   {editingId === user.id ? (
-                    <select 
+                    <Select 
                       value={editData.role}
                       onChange={(e) => setEditData({...editData, role: e.target.value})}
                       className={styles.editInput}
@@ -271,7 +272,7 @@ const Users = () => {
                       <option value="estoque">Estoque (almoxarife)</option>
                       <option value="tecnico">Técnico de campo</option>
                       <option value="admin">Administrador</option>
-                    </select>
+                    </Select>
                   ) : (
                     <span className={`${styles.roleBadge} ${styles[user.role]}`}>
                       {user.role}

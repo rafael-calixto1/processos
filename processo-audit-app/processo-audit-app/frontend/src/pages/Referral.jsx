@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Gift, Plus, X, Search, CheckCircle2, Clock, XCircle, AlertCircle, RefreshCw, Settings, FlaskConical, Pencil, Trash2 } from 'lucide-react';
 import { referralAPI } from '../api';
 import styles from './Referral.module.css';
+import { Select } from '../components/Select/Select';
 
 const STATUS_LABELS = {
   pendente:             'Pendente',
@@ -159,7 +160,7 @@ export default function Referral() {
   // Qualquer mudança no formulário invalida a simulação e o resultado anteriores — evita
   // aplicar de verdade um valor que não corresponde mais ao que foi simulado. Não mexe na
   // lista de faturas disponíveis nem no alvo escolhido: esses só mudam quando o cliente/
-  // serviço muda (ver handleTesteIdChange e o onChange do <select> de Serviço).
+  // serviço muda (ver handleTesteIdChange e o onChange do <Select> de Serviço).
   const resetSimulacao = () => {
     setSimulacao(null);
     setSimulacaoError(null);
@@ -223,7 +224,7 @@ export default function Referral() {
 
   // Passo 1: simula (não escreve nada no Hubsoft) — mostra qual fatura seria afetada, se
   // alguma já está aberta e vai ficar de fora, e o valor real que seria lançado. Aceita
-  // overrides pontuais (ex: o <select> de "Fatura alvo" dispara isso direto no onChange, sem
+  // overrides pontuais (ex: o <Select> de "Fatura alvo" dispara isso direto no onChange, sem
   // esperar o próximo render do estado do formulário).
   const runSimular = async (overrides = {}) => {
     const f = { ...testeForm, ...overrides };
@@ -819,7 +820,7 @@ export default function Referral() {
               {testeLookup.servicos.length > 0 && (
                 <div className={styles.formGroup}>
                   <label>Serviço *</label>
-                  <select
+                  <Select
                     required
                     value={testeForm.id_cliente_servico}
                     onChange={e => handleTesteServicoChange(e.target.value)}
@@ -830,20 +831,20 @@ export default function Referral() {
                         {s.nome} — R$ {parseFloat(s.valor).toFixed(2).replace('.', ',')} ({s.status})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
               <div className={styles.formGroup}>
                 <label>Tipo de recompensa</label>
-                <select
+                <Select
                   className={styles.select}
                   value={testeForm.tipo_recompensa}
                   onChange={e => { setTesteForm(f => ({ ...f, tipo_recompensa: e.target.value })); resetSimulacao(); }}
                 >
                   <option value="desconto_valor">Desconto em valor (R$)</option>
                   <option value="remover_fatura">Remover uma fatura (valor cheio do plano)</option>
-                </select>
+                </Select>
               </div>
 
               {testeForm.id_cliente_servico && (
@@ -852,7 +853,7 @@ export default function Referral() {
                     Fatura alvo
                     {simulando && <span className={styles.lookupHint}> simulando...</span>}
                   </label>
-                  <select
+                  <Select
                     className={styles.select}
                     value={testeForm.alvo}
                     onChange={e => handleAlvoChange(e.target.value)}
@@ -863,7 +864,7 @@ export default function Referral() {
                         {String(f.mes_processar).padStart(2, '0')}/{f.ano_processar} — {fmtMoney(f.valor)} — vence {fmtDate(f.data_vencimento)} (fatura #{f.id_fatura})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {simulacao && testeFaturasDisponiveis.length === 0 && (
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: 2 }}>
                       Nenhuma fatura em aberto encontrada para esse serviço — só a opção automática está disponível.
@@ -1225,7 +1226,7 @@ export default function Referral() {
               {lookupIndicador.servicos.length > 0 && (
                 <div className={styles.formGroup}>
                   <label>Plano / Serviço do Indicador *</label>
-                  <select
+                  <Select
                     required
                     className={styles.select}
                     value={form.id_cliente_servico}
@@ -1236,7 +1237,7 @@ export default function Referral() {
                         {s.nome} — R$ {parseFloat(s.valor).toFixed(2).replace('.', ',')} ({s.status})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
@@ -1456,7 +1457,7 @@ export default function Referral() {
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label>Status *</label>
-                  <select
+                  <Select
                     required
                     className={styles.select}
                     value={editForm.status}
@@ -1465,7 +1466,7 @@ export default function Referral() {
                     {Object.entries(STATUS_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Valor do Desconto (R$)</label>
@@ -1482,25 +1483,25 @@ export default function Referral() {
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label>Tipo de recompensa</label>
-                  <select
+                  <Select
                     className={styles.select}
                     value={editForm.tipo_recompensa}
                     onChange={e => setEditForm(f => ({ ...f, tipo_recompensa: e.target.value }))}
                   >
                     <option value="desconto_valor">Desconto em valor (R$)</option>
                     <option value="remover_fatura">Remover uma fatura</option>
-                  </select>
+                  </Select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Regra de liberação</label>
-                  <select
+                  <Select
                     className={styles.select}
                     value={editForm.regra_ativacao}
                     onChange={e => setEditForm(f => ({ ...f, regra_ativacao: e.target.value }))}
                   >
                     <option value="ativacao">Quando ativar o serviço</option>
                     <option value="primeira_fatura_paga">Quando pagar a primeira fatura</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 

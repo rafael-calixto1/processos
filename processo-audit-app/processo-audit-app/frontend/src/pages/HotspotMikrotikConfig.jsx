@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { RouterIcon, WifiIcon, ZapIcon, BarChart2Icon, TrashIcon, ClockIcon } from 'lucide-react';
 import styles from './HotspotMikrotikConfig.module.css';
+import { Select } from '../components/Select/Select';
 
 export default function HotspotMikrotikConfig() {
   const [tipoWan, setTipoWan] = useState('');
@@ -243,12 +244,12 @@ export default function HotspotMikrotikConfig() {
             </div>
             <div className={styles.formGroup}>
               <label htmlFor="tipoWan">Tipo de Conexão</label>
-              <select id="tipoWan" name="tipoWan" required value={tipoWan} onChange={e => setTipoWan(e.target.value)}>
+              <Select id="tipoWan" name="tipoWan" required value={tipoWan} onChange={e => setTipoWan(e.target.value)}>
                 <option value="">Selecione...</option>
                 <option value="dhcp">DHCP</option>
                 <option value="pppoe">PPPoE</option>
                 <option value="static">IP Fixo</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -327,7 +328,7 @@ export default function HotspotMikrotikConfig() {
               <p className={styles.subSectionTitle}>⏰ Frequência</p>
               <div className={styles.formGroup}>
                 <label htmlFor="intervaloRelatorio">Intervalo</label>
-                <select id="intervaloRelatorio" name="intervaloRelatorio" defaultValue="5m">
+                <Select id="intervaloRelatorio" name="intervaloRelatorio" defaultValue="5m">
                   <option value="5m">5 minutos</option>
                   <option value="10m">10 minutos</option>
                   <option value="30m">30 minutos</option>
@@ -335,7 +336,7 @@ export default function HotspotMikrotikConfig() {
                   <option value="6h">6 horas</option>
                   <option value="12h">12 horas</option>
                   <option value="24h">24 horas</option>
-                </select>
+                </Select>
               </div>
             </div>
           )}
@@ -356,14 +357,14 @@ export default function HotspotMikrotikConfig() {
               <p className={styles.subSectionTitle}>🕒 Frequência</p>
               <div className={styles.formGroup}>
                 <label htmlFor="intervaloLimpeza">Intervalo</label>
-                <select id="intervaloLimpeza" name="intervaloLimpeza" defaultValue="7d">
+                <Select id="intervaloLimpeza" name="intervaloLimpeza" defaultValue="7d">
                   <option value="1d">1 dia</option>
                   <option value="3d">3 dias</option>
                   <option value="7d">7 dias</option>
                   <option value="15d">15 dias</option>
                   <option value="30d">30 dias</option>
                   <option value="90d">90 dias</option>
-                </select>
+                </Select>
               </div>
             </div>
           )}
@@ -377,7 +378,7 @@ export default function HotspotMikrotikConfig() {
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="fusoHorario">Fuso Horário</label>
-            <select id="fusoHorario" name="fusoHorario" defaultValue="America/Fortaleza">
+            <Select id="fusoHorario" name="fusoHorario" defaultValue="America/Fortaleza">
               <option value="America/Fortaleza">America/Fortaleza (CE, MA, PI)</option>
               <option value="America/Recife">America/Recife (PE, AL, SE)</option>
               <option value="America/Bahia">America/Bahia (BA)</option>
@@ -386,7 +387,7 @@ export default function HotspotMikrotikConfig() {
               <option value="America/Cuiaba">America/Cuiaba (MT)</option>
               <option value="America/Porto_Velho">America/Porto_Velho (RO, AC)</option>
               <option value="America/Manaus">America/Manaus (AM)</option>
-            </select>
+            </Select>
           </div>
           <p className={styles.hintText}>O nome do equipamento será o mesmo do campo "Nome do Sistema".</p>
         </div>

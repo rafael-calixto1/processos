@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
 import styles from './Fleet.module.css';
 import MaintenanceDashboard from './MaintenanceDashboard';
+import { Select } from '../components/Select/Select';
 
 const LIMIT = 15;
 
@@ -162,17 +163,17 @@ const MaintenanceHistory = ({ cars, types }) => {
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Veículo *</label>
-                <select className={styles.select} value={form.car_id} onChange={e => setForm({ ...form, car_id: e.target.value })} required>
+                <Select className={styles.select} value={form.car_id} onChange={e => setForm({ ...form, car_id: e.target.value })} required>
                   <option value="">— Selecione —</option>
                   {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Tipo de Manutenção *</label>
-                <select className={styles.select} value={form.maintenance_type_id} onChange={e => setForm({ ...form, maintenance_type_id: e.target.value })} required>
+                <Select className={styles.select} value={form.maintenance_type_id} onChange={e => setForm({ ...form, maintenance_type_id: e.target.value })} required>
                   <option value="">— Selecione —</option>
                   {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
@@ -560,7 +561,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
                       required={showDate}
                       style={{ flex: 1 }}
                     />
-                    <select
+                    <Select
                       className={styles.select}
                       value={form.recurrency_date_unit}
                       onChange={e => setForm({ ...form, recurrency_date_unit: e.target.value })}
@@ -569,17 +570,17 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
                       {DATE_UNITS.map(u => (
                         <option key={u.value} value={u.value}>{u.label}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
               )}
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>Status</label>
-                <select className={styles.select} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                <Select className={styles.select} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
-                </select>
+                </Select>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

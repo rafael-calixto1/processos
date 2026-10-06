@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Printer, PackagePlus, CheckCircle2 } from 'lucide-react';
+import { Printer, PackagePlus, CheckCircle2, Plus } from 'lucide-react';
 import { estoqueAPI, cadastrosAPI } from '../api/estoque';
-import { AsyncState, useLoad, useToasts, Field, LabelSheet, fmtNum, fmtQtd, fmtDataHora, styles as s } from '../components/estoque/ui';
+import { FornecedorForm } from './EstoqueCadastros';
+import { Combobox, AsyncState, useLoad, useToasts, Field, LabelSheet, fmtNum, fmtQtd, fmtDataHora, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const VOLUMES = { bobina: 'Bobina', caixa: 'Caixa', rolo: 'Rolo', unidade: 'Unidade' };
 
@@ -10,21 +12,24 @@ const EstoqueEntrada = () => {
   const forn = useLoad(() => cadastrosAPI.fornecedores());
   const hist = useLoad(() => estoqueAPI.compras());
   const [f, setF] = useState({ item_id: '', fornecedor_id: '', tipo_volume: 'bobina', qtd_volumes: 1, medida_por_volume: '', nf: '' });
+  const [usaLote, setUsaLote] = useState(true); // false = só unidade/quantidade, sem etiquetas por volume
+  const [novoForn, setNovoForn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resultado, setResultado] = useState(null);
   const chave = useRef(crypto.randomUUID()); // idempotência: duplo clique não gera lotes em dobro
   const { notify, toasts } = useToasts();
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const item = (itens.data || []).find((i) => String(i.id) === String(f.item_id));
-  const total = (Number(f.qtd_volumes) || 0) * (Number(f.medida_por_volume) || 0);
+  const total = (usaLote ? Number(f.qtd_volumes) || 0 : 1) * (Number(f.medida_por_volume) || 0);
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true);
     try {
-      const out = await estoqueAPI.criarCompra({ ...f, chave_idempotencia: chave.current });
-      setResultado({ ...out, item });
+      const dados = usaLote ? f : { ...f, tipo_volume: 'unidade', qtd_volumes: 1 };
+      const out = await estoqueAPI.criarCompra({ ...dados, chave_idempotencia: chave.current });
+      setResultado({ ...out, item, semLote: !usaLote, qtd: Number(f.medida_por_volume) });
       chave.current = crypto.randomUUID();
-      notify(`${out.lotes.length} lote(s) gerado(s)`); hist.reload(); itens.reload();
+      notify(usaLote ? `${out.lotes.length} lote(s) gerado(s)` : 'Entrada registrada'); hist.reload(); itens.reload();
     } catch (err) { notify(err.message, 'err'); } finally { setBusy(false); }
   };
 
@@ -32,35 +37,49 @@ const EstoqueEntrada = () => {
 
   return (
     <div className={s.page}>
-      <div><h1 className={s.title}>Entrada / Compra</h1><p className={s.sub}>Cada volume vira um lote com código único e etiqueta QR</p></div>
+      <div><h1 className={s.title}>Entrada / Compra</h1><p className={s.sub}>Com lotes, cada volume ganha código único e etiqueta QR; sem lotes, só a quantidade entra no estoque</p></div>
       {!resultado ? (
         <form className={`${s.card} ${s.form} ${s.cols2}`} onSubmit={submit}>
           <Field label="Item" className={s.span2}>
-            <select value={f.item_id} onChange={set('item_id')} required>
-              <option value="">Selecione…</option>{(itens.data || []).map((i) => <option key={i.id} value={i.id}>{i.nome} ({i.unidade === 'metros' ? 'm' : 'un'})</option>)}
-            </select>
+            <Combobox value={f.item_id} onChange={(v) => setF({ ...f, item_id: v })} required placeholder="Selecione o item…"
+              options={(itens.data || []).map((i) => ({ value: i.id, label: i.nome, sub: `${i.categoria ? i.categoria + ' · ' : ''}saldo ${fmtQtd(i.saldo, i.unidade)}`, tag: i.unidade === 'metros' ? 'metros' : 'unidades' }))} />
           </Field>
-          <Field label="Fornecedor"><select value={f.fornecedor_id} onChange={set('fornecedor_id')}><option value="">—</option>{(forn.data || []).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select></Field>
+          <Field label="Como registrar esta entrada?" className={s.span2}>
+            <Select value={usaLote ? 'sim' : 'nao'} onChange={(e) => setUsaLote(e.target.value === 'sim')}>
+              <option value="sim">Gerar lotes (bobinas, rolos, caixas — com etiqueta QR)</option>
+              <option value="nao">Apenas unidades (sem lote nem etiqueta)</option>
+            </Select>
+          </Field>
+          <Field label="Fornecedor">
+            <div className={s.inline}>
+              <Select style={{ flex: 1, minWidth: 0 }} value={f.fornecedor_id} onChange={set('fornecedor_id')}><option value="">—</option>{(forn.data || []).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</Select>
+              <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => setNovoForn(true)} title="Cadastrar novo fornecedor" aria-label="Cadastrar novo fornecedor"><Plus size={18} /></button>
+            </div>
+          </Field>
           <Field label="Nota fiscal (opcional)"><input value={f.nf} onChange={set('nf')} /></Field>
-          <Field label="Tipo de volume"><select value={f.tipo_volume} onChange={set('tipo_volume')}>{Object.entries(VOLUMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+          {usaLote && (<>
+          <Field label="Tipo de volume"><Select value={f.tipo_volume} onChange={set('tipo_volume')}>{Object.entries(VOLUMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
           <Field label="Nº de volumes"><input type="number" min="1" max="500" step="1" value={f.qtd_volumes} onChange={set('qtd_volumes')} required /></Field>
-          <Field label={`Medida por volume (${item?.unidade === 'metros' ? 'metros' : 'peças'})`}><input type="number" min="0.01" step="0.01" value={f.medida_por_volume} onChange={set('medida_por_volume')} required /></Field>
+          </>)}
+          <Field label={usaLote ? `Medida por volume (${item?.unidade === 'metros' ? 'metros' : 'peças'})` : `Quantidade (${item?.unidade === 'metros' ? 'metros' : 'peças'})`}><input type="number" min="0.01" step="0.01" value={f.medida_por_volume} onChange={set('medida_por_volume')} required /></Field>
           <div className={`${s.callout} ${s.calloutKeep} ${s.span2}`}>
             <PackagePlus size={20} aria-hidden="true" />
-            <span>Serão gerados <b>{Number(f.qtd_volumes) || 0} lote(s)</b>{total > 0 && item && <> totalizando <b>{fmtQtd(total, item.unidade)}</b></>}.</span>
+            {usaLote
+              ? <span>Serão gerados <b>{Number(f.qtd_volumes) || 0} lote(s)</b>{total > 0 && item && <> totalizando <b>{fmtQtd(total, item.unidade)}</b></>}.</span>
+              : <span>Entrarão <b>{fmtQtd(Number(f.medida_por_volume) || 0, item?.unidade || 'pecas')}</b> no estoque, sem etiqueta por volume.</span>}
           </div>
-          <button className={`${s.btn} ${s.btnPrimary} ${s.span2}`} disabled={busy}>{busy ? 'Registrando…' : 'Registrar entrada e gerar lotes'}</button>
+          <button className={`${s.btn} ${s.btnPrimary} ${s.span2}`} disabled={busy}>{busy ? 'Registrando…' : usaLote ? 'Registrar entrada e gerar lotes' : 'Registrar entrada'}</button>
         </form>
       ) : (
         <div className={s.card}>
           <div className={s.head}>
-            <h2 className={s.cardTitle}><CheckCircle2 size={18} style={{ verticalAlign: -3, color: '#166534' }} /> {lotes.length} lote(s) gerado(s)</h2>
+            <h2 className={s.cardTitle}><CheckCircle2 size={18} style={{ verticalAlign: -3, color: '#166534' }} /> {resultado.semLote ? `Entrada registrada: ${fmtQtd(resultado.qtd, resultado.item?.unidade)} de ${resultado.item?.nome}` : `${lotes.length} lote(s) gerado(s)`}</h2>
             <div className={`${s.actions} ${s.noPrint}`}>
-              <button className={s.btn} onClick={() => window.print()}><Printer size={18} />Imprimir etiquetas</button>
+              {!resultado.semLote && <button className={s.btn} onClick={() => window.print()}><Printer size={18} />Imprimir etiquetas</button>}
               <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setResultado(null)}>Nova entrada</button>
             </div>
           </div>
-          <LabelSheet lotes={lotes} itemNome={resultado.item?.nome} />
+          {!resultado.semLote && <LabelSheet lotes={lotes} itemNome={resultado.item?.nome} />}
         </div>
       )}
       <div className={`${s.card} ${s.noPrint}`}>
@@ -74,6 +93,14 @@ const EstoqueEntrada = () => {
                 <td data-label="Fornecedor">{c.fornecedor_nome || '—'}</td><td data-label="NF">{c.nf || '—'}</td><td data-label="Por">{c.usuario_nome}</td></tr>))}</tbody></table></div>
         </AsyncState>
       </div>
+      {novoForn && (
+        <FornecedorForm
+          inicial={{ nome: '' }}
+          notify={notify}
+          onClose={() => setNovoForn(false)}
+          onSaved={async (r) => { setNovoForn(false); await forn.reload(); if (r?.id) setF((p) => ({ ...p, fornecedor_id: String(r.id) })); }}
+        />
+      )}
       {toasts}
     </div>
   );

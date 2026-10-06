@@ -137,16 +137,16 @@ button, .btn {
 }
 
 .btn-secondary {
-  background-color: var(--secondary-color);
+  background-color: var(--primary-light);
   color: var(--accent-color);
-  border-color: var(--secondary-dark);
+  border-color: #bfe3c8;
   font-weight: 600;
 }
 
 .btn-secondary:hover {
-  background-color: var(--secondary-dark);
+  background-color: #d4f1dc;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(187, 248, 4, 0.4);
+  box-shadow: 0 4px 10px rgba(11, 165, 43, 0.2);
 }
 
 .btn-outline {
@@ -365,8 +365,8 @@ th {
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--secondary-color);
-  border-bottom: 2px solid var(--secondary-color);
+  color: #fff;
+  border-bottom: 2px solid var(--primary-color);
 }
 
 td {
@@ -590,7 +590,7 @@ main > div > div > [class*="_head_"] {
   background:
     linear-gradient(105deg, rgba(18, 48, 10, 0.96) 0%, rgba(39, 69, 24, 0.88) 55%, rgba(11, 165, 43, 0.55) 100%),
     url('/fundo-app.png') center / cover no-repeat;
-  border-bottom: 3px solid var(--secondary-color);
+  border-bottom: 3px solid var(--primary-color);
   box-shadow: var(--shadow-md);
   color: #fff;
 }
@@ -640,9 +640,9 @@ main > div > div > [class*="_head_"] button:hover:not(:disabled) {
 main > div > div > [class*="_header_"] button[class*="rimary"],
 main > div > div > [class*="_pageHeader_"] button[class*="rimary"],
 main > div > div > [class*="_head_"] button[class*="rimary"] {
-  background: var(--secondary-color);
+  background: #fff;
   color: var(--accent-color);
-  border-color: var(--secondary-dark);
+  border-color: #fff;
   font-weight: 700;
 }
 
@@ -650,12 +650,12 @@ main > div > div > [class*="_head_"] button[class*="rimary"] {
 main > div > div > [class*="_header_"] button[class*="rimary"]:hover:not(:disabled),
 main > div > div > [class*="_pageHeader_"] button[class*="rimary"]:hover:not(:disabled),
 main > div > div > [class*="_head_"] button[class*="rimary"]:hover:not(:disabled) {
-  background: var(--secondary-dark);
+  background: var(--primary-light);
   color: var(--accent-color);
 }
 
 main > div > div > [class*="_header_"] [class*="headerIcon"] {
-  background: var(--secondary-color);
+  background: #fff;
   color: var(--accent-color);
 }
 
@@ -680,12 +680,12 @@ main table {
 
 main :is(table, [class*="_table"]) th {
   background: linear-gradient(180deg, #2f5520, var(--accent-color));
-  color: var(--secondary-color);
+  color: #fff;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-bottom: 3px solid var(--secondary-color);
+  border-bottom: 3px solid var(--primary-color);
   white-space: nowrap;
 }
 
@@ -706,11 +706,11 @@ main :is(table, [class*="_table"]) tbody tr {
 }
 
 main :is(table, [class*="_table"]) tbody tr:hover td {
-  background-color: #f1fbd9;
+  background-color: #eef7ec;
 }
 
 main :is(table, [class*="_table"]) tbody tr:hover td:first-child {
-  box-shadow: inset 4px 0 0 var(--secondary-color);
+  box-shadow: inset 3px 0 0 var(--primary-color);
 }
 
 /* ── Rótulos e campos ── */
@@ -740,7 +740,7 @@ main :is([class*="_formGroup"], [class*="_field"], .form-group) :is(input, selec
   outline: none;
   border-color: var(--primary-color);
   background-color: #fff;
-  box-shadow: 0 0 0 4px rgba(187, 248, 4, 0.4);
+  box-shadow: 0 0 0 3px rgba(11, 165, 43, 0.18);
 }
 
 main :is(input, textarea)::placeholder {
@@ -775,8 +775,8 @@ main [class*="_pageBtn"] {
 }
 
 main [class*="_pageBtn"]:not(:disabled):hover {
-  background: var(--secondary-color);
-  border-color: var(--secondary-dark);
+  background: var(--primary-light);
+  border-color: var(--primary-color);
   color: var(--accent-color);
 }
 
@@ -788,7 +788,7 @@ main [class*="_pageBtn"]:not(:disabled):hover {
 
 [class*="_modal_"], [class*="_modal "], .modal {
   border-radius: var(--radius-xl) !important;
-  border-top: 4px solid var(--secondary-color);
+  border-top: 4px solid var(--primary-color);
   box-shadow: 0 30px 70px -12px rgba(18, 48, 10, 0.55) !important;
 }
 

@@ -6,8 +6,7 @@ import { FiArrowLeft, FiEdit2, FiTrash2, FiPlay, FiImage, FiFileText } from 'rea
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './ProcessDetail.module.css';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportProcessPdf } from '../utils/pdfBrand';
 
 const ProcessDetail = () => {
   const { id } = useParams();
@@ -41,166 +40,11 @@ const ProcessDetail = () => {
     }
   };
 
-  const getBase64ImageFromURL = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.setAttribute('crossOrigin', 'anonymous');
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const dataURL = canvas.toDataURL('image/jpeg');
-        resolve({
-          dataURL,
-          width: img.width,
-          height: img.height
-        });
-      };
-      img.onerror = (error) => {
-        reject(error);
-      };
-      img.src = url;
-    });
-  };
-
   const handleExportPDF = async () => {
     if (!process) return;
-
     try {
       setLoading(true);
-      const doc = new jsPDF();
-      
-      // Header
-      doc.setFontSize(20);
-      doc.setTextColor(11, 165, 43); // Primary color
-      doc.text(process.title, 14, 22);
-      
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Departamento: ${process.department_name} | Versão: ${process.version}`, 14, 30);
-      doc.text(`Criado por: ${process.created_by_name} em ${new Date(process.created_at).toLocaleDateString()}`, 14, 35);
-      
-      // Description
-      doc.setFontSize(12);
-      doc.setTextColor(0);
-      doc.text('Descrição:', 14, 45);
-      doc.setFontSize(10);
-      const descLines = doc.splitTextToSize(process.description || 'Sem descrição', 180);
-      doc.text(descLines, 14, 52);
-      
-      let currentY = 52 + (descLines.length * 5) + 10;
-
-      // Steps Table
-      doc.setFontSize(14);
-      doc.setTextColor(11, 165, 43);
-      doc.text('Passos do Processo', 14, currentY);
-      
-      const tableColumn = ["#", "Título", "Procedimento / Instruções"];
-      const tableRows = [];
-      const rowStepMap = new Map();
-
-      // Pre-load all images
-      const stepsWithImages = await Promise.all(process.steps?.map(async (step) => {
-        let imageData = null;
-        if (step.photo_url) {
-          try {
-            imageData = await getBase64ImageFromURL(getFullUrl(step.photo_url));
-          } catch (e) {
-            console.error('Erro ao carregar imagem para o PDF:', e);
-          }
-        }
-        return { ...step, imageData };
-      }) || []);
-
-      let lastSection = null;
-
-      stepsWithImages.forEach((step, index) => {
-        // Section header row (when the section changes)
-        const section = step.section || null;
-        if (section && section !== lastSection) {
-          tableRows.push([
-            {
-              content: section,
-              colSpan: 3,
-              styles: {
-                fillColor: [11, 165, 43],
-                textColor: 255,
-                fontStyle: 'bold',
-                fontSize: 11,
-                halign: 'left'
-              }
-            }
-          ]);
-        }
-        lastSection = section;
-
-        // Text row
-        tableRows.push([
-          index + 1,
-          step.title,
-          step.description || '-'
-        ]);
-
-        // Image row if exists
-        if (step.imageData) {
-          // Calculate aspect ratio
-          const maxWidth = 140;
-          const maxHeight = 80;
-          let imgWidth = step.imageData.width;
-          let imgHeight = step.imageData.height;
-          
-          const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-          imgWidth *= ratio;
-          imgHeight *= ratio;
-
-          rowStepMap.set(tableRows.length, { base64: step.imageData.dataURL, width: imgWidth, height: imgHeight });
-          tableRows.push([
-            '',
-            { 
-              content: '', 
-              colSpan: 2, 
-              styles: { minCellHeight: imgHeight + 10, halign: 'center' } 
-            }
-          ]);
-        }
-      });
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: currentY + 5,
-        theme: 'striped',
-        headStyles: { fillColor: [11, 165, 43] },
-        styles: { fontSize: 10, cellPadding: 5 },
-        columnStyles: {
-          0: { cellWidth: 15 },
-          1: { cellWidth: 50 },
-          2: { cellWidth: 'auto' }
-        },
-        rowPageBreak: 'avoid',
-        didDrawCell: (data) => {
-          if (data.section === 'body' && rowStepMap.has(data.row.index) && data.column.index === 1) {
-            const imgInfo = rowStepMap.get(data.row.index);
-            // Center the image in the spanned cell
-            const x = data.cell.x + (data.cell.width - imgInfo.width) / 2;
-            const y = data.cell.y + 5;
-            doc.addImage(imgInfo.base64, 'JPEG', x, y, imgInfo.width, imgInfo.height);
-          }
-        }
-      });
-
-      // Footer
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`Página ${i} de ${pageCount} - Gerado em ${new Date().toLocaleString()}`, 14, doc.internal.pageSize.height - 10);
-      }
-
-      doc.save(`processo_${process.id}_${new Date().getTime()}.pdf`);
+      await exportProcessPdf(process, getFullUrl);
     } catch (err) {
       setError('Erro ao exportar PDF: ' + err.message);
     } finally {

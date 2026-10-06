@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { cadastrosAPI } from '../api/estoque';
 import { AsyncState, useLoad, useToasts, Modal, Field, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const TecnicoForm = ({ inicial, onClose, onSaved, notify }) => {
   const usuarios = useLoad(() => cadastrosAPI.usuariosDisponiveis());
@@ -20,32 +21,32 @@ const TecnicoForm = ({ inicial, onClose, onSaved, notify }) => {
     <Modal title={f.id ? 'Editar técnico/equipe' : 'Novo técnico/equipe'} onClose={onClose}>
       <form className={s.form} onSubmit={submit}>
         <Field label="Nome"><input value={f.nome} onChange={set('nome')} required /></Field>
-        <Field label="Tipo"><select value={f.tipo} onChange={set('tipo')}><option value="interno">Interno</option><option value="terceirizado">Equipe terceirizada</option></select></Field>
+        <Field label="Tipo"><Select value={f.tipo} onChange={set('tipo')}><option value="interno">Interno</option><option value="terceirizado">Equipe terceirizada</option></Select></Field>
         {f.tipo === 'terceirizado' && <Field label="Empresa / equipe"><input value={f.empresa || ''} onChange={set('empresa')} /></Field>}
         <Field label="Telefone"><input value={f.telefone || ''} onChange={set('telefone')} /></Field>
         {f.tipo === 'interno' && (
           <Field label="Usuário de login (perfil Técnico)" hint="Crie o usuário em Usuários com o papel “Técnico de campo”. Equipes terceirizadas não têm login.">
-            <select value={f.usuario_id || ''} onChange={set('usuario_id')}>
+            <Select value={f.usuario_id || ''} onChange={set('usuario_id')}>
               <option value="">Sem vínculo</option>
               {f.usuario_id && !(usuarios.data || []).some((u) => u.id === f.usuario_id) && <option value={f.usuario_id}>{f.usuario_email || 'Usuário atual'}</option>}
               {(usuarios.data || []).map((u) => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
-            </select>
+            </Select>
           </Field>
         )}
-        {f.id && <Field label="Situação"><select value={f.ativo === 0 ? '0' : '1'} onChange={(e) => setF({ ...f, ativo: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></select></Field>}
+        {f.id && <Field label="Situação"><Select value={f.ativo === 0 ? '0' : '1'} onChange={(e) => setF({ ...f, ativo: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></Select></Field>}
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Salvar</button>
       </form>
     </Modal>
   );
 };
 
-const FornecedorForm = ({ inicial, onClose, onSaved, notify }) => {
+export const FornecedorForm = ({ inicial, onClose, onSaved, notify }) => {
   const [f, setF] = useState(inicial);
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const submit = async (e) => {
     e.preventDefault(); setBusy(true);
-    try { if (f.id) await cadastrosAPI.atualizarFornecedor(f.id, f); else await cadastrosAPI.criarFornecedor(f); notify('Fornecedor salvo'); onSaved(); }
+    try { const r = f.id ? await cadastrosAPI.atualizarFornecedor(f.id, f) : await cadastrosAPI.criarFornecedor(f); notify('Fornecedor salvo'); onSaved(r); }
     catch (err) { notify(err.message, 'err'); } finally { setBusy(false); }
   };
   return (
@@ -54,7 +55,7 @@ const FornecedorForm = ({ inicial, onClose, onSaved, notify }) => {
         <Field label="Nome"><input value={f.nome} onChange={set('nome')} required /></Field>
         <Field label="CNPJ"><input value={f.cnpj || ''} onChange={set('cnpj')} /></Field>
         <Field label="Contato"><input value={f.contato || ''} onChange={set('contato')} /></Field>
-        {f.id && <Field label="Situação"><select value={f.ativo === 0 ? '0' : '1'} onChange={(e) => setF({ ...f, ativo: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></select></Field>}
+        {f.id && <Field label="Situação"><Select value={f.ativo === 0 ? '0' : '1'} onChange={(e) => setF({ ...f, ativo: e.target.value === '1' })}><option value="1">Ativo</option><option value="0">Inativo</option></Select></Field>}
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Salvar</button>
       </form>
     </Modal>

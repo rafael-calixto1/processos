@@ -12,7 +12,7 @@
   z-index: 100;
   height: var(--header-height);
   background: linear-gradient(100deg, #12300a 0%, var(--accent-color) 60%, #1d6a1f 130%);
-  border-bottom: 3px solid var(--secondary-color);
+  border-bottom: 2px solid var(--primary-color);
   box-shadow: 0 4px 18px rgba(18, 48, 10, 0.35);
 }
 
@@ -77,7 +77,7 @@
 .logoPlaceholder {
   width: 36px;
   height: 36px;
-  background-color: var(--secondary-color);
+  background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -92,9 +92,9 @@
   font-size: 0.8125rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--secondary-color);
+  color: rgba(255, 255, 255, 0.75);
   padding-left: 0.75rem;
-  border-left: 1px solid rgba(187, 248, 4, 0.4);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
   white-space: nowrap;
 }
 
@@ -131,8 +131,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--secondary-color);
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.35);
   color: var(--accent-color);
   display: flex;
   align-items: center;
@@ -173,7 +173,7 @@
 .sidebar {
   width: var(--sidebar-width);
   background: linear-gradient(180deg, #17380f 0%, #102a0a 100%);
-  border-right: 1px solid rgba(187, 248, 4, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   overflow-y: auto;
   overflow-x: hidden;
   transition: width 0.25s ease, opacity 0.25s ease;
@@ -181,7 +181,7 @@
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-  background: rgba(187, 248, 4, 0.25);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Desktop: clicking toggle hides sidebar */
@@ -212,8 +212,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--secondary-color);
-  opacity: 0.7;
+  color: rgba(255, 255, 255, 0.5);
   padding: 1.25rem 0.875rem 0.375rem;
 }
 
@@ -233,20 +232,32 @@
 }
 
 .navItem:hover {
-  background-color: rgba(187, 248, 4, 0.1);
-  color: var(--secondary-color);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .navItem:focus-visible {
-  outline: 2px solid var(--secondary-color);
+  outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: -2px;
 }
 
 .navItem.active {
-  background-color: var(--secondary-color);
-  color: var(--accent-color);
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(187, 248, 4, 0.25);
+  background-color: var(--primary-color);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Único toque de lima: indicador fino no item ativo */
+.navItem.active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--secondary-color);
 }
 
 .navIcon {

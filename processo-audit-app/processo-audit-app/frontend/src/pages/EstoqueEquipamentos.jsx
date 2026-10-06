@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Plus, ArrowRightFromLine, ArrowLeftToLine, CheckCircle2 } from 'lucide-react';
 import { cadastrosAPI } from '../api/estoque';
 import { AsyncState, useLoad, useToasts, Modal, Field, fmtDataHora, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const COND = { novo: 'Novo', bom: 'Bom', usado: 'Usado', defeito: 'Com defeito' };
-const CondSelect = ({ value, onChange }) => <select value={value} onChange={onChange}>{Object.entries(COND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>;
+const CondSelect = ({ value, onChange }) => <Select value={value} onChange={onChange}>{Object.entries(COND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>;
 
 const EstoqueEquipamentos = () => {
   const eq = useLoad(() => cadastrosAPI.equipamentos());
@@ -53,7 +54,7 @@ const EstoqueEquipamentos = () => {
               <Field label="Patrimônio / serial"><input value={f.patrimonio} onChange={set('patrimonio')} /></Field>
               <Field label="Estado"><CondSelect value={f.estado} onChange={set('estado')} /></Field></>)}
             {modal.tipo === 'saida' && (<>
-              <Field label="Técnico / equipe"><select value={f.tecnico_id} onChange={set('tecnico_id')} required><option value="">Selecione…</option>{(tecs.data || []).filter((t) => t.ativo).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select></Field>
+              <Field label="Técnico / equipe"><Select value={f.tecnico_id} onChange={set('tecnico_id')} required><option value="">Selecione…</option>{(tecs.data || []).filter((t) => t.ativo).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</Select></Field>
               <Field label="Condição na saída"><CondSelect value={f.condicao_saida} onChange={set('condicao_saida')} /></Field></>)}
             {modal.tipo === 'devolucao' && <Field label="Condição na devolução"><CondSelect value={f.condicao_devolucao} onChange={set('condicao_devolucao')} /></Field>}
             <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Confirmar</button>

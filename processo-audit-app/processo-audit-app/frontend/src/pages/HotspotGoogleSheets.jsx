@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Plug, Link2, Settings, AlertTriangle, Code2 } from 'lucide-react';
 import styles from './HotspotGoogleSheets.module.css';
+import { Select } from '../components/Select/Select';
 
 const HotspotGoogleSheets = () => {
   const [url, setUrl] = useState('');
@@ -518,7 +519,7 @@ ${urlEncodeBlock}
 
         <div className={styles.formGroup}>
           <label htmlFor="intervaloMonitoramento">Intervalo de monitoramento:</label>
-          <select
+          <Select
             id="intervaloMonitoramento"
             value={intervalo}
             onChange={e => setIntervalo(e.target.value)}
@@ -529,7 +530,7 @@ ${urlEncodeBlock}
             <option value="3m">3 minutos</option>
             <option value="5m">5 minutos</option>
             <option value="10m">10 minutos</option>
-          </select>
+          </Select>
           <div className={styles.hintText}>
             Frequência aplicada para cadastros e logs. Anti-duplicatas e backup automático inclusos.
           </div>

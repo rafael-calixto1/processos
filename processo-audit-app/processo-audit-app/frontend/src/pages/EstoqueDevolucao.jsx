@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { estoqueAPI, cadastrosAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
-import { AsyncState, useLoad, useToasts, Field, ConfirmDialog, fmtQtd, styles as s } from '../components/estoque/ui';
+import { Combobox, AsyncState, useLoad, useToasts, Field, ConfirmDialog, fmtQtd, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const EstoqueDevolucao = () => {
   const { user } = useAuth();
@@ -9,21 +10,44 @@ const EstoqueDevolucao = () => {
   const tecs = useLoad(() => (isTecnico ? Promise.resolve([]) : cadastrosAPI.tecnicos()), [isTecnico]);
   const [tecnicoId, setTecnicoId] = useState('');
   const posse = useLoad(() => (isTecnico ? estoqueAPI.minhaPosse() : tecnicoId ? estoqueAPI.fichaTecnico(tecnicoId).then((r) => r.itens) : Promise.resolve([])), [isTecnico, tecnicoId]);
-  const [sel, setSel] = useState('');
-  const [qtd, setQtd] = useState('');
+  const [qtds, setQtds] = useState({}); // lote_id -> quantidade digitada (presença = selecionado)
   const [condicao, setCondicao] = useState('novo');
   const [confirmar, setConfirmar] = useState(false);
   const [busy, setBusy] = useState(false);
   const { notify, toasts } = useToasts();
-  const linha = (posse.data || []).find((p) => String(p.lote_id) === String(sel));
+  // Itens por unidade (LOTE-UNI) não mostram lote: agrupa por item e a devolução é distribuída entre os lotes.
+  const grupos = React.useMemo(() => {
+    const m = new Map();
+    for (const p of posse.data || []) {
+      const uni = String(p.lote_codigo).startsWith('LOTE-UNI');
+      const key = uni ? `i${p.item_id}` : `l${p.lote_id}`;
+      const g = m.get(key) || { key, item_nome: p.item_nome, unidade: p.unidade, lote_codigo: uni ? null : p.lote_codigo, quantidade: 0, lotes: [] };
+      g.quantidade += p.quantidade; g.lotes.push(p); m.set(key, g);
+    }
+    return [...m.values()];
+  }, [posse.data]);
+  const linhas = grupos.filter((p) => qtds[p.key] !== undefined);
+  const valida = (p) => { const q = Number(qtds[p.key]); return q > 0 && q <= Number(p.quantidade); };
+  const podeRevisar = linhas.length > 0 && linhas.every(valida);
+  const alternar = (p) => setQtds((m) => { const n = { ...m }; if (n[p.key] !== undefined) delete n[p.key]; else n[p.key] = ''; return n; });
 
   const enviar = async () => {
     setBusy(true);
+    let ok = 0;
     try {
-      await estoqueAPI.devolver({ lote_id: linha.lote_id, tecnico_id: isTecnico ? undefined : Number(tecnicoId), quantidade: Number(qtd), condicao });
-      notify('Devolução registrada: material voltou ao almoxarifado');
-      setConfirmar(false); setSel(''); setQtd(''); posse.reload();
-    } catch (e) { notify(e.message, 'err'); setConfirmar(false); } finally { setBusy(false); }
+      for (const p of linhas) {
+        let resta = Number(qtds[p.key]);
+        for (const l of p.lotes) {
+          if (resta <= 0) break;
+          const q = Math.min(resta, l.quantidade);
+          await estoqueAPI.devolver({ lote_id: l.lote_id, tecnico_id: isTecnico ? undefined : Number(tecnicoId), quantidade: q, condicao });
+          resta = Math.round((resta - q) * 100) / 100;
+        }
+        ok++;
+        setQtds((m) => { const n = { ...m }; delete n[p.key]; return n; });
+      }
+      notify(`Devolução registrada (${ok} ${ok === 1 ? 'item' : 'itens'}): material voltou ao almoxarifado`);
+    } catch (e) { notify(`${e.message}${ok ? ` (${ok} já devolvido(s))` : ''}`, 'err'); } finally { setConfirmar(false); setBusy(false); posse.reload(); }
   };
 
   return (
@@ -32,33 +56,46 @@ const EstoqueDevolucao = () => {
       <form className={`${s.card} ${s.form}`} onSubmit={(e) => { e.preventDefault(); setConfirmar(true); }}>
         {!isTecnico && (
           <Field label="Técnico / equipe">
-            <select value={tecnicoId} onChange={(e) => { setTecnicoId(e.target.value); setSel(''); }} required>
-              <option value="">Selecione…</option>{(tecs.data || []).filter((t) => t.ativo).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-            </select>
+            <Combobox avatar value={tecnicoId} onChange={(v) => { setTecnicoId(v); setQtds({}); }} required placeholder="Selecione o técnico ou equipe…"
+              options={(tecs.data || []).filter((t) => t.ativo).map((t) => ({ value: t.id, label: t.nome, sub: t.empresa || (t.tipo === 'terceirizado' ? 'Equipe terceirizada' : 'Técnico interno'), tag: t.tipo === 'terceirizado' ? 'Terceirizada' : undefined }))} />
           </Field>
         )}
         <AsyncState loading={posse.loading && (isTecnico || !!tecnicoId)} error={posse.error} onRetry={posse.reload}
           empty={(isTecnico || tecnicoId) && (posse.data || []).length === 0} emptyTitle="Nada em posse para devolver">
           {(isTecnico || tecnicoId) && (
-            <Field label="Lote em posse">
-              <select value={sel} onChange={(e) => { setSel(e.target.value); setQtd(''); }} required>
-                <option value="">Selecione…</option>
-                {(posse.data || []).map((p) => <option key={p.lote_id} value={p.lote_id}>{p.lote_codigo} — {p.item_nome} ({fmtQtd(p.quantidade, p.unidade)})</option>)}
-              </select>
+            <Field label="Itens em posse">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
+                {grupos.map((p) => {
+                  const ativo = qtds[p.key] !== undefined;
+                  return (
+                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 10,
+                      border: ativo ? '2px solid #1f7a3a' : '1px solid #d5ddd6', background: ativo ? '#e6f4ea' : '#fff' }}>
+                      <input type="checkbox" checked={ativo} onChange={() => alternar(p)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                      <span style={{ flex: 1, cursor: 'pointer' }} onClick={() => alternar(p)}><b>{p.item_nome}</b>{p.lote_codigo && <> <span className={s.mono}>{p.lote_codigo}</span></>}</span>
+                      <span>em posse: <b>{fmtQtd(p.quantidade, p.unidade)}</b></span>
+                      {ativo && (
+                        <input type="number" min="0.01" step="0.01" max={p.quantidade} autoFocus value={qtds[p.key]}
+                          placeholder={p.unidade === 'metros' ? 'metros' : 'peças'} style={{ width: 110 }}
+                          onChange={(e) => setQtds((m) => ({ ...m, [p.key]: e.target.value }))} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </Field>
           )}
         </AsyncState>
-        <Field label={`Quantidade (${linha?.unidade === 'metros' ? 'metros' : 'peças'})`}>
-          <input type="number" min="0.01" step="0.01" max={linha?.quantidade} value={qtd} onChange={(e) => setQtd(e.target.value)} required disabled={!linha} />
-        </Field>
         <Field label="Condição do material devolvido">
-          <select value={condicao} onChange={(e) => setCondicao(e.target.value)}><option value="novo">Novo</option><option value="usado">Usado</option></select>
+          <Select value={condicao} onChange={(e) => setCondicao(e.target.value)}><option value="novo">Novo</option><option value="usado">Usado</option></Select>
         </Field>
-        <button className={`${s.btn} ${s.btnPrimary}`} disabled={!linha || !qtd}>Revisar devolução</button>
+        <button className={`${s.btn} ${s.btnPrimary}`} disabled={!podeRevisar}>Revisar devolução</button>
       </form>
-      {confirmar && linha && (
+      {confirmar && linhas.length > 0 && (
         <ConfirmDialog title="Confirmar devolução" busy={busy} onConfirm={enviar} onCancel={() => setConfirmar(false)}>
-          <p style={{ margin: 0 }}>Devolver <b>{fmtQtd(qtd, linha.unidade)}</b> do lote <b className={s.mono}>{linha.lote_codigo}</b> como <b>{condicao}</b>?</p>
+          <p style={{ margin: '0 0 8px' }}>Devolver como <b>{condicao}</b>:</p>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {linhas.map((p) => <li key={p.key}><b>{fmtQtd(qtds[p.key], p.unidade)}</b> — {p.item_nome}{p.lote_codigo && <> <b className={s.mono}>{p.lote_codigo}</b></>}</li>)}
+          </ul>
         </ConfirmDialog>
       )}
       {toasts}

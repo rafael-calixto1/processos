@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { processAPI, departmentAPI } from '../api/index';
 import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiEdit2, FiCheck, FiX, FiCamera, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 import styles from './ProcessEdit.module.css';
+import { Select } from '../components/Select/Select';
 
 const ProcessEdit = () => {
   const { id } = useParams();
@@ -207,7 +208,7 @@ const ProcessEdit = () => {
 
         <div className={styles.formGroup}>
           <label>Departamento *</label>
-          <select
+          <Select
             value={formData.department_id}
             onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
             required
@@ -218,12 +219,12 @@ const ProcessEdit = () => {
                 {d.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className={styles.formGroup}>
           <label>Status *</label>
-          <select
+          <Select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             required
@@ -231,7 +232,7 @@ const ProcessEdit = () => {
             <option value="draft">📝 Rascunho</option>
             <option value="active">✅ Ativo</option>
             <option value="archived">📦 Arquivado</option>
-          </select>
+          </Select>
         </div>
 
         <div className={styles.stepsSection}>

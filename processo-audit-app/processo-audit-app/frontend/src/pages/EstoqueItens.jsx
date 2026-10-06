@@ -3,6 +3,7 @@ import { Plus, Search, Pencil, Package } from 'lucide-react';
 import { estoqueAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
 import { AsyncState, useLoad, useToasts, Modal, Field, StatusBadge, fmtQtd, fmtNum, fmtDataHora, styles as s } from '../components/estoque/ui';
+import { Select } from '../components/Select/Select';
 
 const TIPOS = { entrada: 'Entrada', retirada: 'Retirada', devolucao: 'Devolução', baixa_os: 'Baixa em OS', estorno: 'Estorno', ajuste: 'Ajuste' };
 const VAZIO = { nome: '', categoria: '', unidade: 'pecas', estoque_minimo: 0 };
@@ -24,7 +25,7 @@ const ItemForm = ({ inicial, onSaved, onClose, notify }) => {
         <Field label="Nome"><input value={f.nome} onChange={set('nome')} required /></Field>
         <Field label="Categoria"><input value={f.categoria || ''} onChange={set('categoria')} placeholder="Cabos, Conectores…" /></Field>
         <Field label="Unidade de medida" hint="Metros (cabos) ou peças. Não pode ser trocada depois que o item tem lotes.">
-          <select value={f.unidade} onChange={set('unidade')}><option value="pecas">Peças / unidades</option><option value="metros">Metros</option></select>
+          <Select value={f.unidade} onChange={set('unidade')}><option value="pecas">Peças / unidades</option><option value="metros">Metros</option></Select>
         </Field>
         <Field label={`Estoque mínimo (${f.unidade === 'metros' ? 'm' : 'un'})`}><input type="number" min="0" step="0.01" value={f.estoque_minimo} onChange={set('estoque_minimo')} /></Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={busy}>Salvar</button>
@@ -89,7 +90,7 @@ const EstoqueItens = () => {
       </div>
       <div className={s.filters}>
         <div className={s.field}><input aria-label="Buscar item" placeholder="Buscar por nome…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <div className={s.field}><select aria-label="Categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas as categorias</option>{categorias.map((c) => <option key={c}>{c}</option>)}</select></div>
+        <div className={s.field}><Select aria-label="Categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas as categorias</option>{categorias.map((c) => <option key={c}>{c}</option>)}</Select></div>
       </div>
       <div className={s.chips} role="group" aria-label="Filtrar por status">
         {[['', 'Todos'], ['OK', 'OK'], ['BAIXO', 'Baixo'], ['ZERADO', 'Zerado']].map(([v, l]) => (

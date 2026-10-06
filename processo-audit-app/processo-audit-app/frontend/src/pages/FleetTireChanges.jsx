@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
 import styles from './Fleet.module.css';
+import { Select } from '../components/Select/Select';
 
 const LIMIT = 15;
 const emptyForm = { car_id: '', tire_change_date: '', tire_change_kilometers: '', observation: '' };
@@ -161,10 +162,10 @@ const FleetTireChanges = () => {
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Veículo *</label>
-                <select className={styles.select} value={form.car_id} onChange={e => setForm({ ...form, car_id: e.target.value })} required>
+                <Select className={styles.select} value={form.car_id} onChange={e => setForm({ ...form, car_id: e.target.value })} required>
                   <option value="">— Selecione —</option>
                   {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
-                </select>
+                </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Data *</label>
