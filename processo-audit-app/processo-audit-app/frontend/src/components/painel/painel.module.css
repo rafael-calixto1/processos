@@ -1,0 +1,42 @@
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.kpi { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpiLabel { font-size: 0.78rem; font-weight: 600; color: var(--text-light); }
+.kpiValue { font-size: 1.7rem; font-weight: 700; color: var(--text-dark); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.kpiUnit { font-size: 0.9rem; font-weight: 600; color: var(--text-light); margin-left: 4px; }
+.kpiFoot { font-size: 0.75rem; color: var(--text-light); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.kpiWarn { border-left: 4px solid var(--warning); }
+.kpiCrit { border-left: 4px solid var(--error); }
+.delta { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; }
+.good { color: var(--success); }
+.bad { color: var(--error); }
+.flat { color: var(--text-light); }
+
+.presets { display: inline-flex; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; background: #fff; }
+.presets button { border: 0; background: transparent; padding: 0 14px; min-height: 44px; font-weight: 600; font-size: 0.85rem; cursor: pointer; color: var(--text-dark); }
+.presets button + button { border-left: 1px solid var(--border-color); }
+.presets button[aria-pressed="true"] { background: var(--primary-color); color: #fff; }
+
+.periodo { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.datas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; font-size: 0.85rem; color: var(--text-dark); }
+.datas input { min-height: 44px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff; font: inherit; }
+.datas button { min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--radius-md); background: var(--primary-color); color: #fff; font-weight: 600; cursor: pointer; }
+.datas button:disabled { opacity: .5; cursor: not-allowed; }
+
+.chartBox { position: relative; height: 240px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-dark); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+.note { font-size: 0.8rem; color: var(--text-light); margin: 0 0 8px; }
+.insight { font-size: 0.85rem; color: var(--text-dark); margin: 0 0 10px; font-weight: 600; }
+
+/* barra segmentada de saúde do estoque / aging */
+.seg { display: flex; height: 14px; gap: 2px; border-radius: 7px; overflow: hidden; background: #e5e7eb; }
+.seg > div { min-width: 2px; }
+.segLegend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 0.85rem; }
+.segLegend b { font-variant-numeric: tabular-nums; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.full { grid-column: 1 / -1; }
+.tnum { font-variant-numeric: tabular-nums; }
+@media (min-width: 769px) {
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+}

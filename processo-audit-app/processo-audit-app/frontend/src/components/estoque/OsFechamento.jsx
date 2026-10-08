@@ -4,7 +4,7 @@ import { estoqueAPI, osAPI } from '../../api/estoque';
 import { AsyncState, useLoad, Modal, Field, ConfirmDialog, fmtQtd, styles as s } from './ui';
 
 /* Agrupa a posse do técnico: itens por unidade (LOTE-UNI) somam entre lotes; demais ficam por lote. */
-const agrupar = (posse) => {
+export const agrupar = (posse) => {
   const m = new Map();
   for (const p of posse || []) {
     const uni = String(p.lote_codigo).startsWith('LOTE-UNI');
@@ -153,10 +153,12 @@ export const ServicosCard = ({ os, podeEditar, onChanged, notify }) => {
       <h2 className={s.cardTitle}>Serviços realizados</h2>
       <AsyncState empty={(os.servicos || []).length === 0} emptyTitle="Nenhum serviço lançado ainda">
         <div className={s.tableWrap}><table className={s.table}>
-          <thead><tr><th>Serviço</th><th>Lançado por</th><th>Quando</th>{podeEditar && <th />}</tr></thead>
+          <thead><tr><th>Serviço</th><th>Trecho / materiais</th><th>Lançado por</th><th>Quando</th>{podeEditar && <th />}</tr></thead>
           <tbody>{os.servicos.map((sv) => (
             <tr key={sv.id}>
               <td data-label="Serviço">{sv.descricao}</td>
+              <td data-label="Trecho / materiais">{sv.trecho || '—'}
+                {(os.materiais || []).filter((m) => m.servico_id === sv.id && !m.estorno_id).map((m) => <div key={m.id}><small>{m.item_nome}: {fmtQtd(m.quantidade, m.unidade)}</small></div>)}</td>
               <td data-label="Por">{sv.usuario_nome || '—'}</td><td data-label="Quando">{new Date(sv.criado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
               {podeEditar && <td><button className={`${s.btn} ${s.btnSm}`} disabled={busy === sv.id} onClick={() => remover(sv)} aria-label="Remover serviço"><Trash2 size={16} /></button></td>}
             </tr>))}</tbody></table></div>

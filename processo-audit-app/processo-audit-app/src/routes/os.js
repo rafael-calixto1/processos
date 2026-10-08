@@ -30,6 +30,7 @@ router.get('/', handle(async (req, res) => {
   if (req.query.status) { where.push('o.status = ?'); params.push(req.query.status); }
   const [rows] = await pool.query(
     `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,
+       o.tipo_servico, o.bairro, o.cidade, o.latitude, o.longitude, o.pop_nome, o.rota_id, o.poste_id,
        t.nome AS tecnico_nome FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY o.id DESC LIMIT 300`, params);
   res.json(rows);
@@ -37,6 +38,19 @@ router.get('/', handle(async (req, res) => {
 
 router.post('/', staff, handle(async (req, res) => {
   res.status(201).json(await svc.criarOS(req.body, req.userId));
+}));
+
+// tipos de serviço (lista editável pelo staff)
+router.get('/tipos-servico', handle(async (req, res) => {
+  const [rows] = await pool.query('SELECT id, nome FROM os_tipos_servico ORDER BY nome');
+  res.json(rows);
+}));
+router.post('/tipos-servico', staff, handle(async (req, res) => {
+  const nome = String(req.body.nome || '').trim().replace(/\s+/g, ' ');
+  if (nome.length < 2 || nome.length > 60) throw new svc.ServiceError(400, 'Informe um nome de 2 a 60 caracteres');
+  await pool.query('INSERT IGNORE INTO os_tipos_servico (nome) VALUES (?)', [nome]);
+  const [[row]] = await pool.query('SELECT id, nome FROM os_tipos_servico WHERE nome = ?', [nome]);
+  res.status(201).json(row);
 }));
 
 // sugestões de serviços já lançados (autocompletar)
@@ -49,7 +63,7 @@ router.get('/servicos/sugestoes', handle(async (req, res) => {
 router.get('/:id', handle(async (req, res) => {
   const os = await carregarOS(req);
   const [materiais] = await pool.query(
-    `SELECT m.id, m.quantidade, m.criado_em, m.observacao, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade,
+    `SELECT m.id, m.servico_id, m.quantidade, m.criado_em, m.observacao, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade,
        u.name AS usuario_nome,
        (SELECT e.id FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id) AS estorno_id
      FROM estoque_movimentacoes m JOIN estoque_lotes l ON l.id = m.lote_id JOIN estoque_itens i ON i.id = m.item_id
@@ -59,7 +73,7 @@ router.get('/:id', handle(async (req, res) => {
     `SELECT h.*, u.name AS usuario_nome FROM os_historico_status h LEFT JOIN users u ON u.id = h.usuario_id
      WHERE h.os_id = ? ORDER BY h.id`, [os.id]);
   const [servicos] = await pool.query(
-    `SELECT sv.id, sv.descricao, sv.quantidade, sv.criado_em, u.name AS usuario_nome
+    `SELECT sv.id, sv.descricao, sv.trecho, sv.quantidade, sv.criado_em, u.name AS usuario_nome
      FROM os_servicos sv LEFT JOIN users u ON u.id = sv.criado_por WHERE sv.os_id = ? ORDER BY sv.id`, [os.id]);
   const totais = { metros: 0, pecas: 0 };
   for (const m of materiais) if (!m.estorno_id) totais[m.unidade === 'metros' ? 'metros' : 'pecas'] += Number(m.quantidade);
@@ -78,13 +92,19 @@ router.put('/:id', staff, handle(async (req, res) => {
     if (!Number.isInteger(numero) || numero <= 0) throw new svc.ServiceError(400, 'Número inválido');
   }
   await pool.query(
-    'UPDATE ordens_servico SET numero=?, cliente=?, endereco=?, prazo=?, prioridade=?, descricao=? WHERE id=?',
-    [numero, b.cliente.trim(), b.endereco || null, b.prazo || null, b.prioridade || os.prioridade, b.descricao || null, os.id]);
+    `UPDATE ordens_servico SET numero=?, cliente=?, endereco=?, prazo=?, prioridade=?, descricao=?,
+       tipo_servico=?, cep=?, logradouro=?, numero_endereco=?, complemento=?, bairro=?, cidade=?, uf=?, latitude=?, longitude=?, pop_nome=?, rota_id=?, poste_id=? WHERE id=?`,
+    [numero, b.cliente.trim(), b.endereco || null, b.prazo || null, b.prioridade || os.prioridade, b.descricao || null,
+     ...Object.values(svc.camposInfraOS(b)), os.id]);
   res.json({ ok: true });
 }));
 
 router.post('/:id/materiais', handle(async (req, res) => {
   res.status(201).json(await svc.baixarEmOS({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
+}));
+
+router.post('/:id/lancamentos', handle(async (req, res) => {
+  res.status(201).json(await svc.lancarServicoComMateriais({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
 }));
 
 router.post('/:id/servicos', handle(async (req, res) => {

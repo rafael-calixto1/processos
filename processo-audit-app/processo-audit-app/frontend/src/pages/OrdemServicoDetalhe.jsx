@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, CheckCircle2, Undo2 } from 'lucide-react';
 import { osAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
 import { OsFechamentoModal, ServicosCard } from '../components/estoque/OsFechamento';
+import MapPreview from '../components/MapPreview';
 import { AsyncState, useLoad, useToasts, Field, ConfirmDialog, OsStatusBadge, PrioridadeBadge,
   fmtData, fmtDataHora, fmtQtd, fmtNum, styles as s } from '../components/estoque/ui';
 
@@ -46,11 +47,15 @@ const OrdemServicoDetalhe = () => {
           <div className={s.card}><dl className={s.detailGrid}>
             <div><dt>Responsável</dt><dd>{os.tecnico_nome}{os.tipo_execucao === 'terceirizado' ? ' (terceirizada)' : ''}</dd></div>
             <div><dt>Prazo</dt><dd>{fmtData(os.prazo)}</dd></div>
+            <div><dt>Tipo de serviço</dt><dd>{os.tipo_servico || '—'}</dd></div>
             <div><dt>Endereço</dt><dd>{os.endereco || '—'}</dd></div>
+            {os.latitude != null && <div><dt>Coordenadas</dt><dd><a href={`https://www.google.com/maps/search/?api=1&query=${os.latitude},${os.longitude}`} target="_blank" rel="noreferrer">{Number(os.latitude).toFixed(6)}, {Number(os.longitude).toFixed(6)}</a></dd></div>}
+            {(os.pop_nome || os.rota_id || os.poste_id) && <div><dt>Rede</dt><dd>{[os.pop_nome, os.rota_id, os.poste_id].filter(Boolean).join(' · ')}</dd></div>}
             <div><dt>Aberta em</dt><dd>{fmtDataHora(os.criado_em)}</dd></div>
             <div><dt>Concluída em</dt><dd>{os.concluida_em ? fmtDataHora(os.concluida_em) : '—'}</dd></div>
             <div><dt>Descrição</dt><dd>{os.descricao || '—'}</dd></div>
           </dl></div>
+          {os.latitude != null && <MapPreview lat={os.latitude} lng={os.longitude} />}
           <div className={s.kpis} style={{ gridTemplateColumns: 'repeat(2, 1fr)', maxWidth: 420 }}>
             <div className={s.kpi}><b>{fmtNum(os.totais.metros)} m</b><span>Cabo consumido</span></div>
             <div className={s.kpi}><b>{fmtNum(os.totais.pecas)}</b><span>Peças consumidas</span></div>

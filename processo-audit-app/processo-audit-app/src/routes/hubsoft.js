@@ -60,4 +60,15 @@ router.get('/tecnicos', verifyToken, async (req, res) => {
   }
 });
 
+// GET POPs (rede)
+router.get('/pops', verifyToken, async (req, res) => {
+  try {
+    const data = await hubsoft.get('api/v1/integracao/rede/pop');
+    const pops = (data.pops || []).map((p) => ({ id: p.id_pop, nome: p.nome }));
+    res.json(pops);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 export default router;

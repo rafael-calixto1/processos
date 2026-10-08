@@ -381,30 +381,52 @@ const mudarStatus = async (conn, os, para, userId) => {
     [os.id, os.status, para, userId]);
 };
 
-export const baixarEmOS = ({ os_id, lote_id, codigo, quantidade, observacao }, actor, db) =>
+/* Baixa de um lote na OS, dentro de uma transação já aberta. servico_id (opcional) vincula o material à linha de serviço. */
+const baixarNaTx = async (conn, { os_id, lote_id, codigo, quantidade, observacao, servico_id }, actor) => {
+  const q = parseQtd(quantidade);
+  const os = await lockOS(conn, os_id);
+  assertAcessoOS(os, actor);
+  if (!['aberta', 'em_andamento'].includes(os.status)) {
+    throw new ServiceError(409, 'OS encerrada: não aceita novos materiais (use estorno para corrigir)');
+  }
+  const lote = await lockLote(conn, { lote_id, codigo });
+  await exigirInteiro(conn, lote.item_id, q);
+  const posse = await getPosse(conn, lote.id, os.tecnico_id);
+  if (posse <= 0) throw new ServiceError(400, 'Este lote não está em posse do técnico/equipe da OS');
+  if (q > posse) throw new ServiceError(400, `Quantidade maior que a posse do técnico neste lote (${posse})`);
+
+  await addPosse(conn, lote.id, os.tecnico_id, -q);
+  const novoSaldo = r2(lote.saldo_atual - q);
+  await conn.query('UPDATE estoque_lotes SET saldo_atual = ?, status = ? WHERE id = ?',
+    [novoSaldo, novoSaldo === 0 ? 'esgotado' : 'ativo', lote.id]);
+  const id = await registrar(conn, {
+    tipo: 'baixa_os', lote_id: lote.id, item_id: lote.item_id, quantidade: q,
+    tecnico_id: os.tecnico_id, os_id: os.id, observacao, criado_por: actor.id,
+  });
+  if (servico_id) await conn.query('UPDATE estoque_movimentacoes SET servico_id = ? WHERE id = ?', [servico_id, id]);
+  if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
+  return { movimentacao_id: id, lote_codigo: lote.codigo, quantidade: q, saldo_lote: novoSaldo };
+};
+
+export const baixarEmOS = (params, actor, db) => withTx((conn) => baixarNaTx(conn, params, actor), db);
+
+/* Lançamento: uma linha de serviço no trecho + os materiais usados nele. Tudo ou nada (uma transação). */
+export const lancarServicoComMateriais = ({ os_id, descricao, trecho, quantidade, materiais }, actor, db) =>
   withTx(async (conn) => {
-    const q = parseQtd(quantidade);
+    const desc = String(descricao || '').trim();
+    if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
+    if (!Array.isArray(materiais)) throw new ServiceError(400, 'Materiais inválidos');
+    const q = quantidade === undefined || quantidade === null || quantidade === '' ? 1 : parseQtd(quantidade);
     const os = await lockOS(conn, os_id);
     assertAcessoOS(os, actor);
-    if (!['aberta', 'em_andamento'].includes(os.status)) {
-      throw new ServiceError(409, 'OS encerrada: não aceita novos materiais (use estorno para corrigir)');
-    }
-    const lote = await lockLote(conn, { lote_id, codigo });
-    await exigirInteiro(conn, lote.item_id, q);
-    const posse = await getPosse(conn, lote.id, os.tecnico_id);
-    if (posse <= 0) throw new ServiceError(400, 'Este lote não está em posse do técnico/equipe da OS');
-    if (q > posse) throw new ServiceError(400, `Quantidade maior que a posse do técnico neste lote (${posse})`);
-
-    await addPosse(conn, lote.id, os.tecnico_id, -q);
-    const novoSaldo = r2(lote.saldo_atual - q);
-    await conn.query('UPDATE estoque_lotes SET saldo_atual = ?, status = ? WHERE id = ?',
-      [novoSaldo, novoSaldo === 0 ? 'esgotado' : 'ativo', lote.id]);
-    const id = await registrar(conn, {
-      tipo: 'baixa_os', lote_id: lote.id, item_id: lote.item_id, quantidade: q,
-      tecnico_id: os.tecnico_id, os_id: os.id, observacao, criado_por: actor.id,
-    });
+    if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não aceita novos lançamentos');
+    const tr = String(trecho || '').trim().slice(0, 255) || null;
+    const [res] = await conn.query('INSERT INTO os_servicos (os_id, descricao, quantidade, trecho, criado_por) VALUES (?,?,?,?,?)',
+      [os.id, desc.slice(0, 255), q, tr, actor.id]);
+    const baixas = [];
+    for (const m of materiais) baixas.push(await baixarNaTx(conn, { os_id: os.id, lote_id: m.lote_id, quantidade: m.quantidade, servico_id: res.insertId }, actor));
     if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
-    return { movimentacao_id: id, lote_codigo: lote.codigo, quantidade: q, saldo_lote: novoSaldo };
+    return { id: res.insertId, descricao: desc, trecho: tr, quantidade: q, materiais: baixas };
   }, db);
 
 /* ── Serviços realizados na OS (mão de obra/atividades; não mexem em estoque) ── */
@@ -433,6 +455,10 @@ export const removerServico = ({ os_id, servico_id }, actor, db) =>
     const os = await lockOS(conn, os_id);
     assertAcessoOS(os, actor);
     assertOSAberta(os);
+    const [[{ n }]] = await conn.query(
+      `SELECT COUNT(*) n FROM estoque_movimentacoes m WHERE m.servico_id = ? AND m.tipo = 'baixa_os'
+       AND NOT EXISTS (SELECT 1 FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id)`, [servico_id]);
+    if (n > 0) throw new ServiceError(409, 'Este lançamento tem materiais baixados: estorne-os antes de removê-lo');
     const [res] = await conn.query('DELETE FROM os_servicos WHERE id = ? AND os_id = ?', [servico_id, os.id]);
     if (!res.affectedRows) throw new ServiceError(404, 'Serviço não encontrado nesta OS');
     return { ok: true };
@@ -478,16 +504,37 @@ export const statusItem = (saldo, minimo) => {
 };
 
 /* ── Criação / cancelamento de OS ── */
+/* Campos de infraestrutura/endereço estruturado da OS (todos opcionais), na ordem das colunas do INSERT/UPDATE */
+export const camposInfraOS = (d = {}) => {
+  const txt = (v, max) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim().slice(0, max));
+  const num = (v, lim) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(String(v).replace(',', '.'));
+    if (!Number.isFinite(n) || Math.abs(n) > lim) throw new ServiceError(400, 'Coordenada inválida');
+    return n;
+  };
+  const cep = txt(d.cep, 12) && String(d.cep).replace(/\D/g, '');
+  if (cep && cep.length !== 8) throw new ServiceError(400, 'CEP inválido');
+  const uf = txt(d.uf, 2);
+  return {
+    tipo_servico: txt(d.tipo_servico, 60), cep: cep || null, logradouro: txt(d.logradouro, 255), numero_endereco: txt(d.numero_endereco, 20),
+    complemento: txt(d.complemento, 120), bairro: txt(d.bairro, 120), cidade: txt(d.cidade, 120), uf: uf && uf.toUpperCase(),
+    latitude: num(d.latitude, 90), longitude: num(d.longitude, 180), pop_nome: txt(d.pop_nome, 100), rota_id: txt(d.rota_id, 60), poste_id: txt(d.poste_id, 60),
+  };
+};
+
 export const criarOS = (dados, userId, db) => withTx(async (conn) => {
   if (!dados.cliente || !String(dados.cliente).trim()) throw new ServiceError(400, 'Informe o cliente');
   if (!['baixa', 'normal', 'alta'].includes(dados.prioridade || 'normal')) throw new ServiceError(400, 'Prioridade inválida');
   const tec = await getTecnicoAtivo(conn, dados.tecnico_id);
   const numero = await nextSequence(conn, 'os', 1);
+  const g = camposInfraOS(dados);
   const [res] = await conn.query(
-    `INSERT INTO ordens_servico (numero, cliente, endereco, tipo_execucao, tecnico_id, prazo, prioridade, descricao, criado_por)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO ordens_servico (numero, cliente, endereco, tipo_execucao, tecnico_id, prazo, prioridade, descricao, criado_por,
+       tipo_servico, cep, logradouro, numero_endereco, complemento, bairro, cidade, uf, latitude, longitude, pop_nome, rota_id, poste_id)
+     VALUES (?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [numero, String(dados.cliente).trim(), dados.endereco || null, tec.tipo, tec.id, dados.prazo || null,
-     dados.prioridade || 'normal', dados.descricao || null, userId]);
+     dados.prioridade || 'normal', dados.descricao || null, userId, ...Object.values(g)]);
   await conn.query('INSERT INTO os_historico_status (os_id, de, para, usuario_id) VALUES (?,?,?,?)',
     [res.insertId, null, 'aberta', userId]);
   return { id: res.insertId, numero };

@@ -89,6 +89,25 @@ router.get('/compras', staff, handle(async (req, res) => {
   res.json(rows);
 }));
 
+// Detalhe de uma compra (todas as linhas): lotes e onde está cada um (almoxarifado, com técnico, consumido)
+router.get('/compras/detalhe', staff, handle(async (req, res) => {
+  const ids = String(req.query.ids || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (!ids.length) return res.json([]);
+  const [lotes] = await pool.query(
+    `SELECT l.id, l.codigo, l.compra_id, l.item_id, l.saldo_inicial, l.saldo_atual, l.status, i.nome AS item_nome, i.unidade
+     FROM estoque_lotes l JOIN estoque_itens i ON i.id = l.item_id WHERE l.compra_id IN (?) ORDER BY l.id`, [ids]);
+  const [posse] = lotes.length ? await pool.query(
+    `SELECT p.lote_id, p.quantidade, t.nome AS tecnico FROM estoque_posse p JOIN tecnicos t ON t.id = p.tecnico_id
+     WHERE p.lote_id IN (?) AND p.quantidade > 0`, [lotes.map((l) => l.id)]) : [[]];
+  res.json(lotes.map((l) => {
+    const com = posse.filter((p) => p.lote_id === l.id).map((p) => ({ tecnico: p.tecnico, quantidade: Number(p.quantidade) }));
+    const emPosse = com.reduce((a, p) => a + p.quantidade, 0);
+    const atual = Number(l.saldo_atual); const inicial = Number(l.saldo_inicial);
+    return { ...l, saldo_inicial: inicial, saldo_atual: atual, com_tecnicos: com,
+      no_almoxarifado: Math.max(0, +(atual - emPosse).toFixed(2)), consumido: +(inicial - atual).toFixed(2) };
+  }));
+}));
+
 router.get('/compras/:id/lotes', staff, handle(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT l.*, i.nome AS item_nome, i.unidade FROM estoque_lotes l JOIN estoque_itens i ON i.id = l.item_id
@@ -96,8 +115,87 @@ router.get('/compras/:id/lotes', staff, handle(async (req, res) => {
   res.json(rows);
 }));
 
+/* ───── Patrimônio: consulta de lotes por nome, lote, categoria ou automático, com filtros de local e status ───── */
+const termosNome = (q) => String(q || '').trim().split(/\s+/).filter(Boolean).slice(0, 6);
+const TIPOS_BUSCA = ['nome', 'lote', 'categoria', 'auto'];
+
+// Sugestões a partir de 3 letras, conforme o tipo de busca
+router.get('/patrimonio/sugestoes', staff, handle(async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 3) return res.json([]);
+  const tipo = TIPOS_BUSCA.includes(req.query.tipo) ? req.query.tipo : 'auto';
+  const like = `%${q}%`; const termos = termosNome(q);
+  const out = [];
+  if (tipo === 'lote' || tipo === 'auto') {
+    const [r] = await pool.query(
+      `SELECT l.codigo AS valor, i.nome AS detalhe FROM estoque_lotes l JOIN estoque_itens i ON i.id = l.item_id
+       WHERE l.codigo LIKE ? ORDER BY l.codigo LIMIT 8`, [like]);
+    out.push(...r.map((x) => ({ ...x, tipo: 'lote' })));
+  }
+  if (tipo === 'nome' || tipo === 'auto') {
+    const [r] = await pool.query(
+      `SELECT i.nome AS valor, i.categoria AS detalhe FROM estoque_itens i
+       WHERE i.ativo = 1 AND ${termos.map(() => 'i.nome LIKE ?').join(' AND ')} ORDER BY i.nome LIMIT 8`, termos.map((t) => `%${t}%`));
+    out.push(...r.map((x) => ({ ...x, tipo: 'nome' })));
+  }
+  if (tipo === 'categoria') {
+    const [r] = await pool.query(
+      'SELECT DISTINCT categoria AS valor FROM estoque_itens WHERE ativo = 1 AND categoria LIKE ? ORDER BY categoria LIMIT 8', [like]);
+    out.push(...r.map((x) => ({ ...x, detalhe: 'Categoria', tipo: 'categoria' })));
+  }
+  res.json(out.slice(0, 10));
+}));
+
+router.get('/patrimonio', staff, handle(async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const tipo = TIPOS_BUSCA.includes(req.query.tipo) ? req.query.tipo : 'nome';
+  const { local = '', status = '' } = req.query;
+  if (q && q.length < 3) throw new svc.ServiceError(400, 'Digite ao menos 3 caracteres');
+  const POSSE = '(SELECT COALESCE(SUM(p.quantidade),0) FROM estoque_posse p WHERE p.lote_id = l.id)';
+  const where = ['i.ativo = 1']; const params = [];
+  if (q) {
+    const termos = termosNome(q);
+    const nome = () => { where.push(...termos.map(() => 'i.nome LIKE ?')); params.push(...termos.map((t) => `%${t}%`)); };
+    if (tipo === 'lote') { where.push('l.codigo LIKE ?'); params.push(`%${q}%`); }
+    else if (tipo === 'categoria') { where.push('i.categoria LIKE ?'); params.push(`%${q}%`); }
+    else if (tipo === 'auto') {
+      where.push(`(l.codigo LIKE ? OR i.categoria LIKE ? OR (${termos.map(() => 'i.nome LIKE ?').join(' AND ')}))`);
+      params.push(`%${q}%`, `%${q}%`, ...termos.map((t) => `%${t}%`));
+    } else nome();
+  }
+  if (local === 'almoxarifado') where.push(`(l.saldo_atual - ${POSSE}) > 0`);
+  else if (local === 'tecnicos') where.push(`${POSSE} > 0`);
+  else if (/^tec:\d+$/.test(local)) { where.push('EXISTS (SELECT 1 FROM estoque_posse p WHERE p.lote_id = l.id AND p.tecnico_id = ? AND p.quantidade > 0)'); params.push(Number(local.slice(4))); }
+  if (status === 'com_saldo') where.push('l.saldo_atual > 0');
+  else if (status === 'esgotado') where.push('l.saldo_atual = 0');
+
+  const [lotes] = await pool.query(
+    `SELECT l.id, l.codigo, l.item_id, l.saldo_inicial, l.saldo_atual, l.status, l.criado_em,
+       i.nome AS item_nome, i.unidade, i.categoria, i.estoque_minimo
+     FROM estoque_lotes l JOIN estoque_itens i ON i.id = l.item_id
+     WHERE ${where.join(' AND ')} ORDER BY i.nome, l.id LIMIT 500`, params);
+  const [posse] = lotes.length ? await pool.query(
+    `SELECT p.lote_id, p.tecnico_id, p.quantidade, t.nome AS tecnico FROM estoque_posse p JOIN tecnicos t ON t.id = p.tecnico_id
+     WHERE p.lote_id IN (?) AND p.quantidade > 0`, [lotes.map((l) => l.id)]) : [[]];
+  res.json(lotes.map((l) => {
+    const com = posse.filter((p) => p.lote_id === l.id).map((p) => ({ tecnico_id: p.tecnico_id, tecnico: p.tecnico, quantidade: Number(p.quantidade) }));
+    const emPosse = com.reduce((a, p) => a + p.quantidade, 0); const atual = Number(l.saldo_atual);
+    return { ...l, saldo_inicial: Number(l.saldo_inicial), saldo_atual: atual, estoque_minimo: Number(l.estoque_minimo),
+      com_tecnicos: com, no_almoxarifado: Math.max(0, +(atual - emPosse).toFixed(2)) };
+  }));
+}));
+
 /* ───── Lotes ───── */
 // Consulta por código (scan/digitação). Técnico só enxerga lote que está com ele.
+// Histórico de movimentações de um lote (staff)
+router.get('/lotes/:id/historico', staff, handle(async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT m.id, m.tipo, m.quantidade, m.condicao, m.observacao, m.criado_em, t.nome AS tecnico_nome, u.name AS usuario_nome, o.numero AS os_numero
+     FROM estoque_movimentacoes m LEFT JOIN tecnicos t ON t.id = m.tecnico_id LEFT JOIN users u ON u.id = m.criado_por
+     LEFT JOIN ordens_servico o ON o.id = m.os_id WHERE m.lote_id = ? ORDER BY m.id DESC`, [Number(req.params.id) || 0]);
+  res.json(rows);
+}));
+
 router.get('/lotes/:codigo', handle(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT l.*, i.nome AS item_nome, i.unidade,

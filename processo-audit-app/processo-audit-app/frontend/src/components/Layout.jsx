@@ -5,7 +5,8 @@ import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
   CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift, FileSearch,
-  BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill
+  BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill,
+  ScanSearch,
 } from 'lucide-react';
 import styles from './Layout.module.css';
 
@@ -26,7 +27,9 @@ const menuItems = [
 // Estoque e OS — visibilidade por perfil (o backend aplica as mesmas regras)
 const STAFF = ['admin', 'estoque'];
 const estoqueItems = [
-  { label: 'Painel de uso', path: '/estoque/painel', Icon: BarChart3, roles: STAFF },
+  { label: 'Painel de estoque', path: '/estoque/painel', Icon: BarChart3, roles: STAFF },
+  { label: 'Painel de OS', path: '/os/painel', Icon: BarChart3, roles: STAFF },
+  { label: 'Patrimônio', path: '/estoque/patrimonio', Icon: ScanSearch, roles: STAFF },
   { label: 'Itens', path: '/estoque/itens', Icon: Package, roles: STAFF },
   { label: 'Entrada / Compra', path: '/estoque/entrada', Icon: PackagePlus, roles: STAFF },
   { label: 'Retirada', path: '/estoque/retirada', Icon: PackageMinus, roles: STAFF },

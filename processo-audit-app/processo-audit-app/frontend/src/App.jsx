@@ -28,6 +28,7 @@ import ConsultaFatura from './pages/ConsultaFatura';
 import Referral from './pages/Referral';
 import Leads from './pages/Leads';
 const EstoqueItens = lazy(() => import('./pages/EstoqueItens'));
+const EstoquePatrimonio = lazy(() => import('./pages/EstoquePatrimonio'));
 const EstoqueEntrada = lazy(() => import('./pages/EstoqueEntrada'));
 const EstoqueRetirada = lazy(() => import('./pages/EstoqueRetirada'));
 const EstoqueDevolucao = lazy(() => import('./pages/EstoqueDevolucao'));
@@ -36,8 +37,7 @@ const EstoquePosse = lazy(() => import('./pages/EstoquePosse'));
 const EstoqueCadastros = lazy(() => import('./pages/EstoqueCadastros'));
 const EstoqueEquipamentos = lazy(() => import('./pages/EstoqueEquipamentos'));
 const PainelEstoque = lazy(() => import('./pages/PainelEstoque'));
-const OrdensServico = lazy(() => import('./pages/OrdensServico'));
-const OrdemServicoDetalhe = lazy(() => import('./pages/OrdemServicoDetalhe'));
+const OsRoutes = lazy(() => import('./pages/OsRoutes'));
 import './styles/global.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -100,6 +100,7 @@ const WITH_TECNICO = ['admin', 'estoque', 'tecnico'];
 const stockRoutes = [
   ['/estoque/painel', PainelEstoque, STAFF],
   ['/estoque/itens', EstoqueItens, STAFF],
+  ['/estoque/patrimonio', EstoquePatrimonio, STAFF],
   ['/estoque/entrada', EstoqueEntrada, STAFF],
   ['/estoque/retirada', EstoqueRetirada, STAFF],
   ['/estoque/devolucao', EstoqueDevolucao, WITH_TECNICO],
@@ -108,8 +109,7 @@ const stockRoutes = [
   ['/estoque/posse/:id', EstoquePosse, STAFF],
   ['/estoque/equipamentos', EstoqueEquipamentos, STAFF],
   ['/estoque/cadastros', EstoqueCadastros, STAFF],
-  ['/os', OrdensServico, WITH_TECNICO],
-  ['/os/:id', OrdemServicoDetalhe, WITH_TECNICO],
+  ['/os/*', OsRoutes, WITH_TECNICO],
 ];
 
 function AppContent() {
