@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { osAPI } from '../../api/estoque';
 import { OUTSIDE_PLANT_CHECKLIST } from './mockData';
 
@@ -42,6 +42,7 @@ export const toFieldOrder = (os) => ({
   openedAt: os.criado_em,
   summary: os.descricao || '',
   backendStatus: os.status,
+  hasDraft: Boolean(os.tem_rascunho),
   // Lançamentos: linhas de serviço por trecho com os materiais baixados nelas (só vêm no detalhe da OS)
   launches: Array.isArray(os.servicos)
     ? os.servicos.map((sv) => ({
@@ -54,7 +55,7 @@ export const toFieldOrder = (os) => ({
 const reducer = (state, a) => {
   switch (a.type) {
     case 'ORDERS_LOADING': return { ...state, loading: true, error: null };
-    case 'ORDERS_LOADED': return { ...state, loading: false, orders: a.orders };
+    case 'ORDERS_LOADED': return { ...state, loading: false, orders: a.orders, drafts: { ...a.drafts, ...state.drafts } };
     case 'ORDERS_FAILED': return { ...state, loading: false, error: a.error };
     case 'ORDER_DETAIL_LOADED': return { ...state, orders: state.orders.map((o) => (o.id === a.order.id ? { ...o, ...a.order } : o)) };
     case 'EXECUTION_STARTED': return upd(state, a.orderId, (d) => (d.status === 'pending' ? { status: 'in_execution', startedAt: new Date().toISOString() } : {}));
@@ -103,7 +104,7 @@ const materialsDone = (b, flag) => b[flag] === false || (b[flag] === true && b.l
 
 /* Seletor puro: quais etapas estão concluídas */
 export const getStepCompletion = (d, order) => ({
-  'description': d.description.trim().length >= 10,
+  'description': d.description.trim().length > 10,
   'closing-reason': Boolean(d.closingReasonId),
   'intervention-location': Boolean(d.interventionLocation),
   'checklists': OUTSIDE_PLANT_CHECKLIST.filter((i) => i.required).every((i) => {
@@ -127,11 +128,21 @@ const Ctx = createContext(null);
 
 export const FieldWorkProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const saved = useRef({}); // último JSON de rascunho gravado no banco, por OS
   const reload = useCallback(async () => {
     dispatch({ type: 'ORDERS_LOADING' });
     try {
       const rows = await osAPI.list();
-      dispatch({ type: 'ORDERS_LOADED', orders: rows.map(toFieldOrder) });
+      const orders = rows.map(toFieldOrder);
+      // Rascunhos salvos no banco (progresso da finalização), só das OS que têm um
+      const drafts = {};
+      await Promise.all(orders.filter((o) => o.hasDraft).map(async (o) => {
+        try {
+          const { rascunho } = await osAPI.rascunho(o.id);
+          if (rascunho) { drafts[o.id] = { ...emptyDraft(), ...rascunho }; saved.current[o.id] = JSON.stringify(drafts[o.id]); }
+        } catch { /* sem rascunho: segue vazio */ }
+      }));
+      dispatch({ type: 'ORDERS_LOADED', orders, drafts });
     } catch (e) {
       // Técnico sem cadastro vinculado não tem OS: lista vazia em vez de erro.
       if (/vinculado/i.test(e.message)) dispatch({ type: 'ORDERS_LOADED', orders: [] });
@@ -139,6 +150,29 @@ export const FieldWorkProvider = ({ children }) => {
     }
   }, []);
   useEffect(() => { reload(); }, [reload]);
+
+  // Salva o rascunho no banco (com pequeno atraso) sempre que a OS em execução muda
+  const draftsRef = useRef(state.drafts);
+  draftsRef.current = state.drafts;
+  const flush = useCallback(() => {
+    Object.entries(draftsRef.current).forEach(([id, d]) => {
+      if (d.status !== 'in_execution') return;
+      const json = JSON.stringify(d);
+      if (saved.current[id] === json) return;
+      saved.current[id] = json;
+      osAPI.salvarRascunho(id, d).catch(() => { delete saved.current[id]; });
+    });
+  }, []);
+  useEffect(() => {
+    const t = setTimeout(flush, 700);
+    return () => clearTimeout(t);
+  }, [state.drafts, flush]);
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', flush); flush(); };
+  }, [flush]);
   const value = useMemo(() => ({ state, dispatch, reload }), [state, reload]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
@@ -149,11 +183,11 @@ export const useServiceOrder = (orderId) => {
   const order = state.orders.find((o) => o.id === orderId) || null;
   const draft = order ? state.drafts[orderId] || EMPTY_DRAFT : null;
   return useMemo(() => ({
-    order, draft,
+    order, draft, loading: state.loading,
     completion: draft ? getStepCompletion(draft, order) : {},
     canFinalize: draft ? canFinalize(draft, order) : false,
     act: (type, payload = {}) => dispatch({ type, orderId, ...payload }),
-  }), [order, draft, orderId, dispatch]);
+  }), [order, draft, orderId, dispatch, state.loading]);
 };
 
 /* Pendentes = abertas ou em andamento no backend */

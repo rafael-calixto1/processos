@@ -149,14 +149,22 @@ router.get('/search', async (req, res) => {
 
 // Coordenadas de um endereço já escolhido (segunda etapa, para não atrasar a lista de sugestões)
 router.get('/geocode', async (req, res) => {
-  const { street = '', numero = '', city = '', uf = '', cep = '' } = req.query;
+  const { street = '', numero = '', city = '', uf = '', cep = '', bairro = '' } = req.query;
   try {
     const tries = [];
-    if (street && city) tries.push({ street: `${numero ? `${numero} ` : ''}${street}`, city, state: uf, country: 'Brasil' }, { street, city, state: uf, country: 'Brasil' });
+    // O Nominatim não entende a sigla da UF no parâmetro "state": ela só entra na busca livre
+    if (street && city) {
+      if (numero) tries.push({ street: `${numero} ${street}`, city, country: 'Brasil' });
+      tries.push({ street, city, country: 'Brasil' }, { q: `${street}, ${city}${uf ? `, ${uf}` : ''}, Brasil`, countrycodes: 'br' });
+    }
     if (cep) tries.push({ postalcode: String(cep).replace(/\D/g, ''), country: 'Brasil' });
-    for (const t of tries) {
+    // Rua nova/ausente no OSM: cai para o bairro e, por fim, o centro da cidade (aproximado)
+    const exatas = tries.length;
+    if (bairro && city) tries.push({ q: `${bairro}, ${city}${uf ? `, ${uf}` : ''}, Brasil`, countrycodes: 'br' });
+    if (city) tries.push({ q: `${city}${uf ? `, ${uf}` : ''}, Brasil`, countrycodes: 'br' });
+    for (const [i, t] of tries.entries()) {
       const r = await nominatim('search', { ...t, limit: '1' });
-      if (r[0]) return res.json({ latitude: Number(r[0].lat), longitude: Number(r[0].lon) });
+      if (r[0]) return res.json({ latitude: Number(r[0].lat), longitude: Number(r[0].lon), aproximado: i >= exatas });
     }
     res.json({ latitude: null, longitude: null });
   } catch { res.json({ latitude: null, longitude: null }); }

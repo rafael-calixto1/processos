@@ -31,7 +31,9 @@ router.get('/', handle(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,
        o.tipo_servico, o.bairro, o.cidade, o.latitude, o.longitude, o.pop_nome, o.rota_id, o.poste_id,
-       t.nome AS tecnico_nome FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
+       t.nome AS tecnico_nome,
+       EXISTS(SELECT 1 FROM os_rascunhos r WHERE r.os_id = o.id) AS tem_rascunho
+     FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY o.id DESC LIMIT 300`, params);
   res.json(rows);
 }));
@@ -116,7 +118,27 @@ router.delete('/:id/servicos/:servicoId', handle(async (req, res) => {
 }));
 
 router.post('/:id/fechar', handle(async (req, res) => {
-  res.json(await svc.fecharOS({ os_id: Number(req.params.id) }, actorOf(req)));
+  const r = await svc.fecharOS({ os_id: Number(req.params.id) }, actorOf(req));
+  await pool.query('DELETE FROM os_rascunhos WHERE os_id = ?', [Number(req.params.id)]);
+  res.json(r);
+}));
+
+// Rascunho da finalização em campo (progresso salvo no banco)
+router.get('/:id/rascunho', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  const [[r]] = await pool.query('SELECT dados FROM os_rascunhos WHERE os_id = ?', [os.id]);
+  res.json({ rascunho: r ? JSON.parse(r.dados) : null });
+}));
+
+router.put('/:id/rascunho', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  if (['concluida', 'cancelada'].includes(os.status)) throw new svc.ServiceError(409, 'OS encerrada é somente leitura');
+  if (!req.body || typeof req.body.rascunho !== 'object' || req.body.rascunho === null) throw new svc.ServiceError(400, 'Rascunho inválido');
+  await pool.query(
+    `INSERT INTO os_rascunhos (os_id, dados, atualizado_por) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE dados = VALUES(dados), atualizado_por = VALUES(atualizado_por)`,
+    [os.id, JSON.stringify(req.body.rascunho), req.userId]);
+  res.json({ ok: true });
 }));
 
 router.post('/:id/cancelar', staff, handle(async (req, res) => {

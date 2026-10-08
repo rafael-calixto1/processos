@@ -73,6 +73,8 @@ export const osAPI = {
   adicionarServico: (id: number, b: Body) => request('POST', `/os/${id}/servicos`, b),
   removerServico: (id: number, servicoId: number) => request('DELETE', `/os/${id}/servicos/${servicoId}`),
   sugestoesServicos: () => request('GET', '/os/servicos/sugestoes'),
+  rascunho: (id: number | string) => request('GET', `/os/${id}/rascunho`) as Promise<{ rascunho: Record<string, unknown> | null }>,
+  salvarRascunho: (id: number | string, rascunho: Record<string, unknown>) => request('PUT', `/os/${id}/rascunho`, { rascunho }),
   fechar: (id: number) => request('POST', `/os/${id}/fechar`),
   cancelar: (id: number) => request('POST', `/os/${id}/cancelar`),
   estornar: (id: number, b: Body) => request('POST', `/os/${id}/estornos`, b),
@@ -108,6 +110,6 @@ export const popsAPI = {
 };
 
 export const geoAPI = {
-  geocode: (p: Record<string, string>): Promise<{ latitude: number | null; longitude: number | null }> => request('GET', `/geo/geocode${qs(p)}`) as Promise<{ latitude: number | null; longitude: number | null }>,
+  geocode: (p: Record<string, string>): Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean }> => request('GET', `/geo/geocode${qs(p)}`) as Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean }>,
   search: (q: string): Promise<AddressSuggestion[]> => request('GET', `/geo/search${qs({ q })}`) as Promise<AddressSuggestion[]>,
 };

@@ -6,7 +6,7 @@ import { useServiceOrder, useFieldWork, useOrderDetail, FINALIZATION_STEPS } fro
 import { fw, ScreenHeader, StepStatusIcon, StickyActionBar, StickyButton } from './ui';
 
 const hintFor = (key, d, order) => ({
-  'description': d.description.trim() && `${d.description.trim().slice(0, 40)}…`,
+  'description': d.description.trim() && (d.description.trim().length > 10 ? `${d.description.trim().slice(0, 40)}…` : 'Muito curta: mínimo de 11 caracteres'),
   'closing-reason': d.closingReasonId && 'Selecionado',
   'intervention-location': d.interventionLocation && `${d.interventionLocation.lat.toFixed(5)}, ${d.interventionLocation.lng.toFixed(5)}`,
   'checklists': `${Object.keys(d.checklistAnswers).length} respostas`,
@@ -19,7 +19,7 @@ const hintFor = (key, d, order) => ({
 const FinalizationHub = () => {
   const { orderId } = useParams();
   const nav = useNavigate();
-  const { order, draft, completion, canFinalize, act } = useServiceOrder(orderId);
+  const { order, draft, completion, canFinalize, act, loading } = useServiceOrder(orderId);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -35,6 +35,7 @@ const FinalizationHub = () => {
       act('ORDER_CLOSED'); setConfirming(false); reload();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
+  if (loading && !order) return null;
   if (!order) return <Navigate to="/os" replace />;
   if (draft.status === 'pending') return <Navigate to={`/os/${orderId}`} replace />;
 

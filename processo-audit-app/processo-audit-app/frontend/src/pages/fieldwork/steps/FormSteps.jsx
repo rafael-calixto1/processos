@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Crosshair, Check, MapPin } from 'lucide-react';
 import { CLOSING_REASONS, OUTSIDE_PLANT_CHECKLIST, CREW_DIRECTORY } from '../mockData';
+import AddressSearch from '../../../components/AddressSearch';
+import { geoAPI } from '../../../api/estoque';
 import { fw, YesNo, NetworkMap, fmtCoord, StickyButton } from '../ui';
 import StepScreen from './StepScreen';
 
@@ -10,7 +12,8 @@ export const DescriptionStep = () => (
       <div className={`${fw.card} ${fw.field}`}>
         <label htmlFor="desc">O que foi executado em campo?</label>
         <textarea id="desc" value={draft.description} placeholder="Ex.: Lançados 1.850 m de ASU 12F entre PL-0932 e CEO-03; fusões 1 a 8 e CEO vedada." onChange={(e) => act('DESCRIPTION_CHANGED', { value: e.target.value })} />
-        <span className={fw.muted}>Mínimo de 10 caracteres · {draft.description.trim().length} digitados</span>
+        <span className={fw.muted}>Mínimo de 11 caracteres · {draft.description.trim().length} digitados</span>
+        {draft.description.trim().length <= 10 && <p className={fw.callout} role="alert" style={{ margin: 0 }}>Descrição com 10 caracteres ou menos não é salva como etapa concluída. Escreva mais detalhes.</p>}
       </div>
     )}
   </StepScreen>
@@ -36,6 +39,18 @@ export const ClosingReasonStep = () => (
 export const InterventionLocationStep = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [addr, setAddr] = useState('');
+  const pickAddress = async (act, it) => {
+    setError('');
+    let { latitude: lat, longitude: lng } = it; let approx = false;
+    if (lat == null) {
+      setBusy(true);
+      try { ({ latitude: lat, longitude: lng, aproximado: approx } = await geoAPI.geocode({ street: it.logradouro, numero: it.numero, city: it.cidade, uf: it.uf, cep: it.cep, bairro: it.bairro })); } catch { /* cai na mensagem abaixo */ }
+      setBusy(false);
+    }
+    if (lat == null) { setError('Não foi possível localizar esse endereço no mapa. Escolha outro ou use o GPS.'); return; }
+    act('INTERVENTION_LOCATION_SET', { location: { lat: Number(lat), lng: Number(lng), source: 'address', address: it.label, approximate: Boolean(approx) } });
+  };
   const capture = (act) => {
     setError('');
     if (!navigator.geolocation) { setError('Este navegador não oferece GPS.'); return; }
@@ -57,12 +72,17 @@ export const InterventionLocationStep = () => {
               {loc ? (
                 <>
                   <div className={`${fw.locationValue} ${fw.mono}`}>{fmtCoord(loc.lat)}, {fmtCoord(loc.lng)}</div>
-                  <span className={fw.muted}>{loc.source === 'gps' ? `GPS · precisão ±${loc.accuracyMeters} m` : `Referência do ${order.pole?.id}`}</span>
+                  <span className={fw.muted}>{loc.source === 'gps' ? `GPS · precisão ±${loc.accuracyMeters} m` : loc.source === 'address' ? `Endereço · ${loc.address}${loc.approximate ? ' (posição aproximada: a rua não está no mapa, confirme pelo GPS no local)' : ''}` : `Referência do ${order.pole?.id}`}</span>
                 </>
               ) : <span className={fw.muted}>Nenhuma posição registrada ainda.</span>}
               {error && <p className={fw.callout} role="alert" style={{ marginTop: 10 }}>{error}</p>}
             </div>
             {loc && <NetworkMap lat={loc.lat} lng={loc.lng} label="local da intervenção" />}
+            <div className={`${fw.card} ${fw.field}`}>
+              <label>Escolher o local pelo endereço</label>
+              <AddressSearch value={addr} onChange={setAddr} onPick={(it) => pickAddress(act, it)} />
+              <span className={fw.muted}>Digite o CEP, as coordenadas (lat, lng) ou a rua com número e escolha a sugestão.</span>
+            </div>
             <button className={fw.btnOutline} disabled={busy} onClick={() => capture(act)}><Crosshair size={20} />{busy ? 'Obtendo GPS…' : 'Capturar posição por GPS'}</button>
             {order.pole?.lat != null && (
               <button className={fw.btnOutline} style={{ borderStyle: 'solid', borderColor: 'var(--border-color)', color: 'var(--text-medium)' }}

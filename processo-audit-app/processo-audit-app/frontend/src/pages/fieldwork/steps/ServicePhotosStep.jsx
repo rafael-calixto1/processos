@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Camera, ImagePlus, X } from 'lucide-react';
 import { useServiceOrder } from '../state';
@@ -10,17 +10,28 @@ const ServicePhotosStep = () => {
   const { draft, act } = useServiceOrder(orderId);
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
-  const previewUrls = useRef([]);
-  // Libera as URLs de preview ao sair da tela
-  useEffect(() => () => previewUrls.current.forEach(URL.revokeObjectURL), []);
+  // Reduz a foto (1280 px, JPEG) e guarda como data URL para ir junto com o rascunho no banco
+  const compress = (file) => new Promise((resolve, reject) => {
+    const src = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(src);
+      resolve(c.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('Imagem inválida')); };
+    img.src = src;
+  });
 
   const onFiles = (e) => {
-    Array.from(e.target.files || []).forEach((file) => {
-      const url = URL.createObjectURL(file);
-      previewUrls.current.push(url);
-      act('PHOTO_ADDED', { photo: { id: crypto.randomUUID(), url, fileName: file.name, takenAt: new Date().toISOString() } });
-    });
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
+    files.forEach((file) => compress(file).then((url) => {
+      act('PHOTO_ADDED', { photo: { id: crypto.randomUUID(), url, fileName: file.name, takenAt: new Date().toISOString() } });
+    }).catch(() => {}));
   };
 
   const photos = draft?.servicePhotos || [];

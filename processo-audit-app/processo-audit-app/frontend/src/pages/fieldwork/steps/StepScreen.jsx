@@ -8,6 +8,7 @@ const StepScreen = ({ stepKey, children, action, okDisabled }) => {
   const { orderId } = useParams();
   const nav = useNavigate();
   const so = useServiceOrder(orderId);
+  if (so.loading && !so.order) return null;
   if (!so.order || so.draft.status !== 'in_execution') return <Navigate to={`/os/${orderId}`} replace />;
   const back = `/os/${orderId}/finalizar`;
   const label = FINALIZATION_STEPS.find((s) => s.key === stepKey)?.label;
