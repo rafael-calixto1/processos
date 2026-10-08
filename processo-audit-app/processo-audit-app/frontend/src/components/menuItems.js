@@ -8,16 +8,16 @@ export const STAFF = ['admin', 'estoque'];
 
 // Tudo que é de estoque — aparece na página /estoque
 export const estoqueItems = [
-  { label: 'Painel de estoque', path: '/estoque/painel', Icon: BarChart3, roles: STAFF },
-  { label: 'Patrimônio', path: '/estoque/patrimonio', Icon: ScanSearch, roles: STAFF },
-  { label: 'Itens', path: '/estoque/itens', Icon: Package, roles: STAFF },
-  { label: 'Entrada / Compra', path: '/estoque/entrada', Icon: PackagePlus, roles: STAFF },
-  { label: 'Retirada', path: '/estoque/retirada', Icon: PackageMinus, roles: STAFF },
-  { label: 'Devolução', path: '/estoque/devolucao', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
-  { label: 'Aprovar devoluções', path: '/estoque/devolucoes', Icon: CheckSquare, roles: STAFF },
-  { label: 'Estoque por técnico', path: '/estoque/posse', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
-  { label: 'Equipamentos', path: '/estoque/equipamentos', Icon: Drill, roles: STAFF },
-  { label: 'Cadastros', path: '/estoque/cadastros', Icon: Contact, roles: STAFF },
+  { label: 'Painel de estoque', path: '/estoque/painel', group: 'Consulta e painéis', Icon: BarChart3, roles: STAFF },
+  { label: 'Patrimônio', path: '/estoque/patrimonio', group: 'Consulta e painéis', Icon: ScanSearch, roles: STAFF },
+  { label: 'Itens', path: '/estoque/itens', group: 'Consulta e painéis', Icon: Package, roles: STAFF },
+  { label: 'Entrada / Compra', path: '/estoque/entrada', group: 'Movimentações', Icon: PackagePlus, roles: STAFF },
+  { label: 'Retirada', path: '/estoque/retirada', group: 'Movimentações', Icon: PackageMinus, roles: STAFF },
+  { label: 'Devolução', path: '/estoque/devolucao', group: 'Movimentações', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
+  { label: 'Aprovar devoluções', path: '/estoque/devolucoes', group: 'Movimentações', Icon: CheckSquare, roles: STAFF },
+  { label: 'Estoque por técnico', path: '/estoque/posse', group: 'Técnicos e equipamentos', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
+  { label: 'Equipamentos', path: '/estoque/equipamentos', group: 'Técnicos e equipamentos', Icon: Drill, roles: STAFF },
+  { label: 'Cadastros', path: '/estoque/cadastros', group: 'Cadastros', Icon: Contact, roles: STAFF },
 ];
 
 // Menu lateral: um item "Estoque" e a seção de OS

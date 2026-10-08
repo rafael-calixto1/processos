@@ -1,10 +1,107 @@
-.wrap { max-width: 1100px; margin: 0 auto; }
-.title { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin: 0 0 1.25rem; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem; }
-.tile {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
-  min-height: 120px; padding: 1rem; text-align: center; text-decoration: none;
-  background: var(--primary-color); color: #fff; border-radius: 8px;
-  font-size: 0.85rem; font-weight: 600; transition: background 0.15s, transform 0.15s;
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&display=swap');
+
+/* Hub de atalhos do Estoque: almoxarifado em verde profundo, malha de planta técnica e cards em relevo */
+.wrap {
+  --bg-base: #054016;
+  --card-top: #25cf4f;
+  --card-bot: #109a35;
+  --font: 'Bricolage Grotesque', system-ui, sans-serif;
+  /* sangra o padding do layout para ocupar a área toda */
+  margin: -2rem -1.5rem; padding: 1.5rem 1.5rem 3rem;
+  min-height: calc(100vh - 62px);
+  position: relative; isolation: isolate;
+  box-shadow: 0 0 0 100vmax var(--bg-base); clip-path: inset(0 -100vmax);
+  background:
+    radial-gradient(ellipse 55% 45% at 50% -8%, rgba(60, 220, 100, 0.26), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 50% 110%, rgba(0, 0, 0, 0.32), transparent 70%),
+    var(--bg-base);
+  color: #fff; font-family: var(--font);
+  display: flex; flex-direction: column; align-items: center;
 }
-.tile:hover { background: var(--primary-dark); transform: translateY(-2px); }
+/* malha de planta técnica, esmaecida nas bordas */
+.wrap::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 35%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 35%, #000 30%, transparent 100%);
+}
+
+.search {
+  display: flex; align-items: center; gap: 0.6rem; width: min(100%, 280px);
+  padding: 0.35rem 0.9rem; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22); border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.8);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.search:focus-within { border-color: var(--secondary-color); color: var(--secondary-color); background: rgba(0, 0, 0, 0.34); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06); }
+.search input { flex: 1; min-width: 0; padding: 0.3rem 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 0.92rem; color: #fff; }
+.search input::placeholder { color: rgba(255, 255, 255, 0.55); }
+
+.title {
+  position: relative; margin: 1.75rem 0 1.75rem; padding-bottom: 0.7rem;
+  font-size: 2rem; font-weight: 600; letter-spacing: -0.01em; color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.title::after {
+  content: ''; position: absolute; left: 50%; bottom: 0; width: 44px; height: 3px; border-radius: 3px;
+  transform: translateX(-50%); background: var(--secondary-color);
+}
+
+.grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; max-width: 1180px; }
+
+.tile {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  width: 220px; height: 160px; padding: 1rem; text-align: center; text-decoration: none;
+  background: linear-gradient(160deg, var(--card-top) 0%, var(--card-bot) 100%); color: #fff; border-radius: 14px;
+  font-size: 1rem; font-weight: 600; line-height: 1.25; letter-spacing: 0.005em;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 -2px 0 rgba(0, 0, 0, 0.14) inset,
+    0 10px 22px rgba(0, 0, 0, 0.38),
+    0 2px 4px rgba(0, 0, 0, 0.25);
+  opacity: 0; animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: calc(var(--i, 0) * 45ms);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s, filter 0.25s;
+}
+/* barra inferior que cresce no hover */
+.tile::after {
+  content: ''; position: absolute; left: 50%; bottom: 0; height: 4px; width: 0; transform: translateX(-50%);
+  background: var(--secondary-color); border-radius: 4px 4px 0 0; transition: width 0.3s ease;
+}
+.badge {
+  display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.16); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s;
+}
+.badge svg { color: #fff; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); transition: color 0.2s; }
+.tile:hover, .tile:focus-visible {
+  filter: brightness(1.07); transform: translateY(-5px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 18px 30px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3);
+  outline: 0;
+}
+.tile:hover::after, .tile:focus-visible::after { width: 56%; }
+.tile:hover .badge, .tile:focus-visible .badge { transform: scale(1.08); background: rgba(0, 0, 0, 0.26); }
+.tile:hover .badge svg, .tile:focus-visible .badge svg { color: var(--secondary-color); }
+.tile:focus-visible { box-shadow: 0 0 0 3px var(--secondary-color), 0 18px 30px rgba(0, 0, 0, 0.45); }
+.tile:active { transform: translateY(-1px) scale(0.985); }
+
+.empty { color: rgba(255, 255, 255, 0.85); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile { animation: none; opacity: 1; transition: none; }
+  .tile::after, .badge { transition: none; }
+}
+
+@media (max-width: 600px) {
+  .wrap { margin: -1.25rem -1rem; padding: 1rem 1rem 2rem; }
+  .title { margin: 1.25rem 0 1.25rem; font-size: 1.7rem; }
+  .grid { gap: 0.9rem; }
+  .tile { width: calc(50% - 0.5rem); min-width: 140px; height: 140px; gap: 0.7rem; font-size: 0.92rem; }
+  .badge { width: 62px; height: 62px; }
+  .badge svg { width: 40px; height: 40px; }
+}
