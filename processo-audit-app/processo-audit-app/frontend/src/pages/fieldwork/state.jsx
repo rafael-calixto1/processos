@@ -46,7 +46,7 @@ export const toFieldOrder = (os) => ({
   // Lançamentos: linhas de serviço por trecho com os materiais baixados nelas (só vêm no detalhe da OS)
   launches: Array.isArray(os.servicos)
     ? os.servicos.map((sv) => ({
-      id: sv.id, description: sv.descricao, segment: sv.trecho || '',
+      id: sv.id, description: sv.descricao, segment: sv.trecho || '', route: sv.rota_trecho || null,
       materials: (os.materiais || []).filter((m) => m.servico_id === sv.id && !m.estorno_id).map((m) => ({ id: m.id, name: m.item_nome, lot: m.lote_codigo, quantity: Number(m.quantidade), unit: m.unidade })),
     })).filter((l) => l.materials.length > 0)
     : [],

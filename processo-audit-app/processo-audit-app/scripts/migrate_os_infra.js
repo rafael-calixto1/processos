@@ -49,6 +49,7 @@ const extra = async (tabela, coluna, def, indice) => {
   if (!r.length) { await conn.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${def}`); if (indice) await conn.query(`ALTER TABLE ${tabela} ADD INDEX ${indice} (${coluna})`); }
 };
 await extra('os_servicos', 'trecho', 'VARCHAR(255) NULL');
+await extra('os_servicos', 'rota_trecho', 'TEXT NULL'); // JSON { inicio:{lat,lng}, fim:{lat,lng}, metros } escolhido no mapa
 await extra('estoque_movimentacoes', 'servico_id', 'INT NULL', 'idx_mov_servico');
 
 const PADRAO = ['Lançamento de rota', 'Manutenção de CEO/CTO', 'Manutenção de POP', 'Rompimento de fibra', 'Instalação de poste/ferragem', 'Vistoria de rota', 'Outro'];

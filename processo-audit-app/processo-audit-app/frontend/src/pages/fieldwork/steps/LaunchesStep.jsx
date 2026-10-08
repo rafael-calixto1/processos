@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, X, Layers } from 'lucide-react';
+import { Plus, X, Layers, Map as MapIcon } from 'lucide-react';
+import RouteMap, { fmtMeters } from '../../../components/RouteMap';
 import { estoqueAPI, osAPI } from '../../../api/estoque';
 import { agrupar } from '../../../components/estoque/OsFechamento';
 import { fmtQtd, useLoad } from '../../../components/estoque/ui';
@@ -9,12 +10,14 @@ import { fw, Toggle, StickyButton } from '../ui';
 import StepScreen from './StepScreen';
 
 /* Sheet: uma linha de serviço no trecho + os materiais (da posse do técnico) usados nela */
-const LaunchSheet = ({ orderId, onClose, onSaved }) => {
+const LaunchSheet = ({ orderId, center, onClose, onSaved }) => {
   const posse = useLoad(() => estoqueAPI.minhaPosse(), []);
   const suggestions = useLoad(() => osAPI.sugestoesServicos().catch(() => []), []);
   const groups = useMemo(() => agrupar(posse.data), [posse.data]);
   const [service, setService] = useState('');
   const [segment, setSegment] = useState('');
+  const [route, setRoute] = useState(null); // { pontos, metros, caminho } marcado no mapa
+  const [mapOpen, setMapOpen] = useState(false);
   const [qtds, setQtds] = useState({}); // groupKey -> quantidade (presença = selecionado)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +40,7 @@ const LaunchSheet = ({ orderId, onClose, onSaved }) => {
         resta = Math.round((resta - q) * 100) / 100;
       }
     }
-    try { await osAPI.lancar(orderId, { descricao: service.trim(), trecho: segment.trim(), materiais }); onSaved(); }
+    try { await osAPI.lancar(orderId, { descricao: service.trim(), trecho: segment.trim(), rota: route?.caminho ? route : undefined, materiais }); onSaved(); }
     catch (e) { setError(e.message); } finally { setBusy(false); }
   };
 
@@ -54,6 +57,9 @@ const LaunchSheet = ({ orderId, onClose, onSaved }) => {
           <div className={fw.field}>
             <label htmlFor="lc-segment">Trecho</label>
             <input id="lc-segment" type="text" value={segment} placeholder="Ex.: PL-0932 → PL-0945" onChange={(e) => setSegment(e.target.value)} />
+            <button type="button" className={fw.btnOutline} style={{ marginTop: 8 }} onClick={() => setMapOpen(true)}>
+              <MapIcon size={20} />{route?.caminho ? `Rota no mapa · ≈ ${fmtMeters(route.metros)}` : 'Marcar rota no mapa'}
+            </button>
           </div>
           <div>
             <span className={fw.fieldLabel}>Materiais usados neste trecho</span>
@@ -89,6 +95,18 @@ const LaunchSheet = ({ orderId, onClose, onSaved }) => {
         </div>
         <StickyButton tone="confirm" disabled={!canSave || busy} onClick={save}>{busy ? 'Salvando…' : 'Salvar lançamento'}</StickyButton>
       </div>
+      {mapOpen && (
+        <div className={fw.sheetOverlay} onClick={(e) => e.stopPropagation()}>
+          <div className={fw.sheet} role="dialog" aria-modal="true" aria-label="Rota no mapa" style={{ maxHeight: '96vh' }} onClick={(e) => e.stopPropagation()}>
+            <div className={fw.sheetHead}><h2>Rota no mapa</h2><button className={fw.iconBtn} onClick={() => setMapOpen(false)} aria-label="Fechar"><X size={20} /></button></div>
+            <div className={fw.sheetList}><RouteMap value={route} onChange={setRoute} center={center} /></div>
+            <StickyButton tone="confirm" disabled={!route?.caminho} onClick={() => {
+              if (!segment.trim()) setSegment(`${route.pontos[0].lat}, ${route.pontos[0].lng} → ${route.pontos[route.pontos.length - 1].lat}, ${route.pontos[route.pontos.length - 1].lng}`);
+              setMapOpen(false);
+            }}>Usar esta rota</StickyButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -117,12 +135,13 @@ const LaunchesStep = () => {
         <div key={l.id} className={fw.card}>
           <div className={fw.lineHead}>{l.description}</div>
           {l.segment && <span className={fw.muted}>Trecho: <b>{l.segment}</b></span>}
+          {l.route && <div style={{ marginTop: 8 }}><RouteMap value={l.route} readOnly height={180} /></div>}
           <ul style={{ margin: '10px 0 0', paddingLeft: 18 }}>
             {l.materials.map((m) => <li key={m.id}>{m.name} — <b>{fmtQtd(m.quantity, m.unit)}</b> <span className={`${fw.mono} ${fw.muted}`}>{m.lot}</span></li>)}
           </ul>
         </div>
       ))}
-      {adding && <LaunchSheet orderId={orderId} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reloadDetail(); }} />}
+      {adding && <LaunchSheet orderId={orderId} center={draft?.interventionLocation || (order?.pole?.lat != null ? order.pole : null)} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reloadDetail(); }} />}
     </StepScreen>
   );
 };

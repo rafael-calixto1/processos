@@ -75,11 +75,11 @@ router.get('/:id', handle(async (req, res) => {
     `SELECT h.*, u.name AS usuario_nome FROM os_historico_status h LEFT JOIN users u ON u.id = h.usuario_id
      WHERE h.os_id = ? ORDER BY h.id`, [os.id]);
   const [servicos] = await pool.query(
-    `SELECT sv.id, sv.descricao, sv.trecho, sv.quantidade, sv.criado_em, u.name AS usuario_nome
+    `SELECT sv.id, sv.descricao, sv.trecho, sv.rota_trecho, sv.quantidade, sv.criado_em, u.name AS usuario_nome
      FROM os_servicos sv LEFT JOIN users u ON u.id = sv.criado_por WHERE sv.os_id = ? ORDER BY sv.id`, [os.id]);
   const totais = { metros: 0, pecas: 0 };
   for (const m of materiais) if (!m.estorno_id) totais[m.unidade === 'metros' ? 'metros' : 'pecas'] += Number(m.quantidade);
-  res.json({ ...os, materiais, servicos: servicos.map((x) => ({ ...x, quantidade: Number(x.quantidade) })), historico, totais });
+  res.json({ ...os, materiais, servicos: servicos.map((x) => ({ ...x, quantidade: Number(x.quantidade), rota_trecho: x.rota_trecho ? JSON.parse(x.rota_trecho) : null })), historico, totais });
 }));
 
 router.put('/:id', staff, handle(async (req, res) => {

@@ -411,7 +411,7 @@ const baixarNaTx = async (conn, { os_id, lote_id, codigo, quantidade, observacao
 export const baixarEmOS = (params, actor, db) => withTx((conn) => baixarNaTx(conn, params, actor), db);
 
 /* Lançamento: uma linha de serviço no trecho + os materiais usados nele. Tudo ou nada (uma transação). */
-export const lancarServicoComMateriais = ({ os_id, descricao, trecho, quantidade, materiais }, actor, db) =>
+export const lancarServicoComMateriais = ({ os_id, descricao, trecho, rota, quantidade, materiais }, actor, db) =>
   withTx(async (conn) => {
     const desc = String(descricao || '').trim();
     if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
@@ -421,8 +421,16 @@ export const lancarServicoComMateriais = ({ os_id, descricao, trecho, quantidade
     assertAcessoOS(os, actor);
     if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não aceita novos lançamentos');
     const tr = String(trecho || '').trim().slice(0, 255) || null;
-    const [res] = await conn.query('INSERT INTO os_servicos (os_id, descricao, quantidade, trecho, criado_por) VALUES (?,?,?,?,?)',
-      [os.id, desc.slice(0, 255), q, tr, actor.id]);
+    // Rota desenhada no mapa: 2 ou mais pontos com coordenadas válidas, mais o caminho traçado pelas vias
+    const pts = Array.isArray(rota?.pontos)
+      ? rota.pontos.slice(0, 25).map((p) => ({ lat: Number(p?.lat), lng: Number(p?.lng) })).filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
+      : [];
+    const rotaJson = pts.length >= 2 ? JSON.stringify({
+      pontos: pts, metros: Math.round(Number(rota.metros) || 0),
+      caminho: Array.isArray(rota.caminho) ? rota.caminho.slice(0, 700).map(([a, b]) => [Number(a), Number(b)]).filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b)) : [],
+    }) : null;
+    const [res] = await conn.query('INSERT INTO os_servicos (os_id, descricao, quantidade, trecho, rota_trecho, criado_por) VALUES (?,?,?,?,?,?)',
+      [os.id, desc.slice(0, 255), q, tr, rotaJson, actor.id]);
     const baixas = [];
     for (const m of materiais) baixas.push(await baixarNaTx(conn, { os_id: os.id, lote_id: m.lote_id, quantidade: m.quantidade, servico_id: res.insertId }, actor));
     if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);

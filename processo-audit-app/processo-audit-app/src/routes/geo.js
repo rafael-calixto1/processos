@@ -160,14 +160,51 @@ router.get('/geocode', async (req, res) => {
     if (cep) tries.push({ postalcode: String(cep).replace(/\D/g, ''), country: 'Brasil' });
     // Rua nova/ausente no OSM: cai para o bairro e, por fim, o centro da cidade (aproximado)
     const exatas = tries.length;
+    // CEP da rua (AwesomeAPI traz o ponto da rua mesmo quando o OSM não a conhece): serve para levar o mapa ao lugar certo
+    const cepNum = String(cep).replace(/\D/g, '');
+    const porCep = async () => {
+      if (cepNum.length !== 8) return null;
+      try {
+        const d = await cached(`awesome:${cepNum}`, () => getJson(`https://cep.awesomeapi.com.br/json/${cepNum}`));
+        return Number.isFinite(Number(d.lat)) && d.lat !== '' ? { latitude: Number(d.lat), longitude: Number(d.lng) } : null;
+      } catch { return null; }
+    };
     if (bairro && city) tries.push({ q: `${bairro}, ${city}${uf ? `, ${uf}` : ''}, Brasil`, countrycodes: 'br' });
     if (city) tries.push({ q: `${city}${uf ? `, ${uf}` : ''}, Brasil`, countrycodes: 'br' });
     for (const [i, t] of tries.entries()) {
+      if (i === exatas) { const c = await porCep(); if (c) return res.json({ ...c, aproximado: true, origem: 'cep' }); }
       const r = await nominatim('search', { ...t, limit: '1' });
       if (r[0]) return res.json({ latitude: Number(r[0].lat), longitude: Number(r[0].lon), aproximado: i >= exatas });
     }
+    if (tries.length === exatas) { const c = await porCep(); if (c) return res.json({ ...c, aproximado: true, origem: 'cep' }); }
     res.json({ latitude: null, longitude: null });
   } catch { res.json({ latitude: null, longitude: null }); }
+});
+
+/* Trajeto por vias (rua, estrada, rodovia) passando por 2 ou mais pontos, via OSRM. Os pontos precisam estar sobre uma via. */
+const MAX_DIST_VIA = 60; // metros entre o ponto tocado e a via mais próxima
+const MAX_DIST_VIA_CEP = 400; // ponto vindo do CEP de uma rua real que o OSM ainda não tem: usa a via mapeada mais próxima
+router.get('/rota', async (req, res) => {
+  const brutos = String(req.query.pontos || '').split(';').filter(Boolean);
+  const livres = brutos.map((p) => p.endsWith('!')); // "lat,lng!" = ponto do CEP, tolerância maior
+  const pontos = brutos.map((p) => p.replace('!', '').split(',').map(Number));
+  if (pontos.length < 2 || pontos.length > 25 || pontos.some(([la, ln]) => !Number.isFinite(la) || !Number.isFinite(ln) || Math.abs(la) > 90 || Math.abs(ln) > 180)) {
+    return res.status(400).json({ error: 'Pontos inválidos' });
+  }
+  try {
+    const coords = pontos.map(([la, ln]) => `${ln},${la}`).join(';');
+    const d = await cached(`rota:${coords}`, () => getJson(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`));
+    const wp = d.waypoints || [];
+    if (d.code !== 'Ok' || !d.routes?.[0]) {
+      return res.status(422).json({ error: d.code === 'NoRoute' ? 'Não há trajeto de rua ligando esses pontos.' : 'Não foi possível traçar o trajeto.' });
+    }
+    if (wp.some((w, i) => w.distance > (livres[i] ? MAX_DIST_VIA_CEP : MAX_DIST_VIA))) {
+      return res.status(422).json({ error: 'Marque os pontos sobre uma rua, estrada ou rodovia.' });
+    }
+    let caminho = d.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    if (caminho.length > 600) { const k = Math.ceil(caminho.length / 600); caminho = caminho.filter((_, i) => i % k === 0 || i === caminho.length - 1); }
+    res.json({ pontos: wp.map((w) => ({ lat: w.location[1], lng: w.location[0] })), livres, metros: Math.round(d.routes[0].distance), caminho });
+  } catch { res.status(502).json({ error: 'Serviço de rotas indisponível. Tente novamente.' }); }
 });
 
 export default router;

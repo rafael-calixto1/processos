@@ -109,7 +109,10 @@ export const popsAPI = {
   list: (): Promise<{ id: number; nome: string }[]> => request('GET', '/hubsoft/pops') as Promise<{ id: number; nome: string }[]>,
 };
 
+export type RouteResult = { livres?: boolean[]; pontos: { lat: number; lng: number }[]; metros: number; caminho: [number, number][] };
+
 export const geoAPI = {
-  geocode: (p: Record<string, string>): Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean }> => request('GET', `/geo/geocode${qs(p)}`) as Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean }>,
+  rota: (p: Record<string, string>): Promise<RouteResult> => request('GET', `/geo/rota${qs(p)}`) as Promise<RouteResult>,
+  geocode: (p: Record<string, string>): Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean; origem?: string }> => request('GET', `/geo/geocode${qs(p)}`) as Promise<{ latitude: number | null; longitude: number | null; aproximado?: boolean; origem?: string }>,
   search: (q: string): Promise<AddressSuggestion[]> => request('GET', `/geo/search${qs({ q })}`) as Promise<AddressSuggestion[]>,
 };
