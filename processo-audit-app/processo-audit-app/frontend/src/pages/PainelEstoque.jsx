@@ -2,27 +2,62 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { painelAPI } from '../api/estoque';
 import { AsyncState, useLoad, StatusBadge, Bars, fmtNum, fmtQtd, styles as s } from '../components/estoque/ui';
-import { Kpi, Kpis, Delta, PeriodoFiltro, rangeDe, descPeriodo, LinhaTempo, Segmentos, COR, TOM, painelCss as c } from '../components/painel/painel';
+import { Kpi, Kpis, Delta, PeriodoFiltro, rangeDe, descPeriodo, LinhaTempo, Segmentos, TecnicoFiltro, COR, TOM, painelCss as c } from '../components/painel/painel';
 
 /* Painel de ESTOQUE: saúde do saldo, reposição, ritmo de consumo e material em campo. */
 const PainelEstoque = () => {
   const [dias, setDias] = useState(30);
-  const r = rangeDe(dias);
+  const [tec, setTec] = useState('');
+  const r = { ...rangeDe(dias), ...(tec && { tecnico_id: tec }) };
   const { loading, error, data, reload } = useLoad(async () => {
-    const [resumo, uso] = await Promise.all([painelAPI.estoque(r), painelAPI.uso(r)]);
+    const [resumo, uso] = await Promise.all([painelAPI.estoque(r), tec ? null : painelAPI.uso(r)]);
     return { resumo, uso };
-  }, [dias]);
+  }, [dias, tec]);
   const d = data?.resumo, uso = data?.uso, k = d?.kpis;
   const semAlerta = k && k.baixo + k.zerado === 0;
 
   return (
     <div className={s.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div><h1 className={s.title}>Painel de estoque</h1><p className={s.sub}>Saldo, reposição e consumo — {descPeriodo(dias)}</p></div>
-        <PeriodoFiltro dias={dias} onChange={setDias} />
+        <div><h1 className={s.title}>{d?.tecnico ? `Estoque de ${d.tecnico.nome}` : 'Painel de estoque'}</h1><p className={s.sub}>{tec ? 'Material em posse, retiradas e consumo' : 'Saldo, reposição e consumo'} — {descPeriodo(dias)}</p></div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <TecnicoFiltro value={tec} onChange={setTec} />
+          <PeriodoFiltro dias={dias} onChange={setDias} />
+        </div>
       </div>
       <AsyncState loading={loading} error={error} onRetry={reload}>
-        {d && (<>
+        {d && d.tecnico && (<>
+          <Kpis>
+            <Kpi label="Cabo em posse" value={fmtNum(k.posse_metros)} unit="m" />
+            <Kpi label="Peças em posse" value={fmtNum(k.posse_pecas)} unit="un" />
+            <Kpi label="Cabo consumido" value={fmtNum(d.consumo.atual.metros)} unit="m" foot={<Delta atual={d.consumo.atual.metros} anterior={d.consumo.anterior.metros} />} />
+            <Kpi label="Peças consumidas" value={fmtNum(d.consumo.atual.pecas)} unit="un" foot={<Delta atual={d.consumo.atual.pecas} anterior={d.consumo.anterior.pecas} />} />
+            <Kpi label="OS em aberto" value={k.os_abertas} />
+            <Kpi label="Devoluções pendentes" value={k.devolucoes_pendentes} tom={k.devolucao_mais_antiga_dias >= 3 ? 'alerta' : undefined}
+              foot={k.devolucoes_pendentes ? <Link className={s.rowLink} to="/estoque/devolucoes">Mais antiga: {k.devolucao_mais_antiga_dias} d — revisar</Link> : 'Nenhuma pendente'} />
+          </Kpis>
+          <div className={s.grid2}>
+            <div className={s.card}><h2 className={s.cardTitle}>Cabo (m): retiradas × consumo por dia</h2>
+              <LinhaTempo serie={d.serie} unidade="m" linhas={[{ campo: 'consumo_metros', label: 'Consumo', cor: COR.a }, { campo: 'entrada_metros', label: 'Retirada', cor: COR.b, tracejada: true }]} /></div>
+            <div className={s.card}><h2 className={s.cardTitle}>Peças (un): retiradas × consumo por dia</h2>
+              <LinhaTempo serie={d.serie} unidade="un" linhas={[{ campo: 'consumo_pecas', label: 'Consumo', cor: COR.a }, { campo: 'entrada_pecas', label: 'Retirada', cor: COR.b, tracejada: true }]} /></div>
+          </div>
+          <div className={s.grid2}>
+            <div className={s.card}><h2 className={s.cardTitle}>Em posse agora</h2>
+              <AsyncState empty={d.posse.length === 0} emptyTitle="Nenhum material em posse">
+                <div className={s.tableWrap}><table className={s.table}><thead><tr><th>Item</th><th>Lotes</th><th>Quantidade</th></tr></thead>
+                  <tbody>{d.posse.map((i) => (<tr key={i.id}><td data-label="Item">{i.nome}</td><td data-label="Lotes" className={c.tnum}>{i.lotes}</td><td data-label="Quantidade" className={c.tnum}><b>{fmtQtd(i.quantidade, i.unidade)}</b></td></tr>))}</tbody></table></div></AsyncState></div>
+            <div className={s.card}><h2 className={s.cardTitle}>Itens consumidos no período</h2>
+              <AsyncState empty={d.por_item.length === 0} emptyTitle="Sem consumo no período">
+                <Bars rows={d.por_item.map((i) => ({ key: i.id, label: `${i.nome} (${i.unidade === 'metros' ? 'm' : 'un'})`, value: i.total }))} /></AsyncState></div>
+          </div>
+          <div className={s.card}><h2 className={s.cardTitle}>Consumo por OS</h2>
+            <AsyncState empty={d.por_os.length === 0} emptyTitle="Sem consumo no período">
+              <div className={s.tableWrap}><table className={s.table}><thead><tr><th>OS</th><th>Cliente</th><th>Cabo (m)</th><th>Peças</th></tr></thead>
+                <tbody>{d.por_os.map((o) => (<tr key={o.id}><td data-label="OS"><Link className={s.rowLink} to={`/os/${o.id}`}>#{o.numero}</Link></td><td data-label="Cliente">{o.cliente}</td><td data-label="Cabo (m)" className={c.tnum}>{fmtNum(o.metros)}</td><td data-label="Peças" className={c.tnum}>{fmtNum(o.pecas)}</td></tr>))}</tbody></table></div></AsyncState></div>
+          <Link className={s.rowLink} to={`/estoque/posse/${tec}`}>Ver ficha completa e histórico do técnico →</Link>
+        </>)}
+        {d && !d.tecnico && (<>
           <Kpis>
             <Kpi label="Itens zerados" value={k.zerado} tom={k.zerado ? 'critico' : undefined} foot={k.zerado ? 'Reposição imediata' : 'Nenhum item zerado'} />
             <Kpi label="Itens abaixo do mínimo" value={k.baixo} tom={k.baixo ? 'alerta' : undefined} foot={`de ${k.itens - k.sem_uso} itens em uso`} />

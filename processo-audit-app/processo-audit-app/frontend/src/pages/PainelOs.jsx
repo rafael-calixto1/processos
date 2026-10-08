@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { painelAPI } from '../api/estoque';
 import { AsyncState, useLoad, Bars, OsStatusBadge, PrioridadeBadge, fmtNum, fmtData, styles as s } from '../components/estoque/ui';
-import { Kpi, Kpis, Delta, PeriodoFiltro, rangeDe, descPeriodo, LinhaTempo, Segmentos, fmtHoras, COR, TOM, painelCss as c } from '../components/painel/painel';
+import { Kpi, Kpis, Delta, PeriodoFiltro, rangeDe, descPeriodo, LinhaTempo, Segmentos, TecnicoFiltro, fmtHoras, COR, TOM, painelCss as c } from '../components/painel/painel';
 
 /* Painel de ORDENS DE SERVIÇO: fila, prazo, vazão (criadas × concluídas) e carga por técnico. */
 const PainelOs = () => {
   const [dias, setDias] = useState(30);
-  const r = rangeDe(dias);
-  const { loading, error, data: d, reload } = useLoad(() => painelAPI.os(r), [dias]);
+  const [tec, setTec] = useState('');
+  const r = { ...rangeDe(dias), ...(tec && { tecnico_id: tec }) };
+  const { loading, error, data: d, reload } = useLoad(() => painelAPI.os(r), [dias, tec]);
   const k = d?.kpis;
   const saldoFila = d && d.atual.criadas - d.atual.concluidas;
   const pont = d?.atual.pontualidade;
@@ -17,7 +18,10 @@ const PainelOs = () => {
     <div className={s.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <div><h1 className={s.title}>Painel de ordens de serviço</h1><p className={s.sub}>Fila atual e desempenho — {descPeriodo(dias)}</p></div>
-        <PeriodoFiltro dias={dias} onChange={setDias} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <TecnicoFiltro value={tec} onChange={setTec} />
+          <PeriodoFiltro dias={dias} onChange={setDias} />
+        </div>
       </div>
       <AsyncState loading={loading} error={error} onRetry={reload}>
         {d && (<>
@@ -63,7 +67,7 @@ const PainelOs = () => {
             </AsyncState>
           </div>
 
-          <div className={s.card}>
+          {!tec && <div className={s.card}>
             <h2 className={s.cardTitle}>Carga e desempenho por técnico/equipe</h2>
             <AsyncState empty={d.por_tecnico.length === 0} emptyTitle="Sem OS para os técnicos neste período">
               <div className={s.tableWrap}><table className={s.table}>
@@ -75,7 +79,7 @@ const PainelOs = () => {
                     <td data-label="Concluídas no período" className={c.tnum}>{t.concluidas}</td><td data-label="Tempo médio" className={c.tnum}>{fmtHoras(t.lead_horas)}</td>
                   </tr>))}</tbody></table></div>
             </AsyncState>
-          </div>
+          </div>}
         </>)}
       </AsyncState>
     </div>

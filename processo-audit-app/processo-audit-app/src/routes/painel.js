@@ -2,7 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
-import { statusItem } from '../services/estoqueService.js';
+import { statusItem, ServiceError } from '../services/estoqueService.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque']));
@@ -73,9 +73,71 @@ function serieContinua(p, rows, campos) {
 }
 const N = (v) => Number(v || 0);
 
+/* ───────── Painel de ESTOQUE por técnico/equipe ───────── */
+async function estoqueDoTecnico(tid, p) {
+  const intervalo = (a, b) => [tid, `${a} 00:00:00`, `${b} 23:59:59`];
+  const sinal = `CASE m.tipo WHEN 'baixa_os' THEN m.quantidade WHEN 'estorno' THEN -m.quantidade ELSE 0 END`;
+  const [[tec]] = await pool.query('SELECT id, nome, tipo, empresa FROM tecnicos WHERE id = ?', [tid]);
+  if (!tec) throw new ServiceError('Técnico não encontrado', 404);
+
+  const consumo = async (a, b) => {
+    const [[r]] = await pool.query(
+      `SELECT COALESCE(SUM(CASE WHEN i.unidade='metros' THEN ${sinal} END),0) AS metros,
+              COALESCE(SUM(CASE WHEN i.unidade='pecas'  THEN ${sinal} END),0) AS pecas
+       FROM estoque_movimentacoes m JOIN estoque_itens i ON i.id = m.item_id
+       WHERE m.tecnico_id = ? AND m.tipo IN ('baixa_os','estorno') AND m.criado_em BETWEEN ? AND ?`, intervalo(a, b));
+    return { metros: N(r.metros), pecas: N(r.pecas) };
+  };
+  const [atual, anterior] = await Promise.all([consumo(p.de, p.ate), consumo(p.dePrev, p.atePrev)]);
+
+  const [serieRows] = await pool.query(
+    `SELECT DATE(m.criado_em) AS dia,
+            SUM(CASE WHEN i.unidade='metros' THEN ${sinal} END) AS consumo_metros,
+            SUM(CASE WHEN i.unidade='pecas'  THEN ${sinal} END) AS consumo_pecas,
+            SUM(CASE WHEN m.tipo='retirada' AND i.unidade='metros' THEN m.quantidade END) AS entrada_metros,
+            SUM(CASE WHEN m.tipo='retirada' AND i.unidade='pecas'  THEN m.quantidade END) AS entrada_pecas
+     FROM estoque_movimentacoes m JOIN estoque_itens i ON i.id = m.item_id
+     WHERE m.tecnico_id = ? AND m.criado_em BETWEEN ? AND ? GROUP BY DATE(m.criado_em)`, intervalo(p.de, p.ate));
+  const serie = serieContinua(p, serieRows, ['consumo_metros', 'consumo_pecas', 'entrada_metros', 'entrada_pecas']);
+
+  const [posse] = await pool.query(
+    `SELECT i.id, i.nome, i.unidade, SUM(p.quantidade) AS quantidade, COUNT(*) AS lotes
+     FROM estoque_posse p JOIN estoque_lotes l ON l.id = p.lote_id JOIN estoque_itens i ON i.id = l.item_id
+     WHERE p.tecnico_id = ? AND p.quantidade > 0 GROUP BY i.id ORDER BY quantidade DESC`, [tid]);
+  const [porItem] = await pool.query(
+    `SELECT i.id, i.nome, i.unidade, SUM(${sinal}) AS total
+     FROM estoque_movimentacoes m JOIN estoque_itens i ON i.id = m.item_id
+     WHERE m.tecnico_id = ? AND m.tipo IN ('baixa_os','estorno') AND m.criado_em BETWEEN ? AND ?
+     GROUP BY i.id HAVING total <> 0 ORDER BY total DESC LIMIT 20`, intervalo(p.de, p.ate));
+  const [porOS] = await pool.query(
+    `SELECT o.id, o.numero, o.cliente,
+       COALESCE(SUM(CASE WHEN i.unidade='metros' THEN ${sinal} END),0) AS metros,
+       COALESCE(SUM(CASE WHEN i.unidade='pecas'  THEN ${sinal} END),0) AS pecas
+     FROM estoque_movimentacoes m JOIN estoque_itens i ON i.id = m.item_id JOIN ordens_servico o ON o.id = m.os_id
+     WHERE m.tecnico_id = ? AND m.tipo IN ('baixa_os','estorno') AND m.criado_em BETWEEN ? AND ?
+     GROUP BY o.id ORDER BY o.numero DESC LIMIT 50`, intervalo(p.de, p.ate));
+  const [[dev]] = await pool.query(
+    `SELECT COUNT(*) AS pendentes, COALESCE(MAX(TIMESTAMPDIFF(DAY, solicitado_em, NOW())),0) AS mais_antiga_dias
+     FROM estoque_devolucoes WHERE status='pendente' AND tecnico_id = ?`, [tid]);
+  const [[os]] = await pool.query(
+    `SELECT COALESCE(SUM(status IN ('aberta','em_andamento')),0) AS abertas FROM ordens_servico WHERE tecnico_id = ?`, [tid]);
+
+  const soma = (u) => posse.filter((x) => x.unidade === u).reduce((a, x) => a + N(x.quantidade), 0);
+  return {
+    periodo: p, tecnico: tec,
+    kpis: { posse_metros: soma('metros'), posse_pecas: soma('pecas'), os_abertas: N(os.abertas),
+            devolucoes_pendentes: dev.pendentes, devolucao_mais_antiga_dias: N(dev.mais_antiga_dias) },
+    consumo: { atual, anterior }, serie,
+    posse: posse.map((x) => ({ ...x, quantidade: N(x.quantidade) })),
+    por_item: porItem.map((x) => ({ ...x, total: N(x.total) })),
+    por_os: porOS.map((x) => ({ ...x, metros: N(x.metros), pecas: N(x.pecas) })),
+  };
+}
+
 /* ───────── Painel de ESTOQUE ───────── */
 router.get('/estoque', handle(async (req, res) => {
   const p = periodo(req.query);
+  if (req.query.tecnico_id) return res.json(await estoqueDoTecnico(Number(req.query.tecnico_id), p));
   const intervalo = (a, b) => [`${a} 00:00:00`, `${b} 23:59:59`];
   const sinal = `CASE m.tipo WHEN 'baixa_os' THEN m.quantidade WHEN 'estorno' THEN -m.quantidade ELSE 0 END`;
 
@@ -150,6 +212,10 @@ router.get('/estoque', handle(async (req, res) => {
 /* ───────── Painel de ORDENS DE SERVIÇO ───────── */
 router.get('/os', handle(async (req, res) => {
   const p = periodo(req.query);
+  const tid = req.query.tecnico_id ? Number(req.query.tecnico_id) : null;
+  const T = tid ? ' AND tecnico_id = ?' : '';       // filtro sem alias
+  const TO = tid ? ' AND o.tecnico_id = ?' : '';    // filtro com alias o
+  const tp = tid ? [tid] : [];
   const ini = `${p.de} 00:00:00`, fim = `${p.ate} 23:59:59`;
   const iniP = `${p.dePrev} 00:00:00`, fimP = `${p.atePrev} 23:59:59`;
 
@@ -157,26 +223,26 @@ router.get('/os', handle(async (req, res) => {
     `SELECT SUM(status='aberta') AS abertas, SUM(status='em_andamento') AS andamento,
             SUM(status IN ('aberta','em_andamento') AND prazo IS NOT NULL AND prazo < CURDATE()) AS atrasadas,
             SUM(status IN ('aberta','em_andamento') AND prioridade='alta') AS alta_prioridade
-     FROM ordens_servico`);
+     FROM ordens_servico WHERE 1=1${T}`, tp);
 
   const janela = async (a, b) => {
     const [[r]] = await pool.query(
-      `SELECT (SELECT COUNT(*) FROM ordens_servico WHERE criado_em BETWEEN ? AND ?) AS criadas,
-              (SELECT COUNT(*) FROM ordens_servico WHERE status='concluida' AND concluida_em BETWEEN ? AND ?) AS concluidas,
+      `SELECT (SELECT COUNT(*) FROM ordens_servico WHERE criado_em BETWEEN ? AND ?${T}) AS criadas,
+              (SELECT COUNT(*) FROM ordens_servico WHERE status='concluida' AND concluida_em BETWEEN ? AND ?${T}) AS concluidas,
               (SELECT AVG(TIMESTAMPDIFF(HOUR, criado_em, concluida_em)) FROM ordens_servico
-                 WHERE status='concluida' AND concluida_em BETWEEN ? AND ?) AS lead_horas,
+                 WHERE status='concluida' AND concluida_em BETWEEN ? AND ?${T}) AS lead_horas,
               (SELECT SUM(DATE(concluida_em) <= prazo) FROM ordens_servico
-                 WHERE status='concluida' AND prazo IS NOT NULL AND concluida_em BETWEEN ? AND ?) AS no_prazo,
+                 WHERE status='concluida' AND prazo IS NOT NULL AND concluida_em BETWEEN ? AND ?${T}) AS no_prazo,
               (SELECT COUNT(*) FROM ordens_servico
-                 WHERE status='concluida' AND prazo IS NOT NULL AND concluida_em BETWEEN ? AND ?) AS com_prazo`,
-      [a, b, a, b, a, b, a, b, a, b]);
+                 WHERE status='concluida' AND prazo IS NOT NULL AND concluida_em BETWEEN ? AND ?${T}) AS com_prazo`,
+      [a, b, ...tp, a, b, ...tp, a, b, ...tp, a, b, ...tp, a, b, ...tp]);
     return { criadas: N(r.criadas), concluidas: N(r.concluidas), lead_horas: r.lead_horas === null ? null : N(r.lead_horas),
              pontualidade: N(r.com_prazo) ? N(r.no_prazo) / N(r.com_prazo) : null, com_prazo: N(r.com_prazo) };
   };
   const [atual, anterior] = await Promise.all([janela(ini, fim), janela(iniP, fimP)]);
 
-  const [cri] = await pool.query(`SELECT DATE(criado_em) AS dia, COUNT(*) AS criadas FROM ordens_servico WHERE criado_em BETWEEN ? AND ? GROUP BY DATE(criado_em)`, [ini, fim]);
-  const [con] = await pool.query(`SELECT DATE(concluida_em) AS dia, COUNT(*) AS concluidas FROM ordens_servico WHERE status='concluida' AND concluida_em BETWEEN ? AND ? GROUP BY DATE(concluida_em)`, [ini, fim]);
+  const [cri] = await pool.query(`SELECT DATE(criado_em) AS dia, COUNT(*) AS criadas FROM ordens_servico WHERE criado_em BETWEEN ? AND ?${T} GROUP BY DATE(criado_em)`, [ini, fim, ...tp]);
+  const [con] = await pool.query(`SELECT DATE(concluida_em) AS dia, COUNT(*) AS concluidas FROM ordens_servico WHERE status='concluida' AND concluida_em BETWEEN ? AND ?${T} GROUP BY DATE(concluida_em)`, [ini, fim, ...tp]);
   const porDia = {};
   [...cri, ...con].forEach((r) => { const d = String(r.dia).slice(0, 10); porDia[d] = { ...porDia[d], ...r, dia: d }; });
   const serie = serieContinua(p, Object.values(porDia), ['criadas', 'concluidas']);
@@ -184,23 +250,23 @@ router.get('/os', handle(async (req, res) => {
   // idade das OS em aberto (aging): onde o trabalho está parado
   const [[ag]] = await pool.query(
     `SELECT SUM(d <= 2) AS b1, SUM(d BETWEEN 3 AND 7) AS b2, SUM(d BETWEEN 8 AND 14) AS b3, SUM(d >= 15) AS b4
-     FROM (SELECT DATEDIFF(CURDATE(), DATE(criado_em)) AS d FROM ordens_servico WHERE status IN ('aberta','em_andamento')) x`);
+     FROM (SELECT DATEDIFF(CURDATE(), DATE(criado_em)) AS d FROM ordens_servico WHERE status IN ('aberta','em_andamento')${T}) x`, tp);
 
   const [porTipo] = await pool.query(
     `SELECT COALESCE(NULLIF(tipo_servico,''),'Não informado') AS nome, COUNT(*) AS total
-     FROM ordens_servico WHERE criado_em BETWEEN ? AND ? GROUP BY nome ORDER BY total DESC LIMIT 8`, [ini, fim]);
+     FROM ordens_servico WHERE criado_em BETWEEN ? AND ?${T} GROUP BY nome ORDER BY total DESC LIMIT 8`, [ini, fim, ...tp]);
   const [porTec] = await pool.query(
     `SELECT t.id, t.nome, t.tipo,
             SUM(o.status IN ('aberta','em_andamento')) AS em_aberto,
             SUM(o.status='concluida' AND o.concluida_em BETWEEN ? AND ?) AS concluidas,
             SUM(o.status IN ('aberta','em_andamento') AND o.prazo IS NOT NULL AND o.prazo < CURDATE()) AS atrasadas,
             AVG(CASE WHEN o.status='concluida' AND o.concluida_em BETWEEN ? AND ? THEN TIMESTAMPDIFF(HOUR, o.criado_em, o.concluida_em) END) AS lead_horas
-     FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
-     GROUP BY t.id HAVING em_aberto > 0 OR concluidas > 0 ORDER BY em_aberto DESC, concluidas DESC LIMIT 12`, [ini, fim, ini, fim]);
+     FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id WHERE 1=1${TO}
+     GROUP BY t.id HAVING em_aberto > 0 OR concluidas > 0 ORDER BY em_aberto DESC, concluidas DESC LIMIT 12`, [ini, fim, ini, fim, ...tp]);
   const [atrasadas] = await pool.query(
     `SELECT o.id, o.numero, o.cliente, o.prioridade, o.status, o.prazo, t.nome AS tecnico, DATEDIFF(CURDATE(), o.prazo) AS dias_atraso
      FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
-     WHERE o.status IN ('aberta','em_andamento') AND o.prazo < CURDATE() ORDER BY dias_atraso DESC LIMIT 10`);
+     WHERE o.status IN ('aberta','em_andamento') AND o.prazo < CURDATE()${TO} ORDER BY dias_atraso DESC LIMIT 10`, tp);
 
   res.json({
     periodo: p,

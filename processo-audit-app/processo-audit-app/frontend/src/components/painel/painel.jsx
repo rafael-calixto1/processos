@@ -4,7 +4,8 @@ import {
   Chart as ChartJS, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { fmtNum } from '../estoque/ui';
+import { fmtNum, useLoad } from '../estoque/ui';
+import { cadastrosAPI } from '../../api/estoque';
 import css from './painel.module.css';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
@@ -137,3 +138,18 @@ export const fmtHoras = (h) => {
   return h < 48 ? `${fmtNum(h)} h` : `${fmtNum(h / 24)} d`;
 };
 export { css as painelCss };
+
+/* Seleção de técnico/equipe: vazio = visão geral */
+export const TecnicoFiltro = ({ value, onChange }) => {
+  const { data } = useLoad(() => cadastrosAPI.tecnicos());
+  const lista = (data || []).filter((t) => t.ativo);
+  return (
+    <label className={css.tecFiltro}>
+      <span>Técnico / equipe</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Filtrar por técnico ou equipe">
+        <option value="">Todos</option>
+        {lista.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+      </select>
+    </label>
+  );
+};
