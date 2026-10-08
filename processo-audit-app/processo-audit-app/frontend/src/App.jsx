@@ -36,6 +36,7 @@ const EstoqueDevolucoesRevisao = lazy(() => import('./pages/EstoqueDevolucoesRev
 const EstoquePosse = lazy(() => import('./pages/EstoquePosse'));
 const EstoqueCadastros = lazy(() => import('./pages/EstoqueCadastros'));
 const EstoqueEquipamentos = lazy(() => import('./pages/EstoqueEquipamentos'));
+const EstoqueHub = lazy(() => import('./pages/EstoqueHub'));
 const PainelEstoque = lazy(() => import('./pages/PainelEstoque'));
 const OsRoutes = lazy(() => import('./pages/OsRoutes'));
 import './styles/global.css';
@@ -98,6 +99,7 @@ const RoleRoute = ({ roles, children }) => {
 const STAFF = ['admin', 'estoque'];
 const WITH_TECNICO = ['admin', 'estoque', 'tecnico'];
 const stockRoutes = [
+  ['/estoque', EstoqueHub, WITH_TECNICO],
   ['/estoque/painel', PainelEstoque, STAFF],
   ['/estoque/itens', EstoqueItens, STAFF],
   ['/estoque/patrimonio', EstoquePatrimonio, STAFF],

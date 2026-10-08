@@ -5,9 +5,8 @@ import { useBranding } from '../context/BrandingContext';
 import {
   LayoutDashboard, FileText, Network, FolderOpen, Building2,
   CheckSquare, Settings, Palette, Users, LogOut, Menu, X, ChevronRight, Truck, Wrench, TicketCheck, UserCheck, Database, Gift, FileSearch,
-  BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill,
-  ScanSearch,
 } from 'lucide-react';
+import { estoqueMenu, osItems } from './menuItems';
 import styles from './Layout.module.css';
 
 const menuItems = [
@@ -22,23 +21,6 @@ const menuItems = [
   { label: 'Tickets', path: '/tickets', Icon: TicketCheck },
   { label: 'Indique e Ganhe', path: '/indique-e-ganhe', Icon: Gift },
   { label: 'Leads', path: '/leads', Icon: Users },
-];
-
-// Estoque e OS — visibilidade por perfil (o backend aplica as mesmas regras)
-const STAFF = ['admin', 'estoque'];
-const estoqueItems = [
-  { label: 'Painel de estoque', path: '/estoque/painel', Icon: BarChart3, roles: STAFF },
-  { label: 'Painel de OS', path: '/os/painel', Icon: BarChart3, roles: STAFF },
-  { label: 'Patrimônio', path: '/estoque/patrimonio', Icon: ScanSearch, roles: STAFF },
-  { label: 'Itens', path: '/estoque/itens', Icon: Package, roles: STAFF },
-  { label: 'Entrada / Compra', path: '/estoque/entrada', Icon: PackagePlus, roles: STAFF },
-  { label: 'Retirada', path: '/estoque/retirada', Icon: PackageMinus, roles: STAFF },
-  { label: 'Devolução', path: '/estoque/devolucao', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
-  { label: 'Aprovar devoluções', path: '/estoque/devolucoes', Icon: CheckSquare, roles: STAFF },
-  { label: 'Ordens de Serviço', path: '/os', Icon: ClipboardList, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minhas OS' } },
-  { label: 'Estoque por técnico', path: '/estoque/posse', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
-  { label: 'Equipamentos', path: '/estoque/equipamentos', Icon: Drill, roles: STAFF },
-  { label: 'Cadastros', path: '/estoque/cadastros', Icon: Contact, roles: STAFF },
 ];
 
 const adminItems = [
@@ -74,9 +56,12 @@ const Layout = ({ children }) => {
   const isTecnico = user?.role === 'tecnico';
   // Técnico de campo só vê o que é dele (OS, posse, devolução)
   const allItems = isTecnico ? [] : user?.role === 'admin' ? [...menuItems, ...adminItems] : menuItems;
-  const stockItems = estoqueItems
+  const osMenu = osItems
     .filter((i) => i.roles.includes(user?.role))
     .map((i) => ({ ...i, label: i.labelByRole?.[user?.role] || i.label }));
+  const stockItems = estoqueMenu.roles.includes(user?.role) ? [estoqueMenu] : [];
+  // Estoque fica ativo em qualquer subpágina /estoque/*
+  const isActiveItem = (path) => (path === '/estoque' ? location.pathname.startsWith('/estoque') : isActive(path));
 
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -138,27 +123,27 @@ const Layout = ({ children }) => {
               ))}
             </div>
 
-            {stockItems.length > 0 && (
-              <>
-                <div className={styles.navSectionLabel}>Estoque e OS</div>
+            {[['Estoque', stockItems], ['OS', osMenu]].map(([title, list]) => list.length > 0 && (
+              <React.Fragment key={title}>
+                <div className={styles.navSectionLabel}>{title}</div>
                 <div className={styles.navSection}>
-              {stockItems.map(({ label, path, Icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <span className={styles.navIcon}>
-                    <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 2} />
-                  </span>
-                  <span className={styles.navLabel}>{label}</span>
-                  {isActive(path) && <ChevronRight size={14} className={styles.activeArrow} />}
-                </Link>
-              ))}
+                  {list.map(({ label, path, Icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      className={`${styles.navItem} ${isActiveItem(path) ? styles.active : ''}`}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <span className={styles.navIcon}>
+                        <Icon size={18} strokeWidth={isActiveItem(path) ? 2.5 : 2} />
+                      </span>
+                      <span className={styles.navLabel}>{label}</span>
+                      {isActiveItem(path) && <ChevronRight size={14} className={styles.activeArrow} />}
+                    </Link>
+                  ))}
                 </div>
-              </>
-            )}
+              </React.Fragment>
+            ))}
 
             {!isTecnico && (
             <>
