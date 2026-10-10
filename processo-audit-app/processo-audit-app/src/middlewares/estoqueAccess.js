@@ -5,8 +5,8 @@ import { ServiceError } from '../services/estoqueService.js';
 // perfil `tecnico`, resolve o registro de técnico vinculado (1:1 via tecnicos.usuario_id).
 export const loadTecnico = async (req, res, next) => {
   try {
-    const [[u]] = await pool.query('SELECT role FROM users WHERE id = ?', [req.userId]);
-    if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
+    const [[u]] = await pool.query('SELECT role, status FROM users WHERE id = ?', [req.userId]);
+    if (!u || u.status !== 'active') return res.status(401).json({ error: 'Usuário inativo ou não encontrado' });
     req.userRole = u.role;
     req.tecnicoId = null;
     if (u.role === 'tecnico') {

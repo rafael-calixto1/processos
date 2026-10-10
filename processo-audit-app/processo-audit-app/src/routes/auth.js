@@ -3,8 +3,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 import { verifyToken } from '../middlewares/auth.js';
+import { criarLimitador } from '../middlewares/limitador.js';
 
 const router = express.Router();
+
+// Tentativas de login falhas: por e-mail (não depende de IP, que pode ser forjado) e por IP
+const limiteEmail = criarLimitador({ max: 10 });
+const limiteIp = criarLimitador({ max: 40 });
 
 // Registro
 router.post('/register', async (req, res) => {
@@ -27,7 +32,8 @@ router.post('/register', async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Email já registrado' });
     }
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -40,20 +46,38 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
     }
 
+    const chaveEmail = String(email).trim().toLowerCase();
+    const espera = Math.max(limiteEmail.segundosRestantes(chaveEmail), limiteIp.segundosRestantes(req.ip));
+    if (espera) {
+      res.set('Retry-After', String(espera));
+      return res.status(429).json({ error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.' });
+    }
+    const recusar = () => {
+      limiteEmail.falha(chaveEmail);
+      limiteIp.falha(req.ip);
+      return res.status(401).json({ error: 'Email ou senha inválidos' });
+    };
+
     const [users] = await pool.execute(
-      'SELECT id, email, password, name, role FROM users WHERE email = ?',
+      'SELECT id, email, password, name, role, status FROM users WHERE email = ?',
       [email]
     );
 
     if (users.length === 0) {
-      return res.status(401).json({ error: 'Email ou senha inválidos' });
+      return recusar();
     }
 
     const user = users[0];
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
-      return res.status(401).json({ error: 'Email ou senha inválidos' });
+      return recusar();
+    }
+    limiteEmail.sucesso(chaveEmail);
+
+    // Só depois de validar a senha, para não revelar quais contas existem ou estão inativas
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: 'Usuário inativo. Fale com o administrador.' });
     }
 
     const token = jwt.sign(
@@ -77,7 +101,8 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -95,7 +120,8 @@ router.get('/me', verifyToken, async (req, res) => {
 
     res.json(users[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -128,7 +154,8 @@ router.put('/change-password', verifyToken, async (req, res) => {
 
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -177,7 +204,8 @@ router.get(['/users', '/user'], verifyToken, async (req, res) => {
       currentPage: parseInt(page)
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -222,7 +250,8 @@ router.post(['/users', '/user'], verifyToken, async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Email já registrado' });
     }
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   } finally {
     connection.release();
   }
@@ -272,7 +301,8 @@ router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     res.json({ message: 'Usuário atualizado com sucesso' });
   } catch (error) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   } finally {
     connection.release();
   }
@@ -294,7 +324,8 @@ router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
 
     res.json({ message: 'Usuário inativado com sucesso' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
