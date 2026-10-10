@@ -19,6 +19,8 @@ import geoRoutes from './src/routes/geo.js';
 import painelRoutes from './src/routes/painel.js';
 import { tecnicosRouter, fornecedoresRouter, equipamentosRouter } from './src/routes/cadastros.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
+import { requestLogger } from './src/middlewares/requestLogger.js';
+import { criarOpcoesCors } from './src/config/cors.js';
 
 dotenv.config();
 
@@ -28,22 +30,11 @@ const PORT = process.env.PORT || 5000;
 // Trust proxy for correct IP detection
 app.set('trust proxy', true);
 
-// Request logger
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  console.log('IP:', req.ip);
-  console.log('X-Forwarded-For:', req.headers['x-forwarded-for']);
-  if (['POST', 'PUT'].includes(req.method)) {
-    console.log('Body:', JSON.stringify(req.body));
-  }
-  next();
-});
+// Request logger (corpo só com LOG_BODIES=1, sempre redigido; nunca em /auth nem em upload)
+app.use(requestLogger);
 
 // Middlewares
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+app.use(cors(criarOpcoesCors()));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
