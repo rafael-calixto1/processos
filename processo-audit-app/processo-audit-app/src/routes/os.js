@@ -3,6 +3,7 @@ import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import * as svc from '../services/estoqueService.js';
+import { executarIdempotente } from '../services/idempotencia.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque', 'tecnico']));
@@ -107,17 +108,20 @@ router.put('/:id', staff, handle(async (req, res) => {
   res.json({ ok: true });
 }));
 
-router.post('/:id/materiais', handle(async (req, res) => {
-  res.status(201).json(await svc.baixarEmOS({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
-}));
+// Operações que mexem em estoque/serviços aceitam `Idempotency-Key`: repetir a mesma chave devolve a mesma resposta
+// (com `repetida: true`) sem executar de novo. Sem a chave, o comportamento é o de sempre.
+const idempotente = (fn, status = 201) => handle(async (req, res) => {
+  const r = await executarIdempotente(req, { status }, (conn) => fn(conn, req));
+  if (r.repetida) res.set('Idempotent-Replayed', 'true');
+  res.status(r.status).json(r.repetida ? { ...r.body, repetida: true } : r.body);
+});
+const comOS = (req) => ({ ...req.body, os_id: Number(req.params.id) });
 
-router.post('/:id/lancamentos', handle(async (req, res) => {
-  res.status(201).json(await svc.lancarServicoComMateriais({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
-}));
+router.post('/:id/materiais', idempotente((conn, req) => svc.baixarNaTx(conn, comOS(req), actorOf(req))));
 
-router.post('/:id/servicos', handle(async (req, res) => {
-  res.status(201).json(await svc.adicionarServico({ ...req.body, os_id: Number(req.params.id) }, actorOf(req)));
-}));
+router.post('/:id/lancamentos', idempotente((conn, req) => svc.lancarNaTx(conn, comOS(req), actorOf(req))));
+
+router.post('/:id/servicos', idempotente((conn, req) => svc.adicionarServicoNaTx(conn, comOS(req), actorOf(req))));
 
 router.delete('/:id/servicos/:servicoId', handle(async (req, res) => {
   res.json(await svc.removerServico({ os_id: Number(req.params.id), servico_id: Number(req.params.servicoId) }, actorOf(req)));

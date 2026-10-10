@@ -21,6 +21,7 @@ import { tecnicosRouter, fornecedoresRouter, equipamentosRouter } from './src/ro
 import { auditMiddleware } from './src/middlewares/audit.js';
 import { requestLogger } from './src/middlewares/requestLogger.js';
 import { criarOpcoesCors } from './src/config/cors.js';
+import { limparOperacoesAntigas } from './src/services/idempotencia.js';
 
 dotenv.config();
 
@@ -79,6 +80,13 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Erro interno do servidor' });
 });
+
+// Limpeza diária das chaves de idempotência antigas (silenciosa enquanto a migração do app mobile não rodou)
+const limparIdempotencia = () => limparOperacoesAntigas().catch((e) => {
+  if (e.code !== 'ER_NO_SUCH_TABLE') console.error('sync_operacoes:', e.message);
+});
+limparIdempotencia();
+setInterval(limparIdempotencia, 24 * 60 * 60 * 1000).unref();
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Servidor rodando na porta ${PORT}`);
