@@ -465,7 +465,7 @@ export const removerServico = ({ os_id, servico_id }, actor, db) =>
     assertOSAberta(os);
     const [[{ n }]] = await conn.query(
       `SELECT COUNT(*) n FROM estoque_movimentacoes m WHERE m.servico_id = ? AND m.tipo = 'baixa_os'
-       AND NOT EXISTS (SELECT 1 FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id)`, [servico_id]);
+       AND m.quantidade > (SELECT COALESCE(SUM(e.quantidade), 0) FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id)`, [servico_id]);
     if (n > 0) throw new ServiceError(409, 'Este lançamento tem materiais baixados: estorne-os antes de removê-lo');
     const [res] = await conn.query('DELETE FROM os_servicos WHERE id = ? AND os_id = ?', [servico_id, os.id]);
     if (!res.affectedRows) throw new ServiceError(404, 'Serviço não encontrado nesta OS');
@@ -482,16 +482,18 @@ export const fecharOS = ({ os_id }, actor, db) => withTx(async (conn) => {
 }, db);
 
 /* ── Estorno de baixa (somente estoque/admin — validado na rota) ── */
-export const estornarBaixa = ({ movimentacao_id, motivo }, userId, db) => withTx(async (conn) => {
+export const estornarBaixa = ({ movimentacao_id, motivo, quantidade }, userId, db) => withTx(async (conn) => {
   if (!motivo || !String(motivo).trim()) throw new ServiceError(400, 'Informe o motivo do estorno');
   const [[mov]] = await conn.query('SELECT * FROM estoque_movimentacoes WHERE id = ?', [movimentacao_id]);
   if (!mov || mov.tipo !== 'baixa_os') throw new ServiceError(404, 'Baixa não encontrada');
   await lockOS(conn, mov.os_id);
   const lote = await lockLote(conn, { lote_id: mov.lote_id });
-  const [[ja]] = await conn.query('SELECT id FROM estoque_movimentacoes WHERE estorno_de_id = ?', [mov.id]);
-  if (ja) throw new ServiceError(409, 'Esta baixa já foi estornada');
-
-  const q = r2(mov.quantidade);
+  const [[{ feito }]] = await conn.query('SELECT COALESCE(SUM(quantidade), 0) AS feito FROM estoque_movimentacoes WHERE estorno_de_id = ?', [mov.id]);
+  const restante = r2(Number(mov.quantidade) - Number(feito));
+  if (restante <= 0) throw new ServiceError(409, 'Esta baixa já foi estornada');
+  const q = quantidade === undefined || quantidade === null || quantidade === '' ? restante : r2(Number(String(quantidade).replace(',', '.')));
+  if (!(q > 0)) throw new ServiceError(400, 'Informe uma quantidade válida para estornar');
+  if (q > restante) throw new ServiceError(400, `Quantidade maior que o saldo estornável (${restante})`);
   await conn.query('UPDATE estoque_lotes SET saldo_atual = ?, status = ? WHERE id = ?',
     [r2(Number(lote.saldo_atual) + q), 'ativo', lote.id]);
   await addPosse(conn, lote.id, mov.tecnico_id, q); // volta para a posse de quem consumiu
@@ -553,7 +555,7 @@ export const cancelarOS = ({ os_id }, userId, db) => withTx(async (conn) => {
   if (['concluida', 'cancelada'].includes(os.status)) throw new ServiceError(409, 'Esta OS não pode mais ser cancelada');
   const [[{ n }]] = await conn.query(
     `SELECT COUNT(*) n FROM estoque_movimentacoes m WHERE m.os_id = ? AND m.tipo = 'baixa_os'
-     AND NOT EXISTS (SELECT 1 FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id)`, [os.id]);
+     AND m.quantidade > (SELECT COALESCE(SUM(e.quantidade), 0) FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id)`, [os.id]);
   if (n > 0) throw new ServiceError(409, 'A OS tem materiais baixados: estorne-os antes de cancelar');
   await mudarStatus(conn, os, 'cancelada', userId);
   return { status: 'cancelada' };

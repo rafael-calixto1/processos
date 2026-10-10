@@ -64,13 +64,19 @@ router.get('/servicos/sugestoes', handle(async (req, res) => {
 
 router.get('/:id', handle(async (req, res) => {
   const os = await carregarOS(req);
-  const [materiais] = await pool.query(
+  const [materiaisRaw] = await pool.query(
     `SELECT m.id, m.servico_id, m.quantidade, m.criado_em, m.observacao, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade,
        u.name AS usuario_nome,
-       (SELECT e.id FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id) AS estorno_id
+       (SELECT COALESCE(SUM(e.quantidade), 0) FROM estoque_movimentacoes e WHERE e.estorno_de_id = m.id) AS estornado_qtd
      FROM estoque_movimentacoes m JOIN estoque_lotes l ON l.id = m.lote_id JOIN estoque_itens i ON i.id = m.item_id
      LEFT JOIN users u ON u.id = m.criado_por
      WHERE m.os_id = ? AND m.tipo = 'baixa_os' ORDER BY m.id`, [os.id]);
+  // estorno parcial: `quantidade` passa a ser o saldo ainda baixado; estorno_id só marca baixa totalmente estornada
+  const materiais = materiaisRaw.map(({ estornado_qtd, ...m }) => {
+    const original = Number(m.quantidade), estornado = Number(estornado_qtd), restante = Math.round((original - estornado) * 100) / 100;
+    const total = restante <= 0;
+    return { ...m, quantidade: total ? original : restante, quantidade_original: original, estornado_qtd: estornado, estorno_id: total ? 1 : null };
+  });
   const [historico] = await pool.query(
     `SELECT h.*, u.name AS usuario_nome FROM os_historico_status h LEFT JOIN users u ON u.id = h.usuario_id
      WHERE h.os_id = ? ORDER BY h.id`, [os.id]);

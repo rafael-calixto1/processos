@@ -18,14 +18,16 @@ const OrdemServicoDetalhe = () => {
   const [fechar, setFechar] = useState(false);
   const [estornar, setEstornar] = useState(null);
   const [motivo, setMotivo] = useState('');
+  const [qtdEstorno, setQtdEstorno] = useState('');
   const [cancelar, setCancelar] = useState(false);
   const [busy, setBusy] = useState(false);
   const { notify, toasts } = useToasts();
+  const qtdNum = Number(String(qtdEstorno).replace(',', '.'));
   const aberta = os && ['aberta', 'em_andamento'].includes(os.status);
 
   const exec = async (fn, ok) => {
     setBusy(true);
-    try { await fn(); notify(ok); setFechar(false); setEstornar(null); setCancelar(false); setMotivo(''); reload(); }
+    try { await fn(); notify(ok); setFechar(false); setEstornar(null); setCancelar(false); setMotivo(''); setQtdEstorno(''); reload(); }
     catch (e) { notify(e.message, 'err'); } finally { setBusy(false); }
   };
 
@@ -71,7 +73,7 @@ const OrdemServicoDetalhe = () => {
                     <td data-label="Lote" className={s.mono}>{m.lote_codigo}</td>
                     <td data-label="Qtd" style={m.estorno_id ? { textDecoration: 'line-through' } : undefined}>{fmtQtd(m.quantidade, m.unidade)}</td>
                     <td data-label="Por">{m.usuario_nome || '—'}</td><td data-label="Quando">{fmtDataHora(m.criado_em)}</td>
-                    {staff && <td>{!m.estorno_id && <button className={`${s.btn} ${s.btnSm}`} onClick={() => setEstornar(m)}><Undo2 size={16} />Estornar</button>}</td>}
+                    {staff && <td>{!m.estorno_id && <button className={`${s.btn} ${s.btnSm}`} onClick={() => { setEstornar(m); setQtdEstorno(String(m.quantidade)); }}><Undo2 size={16} />Estornar</button>}</td>}
                   </tr>))}</tbody></table></div>
             </AsyncState>
           </div>
@@ -91,9 +93,12 @@ const OrdemServicoDetalhe = () => {
           onConfirm={() => exec(() => osAPI.cancelar(os.id), 'OS cancelada')}><p style={{ margin: 0 }}>A OS será cancelada e ficará somente leitura.</p></ConfirmDialog>
       )}
       {estornar && (
-        <ConfirmDialog title="Estornar baixa" danger confirmLabel="Estornar" busy={busy} confirmDisabled={!motivo.trim()} onCancel={() => { setEstornar(null); setMotivo(''); }}
-          onConfirm={() => exec(() => osAPI.estornar(os.id, { movimentacao_id: estornar.id, motivo }), 'Baixa estornada')}>
-          <p style={{ margin: 0 }}>Estornar <b>{fmtQtd(estornar.quantidade, estornar.unidade)}</b> do lote <b className={s.mono}>{estornar.lote_codigo}</b>. O material volta para a posse de {os.tecnico_nome}. Fica registrado em auditoria.</p>
+        <ConfirmDialog title="Estornar baixa" danger confirmLabel="Estornar" busy={busy} confirmDisabled={!motivo.trim() || !(qtdNum > 0) || qtdNum > Number(estornar.quantidade)} onCancel={() => { setEstornar(null); setMotivo(''); setQtdEstorno(''); }}
+          onConfirm={() => exec(() => osAPI.estornar(os.id, { movimentacao_id: estornar.id, motivo, quantidade: qtdNum }), 'Baixa estornada')}>
+          <p style={{ margin: 0 }}>Estornar parte ou todo o material baixado (<b>{fmtQtd(estornar.quantidade, estornar.unidade)}</b>) do lote <b className={s.mono}>{estornar.lote_codigo}</b>. O material volta para a posse de {os.tecnico_nome}. Fica registrado em auditoria.</p>
+          <Field label={`Quantidade a estornar (máx. ${fmtQtd(estornar.quantidade, estornar.unidade)})`}>
+            <input type="number" min="0.01" step={estornar.unidade === 'metros' ? '0.01' : '1'} max={estornar.quantidade} value={qtdEstorno} onChange={(e) => setQtdEstorno(e.target.value)} />
+          </Field>
           <Field label="Motivo (obrigatório)"><textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} /></Field>
         </ConfirmDialog>
       )}
