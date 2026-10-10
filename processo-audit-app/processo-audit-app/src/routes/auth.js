@@ -4,12 +4,15 @@ import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 import { verifyToken } from '../middlewares/auth.js';
 import { criarLimitador } from '../middlewares/limitador.js';
+import { ServiceError } from '../services/estoqueService.js';
+import { abrirSessao, renovarSessao, encerrarSessao, revogarTodas } from '../services/sessao.js';
 
 const router = express.Router();
 
 // Tentativas de login falhas: por e-mail (não depende de IP, que pode ser forjado) e por IP
 const limiteEmail = criarLimitador({ max: 10 });
 const limiteIp = criarLimitador({ max: 40 });
+const limiteRefresh = criarLimitador({ max: 60 });
 
 // Registro
 router.post('/register', async (req, res) => {
@@ -80,6 +83,16 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Usuário inativo. Fale com o administrador.' });
     }
 
+    // App mobile (informa `dispositivo`): token de acesso curto + refresh token. O web segue com o token de 24h.
+    if (req.body.dispositivo !== undefined) {
+      try {
+        return res.json(await abrirSessao(user, req.body.dispositivo));
+      } catch (e) {
+        if (e instanceof ServiceError) return res.status(e.status).json({ error: e.message });
+        throw e;
+      }
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -100,6 +113,38 @@ router.post('/login', async (req, res) => {
         role: user.role
       }
     });
+  } catch (error) {
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Renova a sessão do app: troca o refresh token por um novo par (rotativo)
+router.post('/refresh', async (req, res) => {
+  try {
+    const espera = limiteRefresh.segundosRestantes(req.ip);
+    if (espera) {
+      res.set('Retry-After', String(espera));
+      return res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
+    }
+    try {
+      res.json(await renovarSessao(req.body?.refresh_token, req.body?.dispositivo));
+    } catch (e) {
+      if (!(e instanceof ServiceError)) throw e;
+      if (e.status === 401) limiteRefresh.falha(req.ip);
+      res.status(e.status).json({ error: e.message });
+    }
+  } catch (error) {
+    console.error('auth:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Encerra a sessão do app (revoga a família do refresh token). Sempre responde ok.
+router.post('/logout', async (req, res) => {
+  try {
+    await encerrarSessao(req.body?.refresh_token);
+    res.json({ message: 'Sessão encerrada' });
   } catch (error) {
     console.error('auth:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -151,6 +196,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
       'UPDATE users SET password = ? WHERE id = ?',
       [hashedNewPassword, req.userId]
     );
+    await revogarTodas(req.userId);
 
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (error) {
@@ -298,6 +344,7 @@ router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     }
 
     await connection.commit();
+    if (password) await revogarTodas(userId);
     res.json({ message: 'Usuário atualizado com sucesso' });
   } catch (error) {
     await connection.rollback();
@@ -321,6 +368,7 @@ router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     }
 
     await pool.execute("UPDATE users SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    await revogarTodas(req.params.id);
 
     res.json({ message: 'Usuário inativado com sucesso' });
   } catch (error) {

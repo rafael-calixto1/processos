@@ -14,7 +14,8 @@ export const verifyToken = (req, res, next) => {
     req.userEmail = decoded.email;
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Token inválido ou expirado' });
+    // `code` deixa o app distinguir "renove a sessão" de um token inválido; o status continua 403 por compatibilidade com o web
+    return res.status(403).json({ error: 'Token inválido ou expirado', code: error.name === 'TokenExpiredError' ? 'token_expirado' : 'token_invalido' });
   }
 };
 
