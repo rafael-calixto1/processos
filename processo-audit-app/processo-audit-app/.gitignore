@@ -38,3 +38,6 @@ uploads/branding/*
 !uploads/branding/.gitkeep
 
 
+
+# fotos de serviço (privadas, nunca versionar)
+storage/

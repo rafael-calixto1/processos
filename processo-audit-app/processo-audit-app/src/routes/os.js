@@ -2,8 +2,11 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
+import multer from 'multer-v2';
 import * as svc from '../services/estoqueService.js';
-import { executarIdempotente } from '../services/idempotencia.js';
+import * as fotos from '../services/fotosService.js';
+import { executarIdempotente, hashDe } from '../services/idempotencia.js';
+import { REGRAS_FECHAMENTO } from '../config/regrasFechamento.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque', 'tecnico']));
@@ -117,8 +120,15 @@ router.put('/:id', staff, handle(async (req, res) => {
 
 // Operações que mexem em estoque/serviços aceitam `Idempotency-Key`: repetir a mesma chave devolve a mesma resposta
 // (com `repetida: true`) sem executar de novo. Sem a chave, o comportamento é o de sempre.
-const idempotente = (fn, status = 201) => handle(async (req, res) => {
-  const r = await executarIdempotente(req, { status }, (conn) => fn(conn, req));
+const idempotente = (fn, status = 201, hash) => handle(async (req, res) => {
+  req.arquivosCriados = []; // arquivos gravados em disco pela operação; apagados se ela falhar
+  let r;
+  try {
+    r = await executarIdempotente(req, { status, hash: hash?.(req) }, (conn) => fn(conn, req));
+  } catch (e) {
+    await fotos.apagarArquivos(req.arquivosCriados);
+    throw e;
+  }
   if (r.repetida) res.set('Idempotent-Replayed', 'true');
   res.status(r.status).json(r.repetida ? { ...r.body, repetida: true } : r.body);
 });
@@ -129,6 +139,46 @@ router.post('/:id/materiais', idempotente((conn, req) => svc.baixarNaTx(conn, co
 router.post('/:id/lancamentos', idempotente((conn, req) => svc.lancarNaTx(conn, comOS(req), actorOf(req))));
 
 router.post('/:id/servicos', idempotente((conn, req) => svc.adicionarServicoNaTx(conn, comOS(req), actorOf(req))));
+
+// Fotos do serviço: multipart (campo "foto" + client_uuid, tirada_em, lat, lng, legenda). Ficam em diretório privado.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: REGRAS_FECHAMENTO.foto_max_bytes, files: 1, fields: 10, fieldSize: 2048 } });
+const receberFoto = (req, res, next) => upload.single('foto')(req, res, (err) => {
+  if (!err) return next();
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'A foto é grande demais (máximo de 8 MB)' });
+  if (err instanceof multer.MulterError) return res.status(400).json({ error: 'Envio inválido: mande uma única foto no campo "foto"' });
+  return next(err);
+});
+
+router.post('/:id/fotos', receberFoto, idempotente(
+  (conn, req) => fotos.salvarFotoNaTx(conn, { ...req.body, os_id: Number(req.params.id), buffer: req.file?.buffer }, actorOf(req), req.arquivosCriados),
+  201, (req) => hashDe(`${req.body?.client_uuid}:${hashDe(req.file?.buffer ?? '')}`)));
+
+router.get('/:id/fotos', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  const [rows] = await pool.query('SELECT * FROM os_fotos WHERE os_id = ? ORDER BY id', [os.id]);
+  res.json(rows.map(fotos.metadados));
+}));
+
+router.get('/:id/fotos/:fotoId', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  const [[f]] = await pool.query('SELECT * FROM os_fotos WHERE id = ? AND os_id = ?', [Number(req.params.fotoId) || 0, os.id]);
+  if (!f) throw new svc.ServiceError(404, 'Foto não encontrada');
+  res.set({ 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' });
+  res.type(f.mime);
+  res.sendFile(fotos.caminhoDaFoto(f), { dotfiles: 'allow' }, (err) => {
+    if (err && !res.headersSent) res.status(err.code === 'ENOENT' ? 404 : 500).json({ error: err.code === 'ENOENT' ? 'Arquivo da foto não encontrado' : 'Erro interno do servidor' });
+  });
+}));
+
+router.delete('/:id/fotos/:fotoId', handle(async (req, res) => {
+  const os = await carregarOS(req);
+  if (['concluida', 'cancelada'].includes(os.status)) throw new svc.ServiceError(409, 'OS encerrada é somente leitura');
+  const [[f]] = await pool.query('SELECT * FROM os_fotos WHERE id = ? AND os_id = ?', [Number(req.params.fotoId) || 0, os.id]);
+  if (!f) throw new svc.ServiceError(404, 'Foto não encontrada');
+  await pool.query('DELETE FROM os_fotos WHERE id = ?', [f.id]);
+  await fotos.apagarArquivos([fotos.caminhoDaFoto(f)]);
+  res.json({ ok: true });
+}));
 
 // "Iniciar execução" do app: registra o início (horário do aparelho) e põe a OS em andamento
 router.post('/:id/iniciar', idempotente((conn, req) => svc.iniciarNaTx(conn, comOS(req), actorOf(req)), 200));

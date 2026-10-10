@@ -361,7 +361,7 @@ export const negarDevolucao = ({ id, motivo }, userId, db) =>
   }, db);
 
 /* ── OS ── */
-const lockOS = async (conn, os_id) => {
+export const lockOS = async (conn, os_id) => {
   const [rows] = await conn.query('SELECT * FROM ordens_servico WHERE id = ? FOR UPDATE', [os_id]);
   if (!rows.length) throw new ServiceError(404, 'OS não encontrada');
   return rows[0];
