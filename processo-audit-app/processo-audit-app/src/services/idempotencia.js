@@ -39,26 +39,25 @@ export const executarIdempotente = async (req, { status = 201, hash, db } = {}, 
   const hashCorpo = hash ?? hashDe(req.body);
 
   const tentar = () => withTx(async (conn) => {
-    let id;
-    try {
-      const [r] = await conn.query('INSERT INTO sync_operacoes (usuario_id, chave, rota, hash_corpo) VALUES (?,?,?,?)', [req.userId, chave, rota, hashCorpo]);
-      id = r.insertId;
-    } catch (e) {
-      if (e.code !== 'ER_DUP_ENTRY') throw e;
-      const [[prev]] = await conn.query(
-        'SELECT rota, hash_corpo, status_http, resposta FROM sync_operacoes WHERE usuario_id = ? AND chave = ? FOR UPDATE', [req.userId, chave]);
-      if (!prev || prev.rota !== rota || prev.hash_corpo !== hashCorpo) {
-        throw new ServiceError(422, 'Esta Idempotency-Key já foi usada em outra operação');
-      }
-      if (prev.resposta == null) throw new ServiceError(409, 'Esta operação ainda está em andamento. Tente novamente em instantes');
+    // ON DUPLICATE KEY pede o lock exclusivo da linha direto: os retries simultâneos entram numa fila. Se a gente
+    // inserisse e tratasse o erro de duplicidade, cada um seguraria um lock compartilhado e todos travariam ao pedir o exclusivo.
+    const [r] = await conn.query(
+      `INSERT INTO sync_operacoes (usuario_id, chave, rota, hash_corpo) VALUES (?,?,?,?)
+       ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, [req.userId, chave, rota, hashCorpo]);
+    const id = r.insertId;
+    // Com o lock em mãos, a linha ou é nossa (acabou de ser criada, sem resposta) ou é de uma tentativa já concluída
+    const [[prev]] = await conn.query('SELECT rota, hash_corpo, status_http, resposta FROM sync_operacoes WHERE id = ? FOR UPDATE', [id]);
+    if (prev.resposta !== null) {
+      if (prev.rota !== rota || prev.hash_corpo !== hashCorpo) throw new ServiceError(422, 'Esta Idempotency-Key já foi usada em outra operação');
       return { status: prev.status_http, body: JSON.parse(prev.resposta), repetida: true };
     }
+    if (prev.rota !== rota || prev.hash_corpo !== hashCorpo) throw new ServiceError(409, 'Esta operação ainda está em andamento. Tente novamente em instantes');
     const body = await fn(conn);
     await conn.query('UPDATE sync_operacoes SET status_http = ?, resposta = ? WHERE id = ?', [status, JSON.stringify(body), id]);
     return { status, body, repetida: false };
   }, db);
 
-  // Retries simultâneos da mesma chave podem formar deadlock no índice UNIQUE; o banco aborta um deles, refazemos.
+  // Rede de segurança: se o banco abortar a transação por deadlock, ela é refeita.
   return retentarSeDeadlock(tentar);
 };
 
