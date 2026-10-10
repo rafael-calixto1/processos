@@ -24,7 +24,7 @@ export const handle = (fn) => async (req, res, next) => {
   try {
     await fn(req, res, next);
   } catch (err) {
-    if (err instanceof ServiceError) return res.status(err.status).json({ error: err.message });
+    if (err instanceof ServiceError) return res.status(err.status).json({ error: err.message, ...(err.detalhes && { detalhes: err.detalhes }) });
     if (err.code === 'ER_CHECK_CONSTRAINT_VIOLATED' || err.code === 'ER_CONSTRAINT_FAILED') {
       return res.status(400).json({ error: 'Operação violaria uma regra de integridade do estoque' });
     }

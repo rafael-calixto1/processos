@@ -5,6 +5,7 @@ import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import multer from 'multer-v2';
 import * as svc from '../services/estoqueService.js';
 import * as fotos from '../services/fotosService.js';
+import { finalizarNaTx, carregarFechamento } from '../services/fechamentoService.js';
 import { executarIdempotente, hashDe } from '../services/idempotencia.js';
 import { REGRAS_FECHAMENTO } from '../config/regrasFechamento.js';
 
@@ -96,7 +97,8 @@ router.get('/:id', handle(async (req, res) => {
      FROM os_servicos sv LEFT JOIN users u ON u.id = sv.criado_por WHERE sv.os_id = ? ORDER BY sv.id`, [os.id]);
   const totais = { metros: 0, pecas: 0 };
   for (const m of materiais) if (!m.estorno_id) totais[m.unidade === 'metros' ? 'metros' : 'pecas'] += Number(m.quantidade);
-  res.json({ ...os, materiais, servicos: servicos.map((x) => ({ ...x, quantidade: Number(x.quantidade), rota_trecho: x.rota_trecho ? JSON.parse(x.rota_trecho) : null })), historico, totais });
+  const fechamento = await carregarFechamento(os.id); // { fechamento, fotos, materiais_retirados } (vazios se não houver)
+  res.json({ ...os, materiais, servicos: servicos.map((x) => ({ ...x, quantidade: Number(x.quantidade), rota_trecho: x.rota_trecho ? JSON.parse(x.rota_trecho) : null })), historico, totais, ...fechamento });
 }));
 
 router.put('/:id', staff, handle(async (req, res) => {
@@ -179,6 +181,9 @@ router.delete('/:id/fotos/:fotoId', handle(async (req, res) => {
   await fotos.apagarArquivos([fotos.caminhoDaFoto(f)]);
   res.json({ ok: true });
 }));
+
+// Finalização completa pelo app: valida tudo no servidor e grava fechamento + retirados, apaga o rascunho e encerra a OS
+router.post('/:id/finalizar', idempotente((conn, req) => finalizarNaTx(conn, comOS(req), actorOf(req))));
 
 // "Iniciar execução" do app: registra o início (horário do aparelho) e põe a OS em andamento
 router.post('/:id/iniciar', idempotente((conn, req) => svc.iniciarNaTx(conn, comOS(req), actorOf(req)), 200));

@@ -10,9 +10,10 @@ import pool from '../config/database.js';
  */
 
 export class ServiceError extends Error {
-  constructor(status, message) {
+  constructor(status, message, detalhes) {
     super(message);
     this.status = status;
+    if (detalhes) this.detalhes = detalhes; // lista de problemas, devolvida junto da mensagem
   }
 }
 

@@ -30,7 +30,7 @@ const num = (v, lim) => {
   if (!Number.isFinite(n) || Math.abs(n) > lim) throw new ServiceError(400, 'Coordenada da foto inválida');
   return n;
 };
-const quando = (v) => {
+export const quando = (v) => {
   if (!v) return null;
   const d = new Date(v);
   return Number.isNaN(d.getTime()) || d > new Date(Date.now() + 5 * 60 * 1000) ? null : d;
