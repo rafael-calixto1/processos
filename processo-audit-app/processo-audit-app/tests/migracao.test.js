@@ -82,6 +82,24 @@ test('down remove tudo e as colunas; up depois recria sem perda de estrutura', a
   assert.ok((await tabelas()).has('os_fechamentos'));
 });
 
+test('com a migração revertida, a lista e o detalhe de OS usados pelo web continuam funcionando', async () => {
+  await conn(down);
+  const express = (await import('express')).default;
+  const jwt = (await import('jsonwebtoken')).default;
+  const { default: osRouter } = await import('../src/routes/os.js');
+  const app = express(); app.use(express.json()); app.use('/api/os', osRouter);
+  const srv = await new Promise((ok) => { const s = app.listen(0, () => ok(s)); });
+  try {
+    const call = (path) => fetch(`http://127.0.0.1:${srv.address().port}/api/os${path}`, {
+      headers: { Authorization: `Bearer ${jwt.sign({ id: userId, role: 'tecnico', email: 't@t.local' }, process.env.JWT_SECRET)}` },
+    });
+    const lista = await call('');
+    assert.equal(lista.status, 200);
+    assert.ok((await lista.json()).some((o) => o.id === osId));
+    assert.equal((await call(`/${osId}`)).status, 200);
+  } finally { srv.close(); await conn(up); }
+});
+
 test('CLI recusa rodar sem DB_NAME explícito no comando (não usa o .env)', () => {
   const env = { ...process.env }; delete env.DB_NAME;
   let saida = '', codigo = 0;

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import pool from '../config/database.js';
 import { ServiceError, withTx } from './estoqueService.js';
+import { retentarSeDeadlock } from './retentativa.js';
 
 /**
  * Idempotência por cabeçalho `Idempotency-Key` (UUID gerado pelo app).
@@ -12,7 +13,6 @@ import { ServiceError, withTx } from './estoqueService.js';
  * A chave vale por usuário, por rota (com os ids na URL) e por corpo: reutilizá-la para outra coisa dá 422.
  */
 const CHAVE_VALIDA = /^[A-Za-z0-9._:-]{8,80}$/;
-const RETENTATIVAS_DEADLOCK = 3;
 
 const canonico = (v) => JSON.stringify(v, (_k, x) => (x && typeof x === 'object' && !Array.isArray(x)
   ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
@@ -59,11 +59,7 @@ export const executarIdempotente = async (req, { status = 201, hash, db } = {}, 
   }, db);
 
   // Retries simultâneos da mesma chave podem formar deadlock no índice UNIQUE; o banco aborta um deles, refazemos.
-  for (let i = 1; ; i++) {
-    try { return await tentar(); } catch (e) {
-      if (e.code !== 'ER_LOCK_DEADLOCK' || i >= RETENTATIVAS_DEADLOCK) throw e;
-    }
-  }
+  return retentarSeDeadlock(tentar);
 };
 
 /** Apaga registros antigos. Um app offline por mais que isso deve tratar a operação como "requer atenção". */

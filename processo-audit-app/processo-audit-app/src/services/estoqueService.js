@@ -474,6 +474,27 @@ export const removerServico = ({ os_id, servico_id }, actor, db) =>
     return { ok: true };
   }, db);
 
+/* Início da execução em campo: grava `iniciado_em` (só na primeira vez) e passa a OS para em_andamento. Repetir não muda nada. */
+export const iniciarNaTx = async (conn, { os_id, iniciado_em }, actor) => {
+  const os = await lockOS(conn, os_id);
+  assertAcessoOS(os, actor);
+  if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não pode ser iniciada');
+  let iniciado = os.iniciado_em;
+  const repetida = Boolean(iniciado);
+  if (!iniciado) {
+    // Vale o horário do aparelho (o técnico pode ter iniciado sem sinal), limitado a um intervalo plausível
+    const agora = new Date();
+    let quando = iniciado_em ? new Date(iniciado_em) : agora;
+    if (Number.isNaN(quando.getTime()) || quando > new Date(agora.getTime() + 5 * 60 * 1000)) quando = agora;
+    if (quando < new Date(os.criado_em)) quando = new Date(os.criado_em);
+    quando = new Date(Math.floor(quando.getTime() / 1000) * 1000); // o banco guarda segundos: a 1ª resposta já sai igual às seguintes
+    await conn.query('UPDATE ordens_servico SET iniciado_em = ? WHERE id = ?', [quando, os.id]);
+    iniciado = quando;
+  }
+  if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
+  return { status: 'em_andamento', iniciado_em: new Date(iniciado).toISOString(), ...(repetida && { repetida: true }) };
+};
+
 export const fecharNaTx = async (conn, { os_id }, actor) => {
   const os = await lockOS(conn, os_id);
   assertAcessoOS(os, actor);

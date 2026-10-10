@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 import { ServiceError, withTx } from './estoqueService.js';
+import { retentarSeDeadlock } from './retentativa.js';
 
 /**
  * Sessão do app mobile: token de acesso curto (JWT) + refresh token opaco e rotativo.
@@ -60,7 +61,7 @@ export const revogarTodas = async (usuarioId) => {
 export const renovarSessao = async (refreshToken, dispositivo) => {
   if (typeof refreshToken !== 'string' || refreshToken.length < 20 || refreshToken.length > 200) throw new ServiceError(401, SESSAO_INVALIDA);
   // As revogações precisam ser gravadas mesmo quando a renovação é negada; por isso o erro é lançado depois do commit.
-  const r = await withTx(async (conn) => {
+  const r = await retentarSeDeadlock(() => withTx(async (conn) => {
     const [[t]] = await conn.query(
       `SELECT id, usuario_id, familia, revogado_em, usado_em, (expira_em < NOW()) AS expirado,
               TIMESTAMPDIFF(SECOND, usado_em, NOW()) AS usado_ha_s
@@ -82,7 +83,7 @@ export const renovarSessao = async (refreshToken, dispositivo) => {
     }
     await conn.query('UPDATE refresh_tokens SET usado_em = COALESCE(usado_em, NOW()) WHERE id = ?', [t.id]);
     return { ok: resposta(u, t.familia, await gravarRefresh(conn, u.id, t.familia, dispositivo)) };
-  });
+  }));
   if (r.erro) throw r.erro;
   return r.ok;
 };

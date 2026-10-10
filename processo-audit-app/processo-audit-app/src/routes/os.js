@@ -29,8 +29,15 @@ router.get('/', handle(async (req, res) => {
     where.push('o.tecnico_id = ?'); params.push(req.tecnicoId);
   } else if (req.query.tecnico_id) { where.push('o.tecnico_id = ?'); params.push(req.query.tecnico_id); }
   if (req.query.status) { where.push('o.status = ?'); params.push(req.query.status); }
+  if (req.query.atualizado_desde) {
+    // (colunas da migração do app só entram na consulta neste modo: a lista usada pelo web não depende da migração)
+    // `>=` de propósito: o app reenvia o último instante visto e deduplica por id (a coluna tem precisão de segundos)
+    const desde = new Date(req.query.atualizado_desde);
+    if (Number.isNaN(desde.getTime())) throw new svc.ServiceError(400, 'atualizado_desde inválido: use uma data ISO');
+    where.push('o.atualizado_em >= ?'); params.push(desde);
+  }
   const [rows] = await pool.query(
-    `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,
+    `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,${req.query.atualizado_desde ? ' o.atualizado_em, o.iniciado_em,' : ''}
        o.tipo_servico, o.bairro, o.cidade, o.latitude, o.longitude, o.pop_nome, o.rota_id, o.poste_id,
        t.nome AS tecnico_nome,
        EXISTS(SELECT 1 FROM os_rascunhos r WHERE r.os_id = o.id) AS tem_rascunho
@@ -122,6 +129,9 @@ router.post('/:id/materiais', idempotente((conn, req) => svc.baixarNaTx(conn, co
 router.post('/:id/lancamentos', idempotente((conn, req) => svc.lancarNaTx(conn, comOS(req), actorOf(req))));
 
 router.post('/:id/servicos', idempotente((conn, req) => svc.adicionarServicoNaTx(conn, comOS(req), actorOf(req))));
+
+// "Iniciar execução" do app: registra o início (horário do aparelho) e põe a OS em andamento
+router.post('/:id/iniciar', idempotente((conn, req) => svc.iniciarNaTx(conn, comOS(req), actorOf(req)), 200));
 
 router.delete('/:id/servicos/:servicoId', handle(async (req, res) => {
   res.json(await svc.removerServico({ os_id: Number(req.params.id), servico_id: Number(req.params.servicoId) }, actorOf(req)));
