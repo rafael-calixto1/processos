@@ -382,7 +382,7 @@ const mudarStatus = async (conn, os, para, userId) => {
 };
 
 /* Baixa de um lote na OS, dentro de uma transação já aberta. servico_id (opcional) vincula o material à linha de serviço. */
-const baixarNaTx = async (conn, { os_id, lote_id, codigo, quantidade, observacao, servico_id }, actor) => {
+export const baixarNaTx = async (conn, { os_id, lote_id, codigo, quantidade, observacao, servico_id }, actor) => {
   const q = parseQtd(quantidade);
   const os = await lockOS(conn, os_id);
   assertAcessoOS(os, actor);
@@ -411,52 +411,54 @@ const baixarNaTx = async (conn, { os_id, lote_id, codigo, quantidade, observacao
 export const baixarEmOS = (params, actor, db) => withTx((conn) => baixarNaTx(conn, params, actor), db);
 
 /* Lançamento: uma linha de serviço no trecho + os materiais usados nele. Tudo ou nada (uma transação). */
-export const lancarServicoComMateriais = ({ os_id, descricao, trecho, rota, quantidade, materiais }, actor, db) =>
-  withTx(async (conn) => {
-    const desc = String(descricao || '').trim();
-    if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
-    if (!Array.isArray(materiais)) throw new ServiceError(400, 'Materiais inválidos');
-    const q = quantidade === undefined || quantidade === null || quantidade === '' ? 1 : parseQtd(quantidade);
-    const os = await lockOS(conn, os_id);
-    assertAcessoOS(os, actor);
-    if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não aceita novos lançamentos');
-    const tr = String(trecho || '').trim().slice(0, 255) || null;
-    // Rota desenhada no mapa: 2 ou mais pontos com coordenadas válidas, mais o caminho traçado pelas vias
-    const pts = Array.isArray(rota?.pontos)
-      ? rota.pontos.slice(0, 25).map((p) => ({ lat: Number(p?.lat), lng: Number(p?.lng) })).filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
-      : [];
-    const rotaJson = pts.length >= 2 ? JSON.stringify({
-      pontos: pts, metros: Math.round(Number(rota.metros) || 0),
-      caminho: Array.isArray(rota.caminho) ? rota.caminho.slice(0, 700).map(([a, b]) => [Number(a), Number(b)]).filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b)) : [],
-    }) : null;
-    const [res] = await conn.query('INSERT INTO os_servicos (os_id, descricao, quantidade, trecho, rota_trecho, criado_por) VALUES (?,?,?,?,?,?)',
-      [os.id, desc.slice(0, 255), q, tr, rotaJson, actor.id]);
-    const baixas = [];
-    for (const m of materiais) baixas.push(await baixarNaTx(conn, { os_id: os.id, lote_id: m.lote_id, quantidade: m.quantidade, servico_id: res.insertId }, actor));
-    if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
-    return { id: res.insertId, descricao: desc, trecho: tr, quantidade: q, materiais: baixas };
-  }, db);
+export const lancarNaTx = async (conn, { os_id, descricao, trecho, rota, quantidade, materiais }, actor) => {
+  const desc = String(descricao || '').trim();
+  if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
+  if (!Array.isArray(materiais)) throw new ServiceError(400, 'Materiais inválidos');
+  const q = quantidade === undefined || quantidade === null || quantidade === '' ? 1 : parseQtd(quantidade);
+  const os = await lockOS(conn, os_id);
+  assertAcessoOS(os, actor);
+  if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não aceita novos lançamentos');
+  const tr = String(trecho || '').trim().slice(0, 255) || null;
+  // Rota desenhada no mapa: 2 ou mais pontos com coordenadas válidas, mais o caminho traçado pelas vias
+  const pts = Array.isArray(rota?.pontos)
+    ? rota.pontos.slice(0, 25).map((p) => ({ lat: Number(p?.lat), lng: Number(p?.lng) })).filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
+    : [];
+  const rotaJson = pts.length >= 2 ? JSON.stringify({
+    pontos: pts, metros: Math.round(Number(rota.metros) || 0),
+    caminho: Array.isArray(rota.caminho) ? rota.caminho.slice(0, 700).map(([a, b]) => [Number(a), Number(b)]).filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b)) : [],
+  }) : null;
+  const [res] = await conn.query('INSERT INTO os_servicos (os_id, descricao, quantidade, trecho, rota_trecho, criado_por) VALUES (?,?,?,?,?,?)',
+    [os.id, desc.slice(0, 255), q, tr, rotaJson, actor.id]);
+  const baixas = [];
+  for (const m of materiais) baixas.push(await baixarNaTx(conn, { os_id: os.id, lote_id: m.lote_id, quantidade: m.quantidade, servico_id: res.insertId }, actor));
+  if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
+  return { id: res.insertId, descricao: desc, trecho: tr, quantidade: q, materiais: baixas };
+};
+
+export const lancarServicoComMateriais = (params, actor, db) => withTx((conn) => lancarNaTx(conn, params, actor), db);
 
 /* ── Serviços realizados na OS (mão de obra/atividades; não mexem em estoque) ── */
 const assertOSAberta = (os) => {
   if (!['aberta', 'em_andamento'].includes(os.status)) throw new ServiceError(409, 'OS encerrada: não aceita novos serviços');
 };
 
-export const adicionarServico = ({ os_id, descricao, quantidade }, actor, db) =>
-  withTx(async (conn) => {
-    const desc = String(descricao || '').trim();
-    if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
-    const q = quantidade === undefined || quantidade === '' ? 1 : parseQtd(quantidade);
-    const os = await lockOS(conn, os_id);
-    assertAcessoOS(os, actor);
-    assertOSAberta(os);
-    const [res] = await conn.query(
-      'INSERT INTO os_servicos (os_id, descricao, quantidade, criado_por) VALUES (?,?,?,?)',
-      [os.id, desc.slice(0, 255), q, actor.id]
-    );
-    if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
-    return { id: res.insertId, descricao: desc, quantidade: q };
-  }, db);
+export const adicionarServicoNaTx = async (conn, { os_id, descricao, quantidade }, actor) => {
+  const desc = String(descricao || '').trim();
+  if (!desc) throw new ServiceError(400, 'Informe o serviço realizado');
+  const q = quantidade === undefined || quantidade === '' ? 1 : parseQtd(quantidade);
+  const os = await lockOS(conn, os_id);
+  assertAcessoOS(os, actor);
+  assertOSAberta(os);
+  const [res] = await conn.query(
+    'INSERT INTO os_servicos (os_id, descricao, quantidade, criado_por) VALUES (?,?,?,?)',
+    [os.id, desc.slice(0, 255), q, actor.id]
+  );
+  if (os.status === 'aberta') await mudarStatus(conn, os, 'em_andamento', actor.id);
+  return { id: res.insertId, descricao: desc, quantidade: q };
+};
+
+export const adicionarServico = (params, actor, db) => withTx((conn) => adicionarServicoNaTx(conn, params, actor), db);
 
 export const removerServico = ({ os_id, servico_id }, actor, db) =>
   withTx(async (conn) => {
@@ -472,14 +474,16 @@ export const removerServico = ({ os_id, servico_id }, actor, db) =>
     return { ok: true };
   }, db);
 
-export const fecharOS = ({ os_id }, actor, db) => withTx(async (conn) => {
+export const fecharNaTx = async (conn, { os_id }, actor) => {
   const os = await lockOS(conn, os_id);
   assertAcessoOS(os, actor);
   if (os.status === 'concluida') return { status: 'concluida', repetida: true };
   if (os.status === 'cancelada') throw new ServiceError(409, 'OS cancelada não pode ser fechada');
   await mudarStatus(conn, os, 'concluida', actor.id);
   return { status: 'concluida' };
-}, db);
+};
+
+export const fecharOS = (params, actor, db) => withTx((conn) => fecharNaTx(conn, params, actor), db);
 
 /* ── Estorno de baixa (somente estoque/admin — validado na rota) ── */
 export const estornarBaixa = ({ movimentacao_id, motivo, quantidade }, userId, db) => withTx(async (conn) => {
