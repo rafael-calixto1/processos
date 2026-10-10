@@ -3,19 +3,14 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { pool, prepararBanco } from './helpers/db.js';
 
-process.env.DB_NAME = process.env.DB_NAME || 'processo_audit_test';
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
-if (!/test/.test(process.env.DB_NAME)) throw new Error('Testes só rodam em banco com "test" no nome');
-
-const { default: pool } = await import('../src/config/database.js');
-const { up, down } = await import('../scripts/migrate_estoque.js');
 const svc = await import('../src/services/estoqueService.js');
 const { default: osRouter } = await import('../src/routes/os.js');
 const { default: estoqueRouter } = await import('../src/routes/estoque.js');
 const { tecnicosRouter } = await import('../src/routes/cadastros.js');
 
-let server, base, admin, almox, userT1, userT2, t1, t2, equipe, itemCabo, itemConector;
+let server, base, liberarBanco, admin, almox, userT1, userT2, t1, t2, equipe, itemCabo, itemConector;
 const token = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET);
 const call = async (user, method, path, body) => {
   const r = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token(user)}` },
@@ -28,10 +23,7 @@ const mkUser = async (role, n) => {
 };
 
 before(async () => {
-  await pool.query(`CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, role ENUM('admin','manager','viewer') DEFAULT 'viewer', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-  const c = await pool.getConnection();
-  await down(c); await up(c); await c.query('DELETE FROM users'); c.release();
+  liberarBanco = await prepararBanco();
 
   admin = await mkUser('admin', 1); almox = await mkUser('estoque', 1);
   userT1 = await mkUser('tecnico', 1); userT2 = await mkUser('tecnico', 2);
@@ -47,7 +39,7 @@ before(async () => {
   await new Promise((ok) => { server = app.listen(0, ok); });
   base = `http://127.0.0.1:${server.address().port}/api`;
 });
-after(async () => { server?.close(); await pool.end(); });
+after(async () => { server?.close(); await liberarBanco?.(); await pool.end(); });
 
 const novaCompra = (item, qtd, medida, extra = {}) =>
   svc.criarCompra({ item_id: item, tipo_volume: 'bobina', qtd_volumes: qtd, medida_por_volume: medida, ...extra }, almox.id);
