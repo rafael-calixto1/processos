@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import pool from '../../src/config/database.js';
 import { up as migrarEstoque } from '../../scripts/migrate_estoque.js';
+import { up as migrarMobile } from '../../scripts/migrate_os_mobile.js';
 
 export { pool };
 
@@ -59,6 +60,7 @@ export const prepararBanco = async () => {
         cwd: raiz, env: { ...process.env, DB_NAME: process.env.DB_NAME }, stdio: 'pipe',
       });
     }
+    await migrarMobile(c);
   } catch (err) {
     await c.query('SELECT RELEASE_LOCK(?)', [LOCK]).catch(() => {});
     c.release();
