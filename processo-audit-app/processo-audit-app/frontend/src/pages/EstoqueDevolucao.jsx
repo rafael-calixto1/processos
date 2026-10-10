@@ -3,13 +3,19 @@ import { estoqueAPI, cadastrosAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
 import { Combobox, AsyncState, useLoad, useToasts, Field, ConfirmDialog, fmtQtd, fmtDataHora, styles as s } from '../components/estoque/ui';
 import { Select } from '../components/Select/Select';
+import { agrupar, resumo, ModalGrupo, PosseDetalhada } from './EstoquePosse';
 
 const EstoqueDevolucao = () => {
   const { user } = useAuth();
   const isTecnico = user?.role === 'tecnico';
   const tecs = useLoad(() => (isTecnico ? Promise.resolve([]) : cadastrosAPI.tecnicos()), [isTecnico]);
   const [tecnicoId, setTecnicoId] = useState('');
-  const posse = useLoad(() => (isTecnico ? estoqueAPI.minhaPosse() : tecnicoId ? estoqueAPI.fichaTecnico(tecnicoId).then((r) => r.itens) : Promise.resolve([])), [isTecnico, tecnicoId]);
+  const ficha = useLoad(() => (isTecnico ? estoqueAPI.minhaFicha() : tecnicoId ? estoqueAPI.fichaTecnico(tecnicoId) : Promise.resolve(null)), [isTecnico, tecnicoId]);
+  const posse = { loading: ficha.loading, error: ficha.error, reload: ficha.reload, data: ficha.data ? ficha.data.itens : [] };
+  const { validas, grupos: movs } = React.useMemo(() => (ficha.data ? agrupar(ficha.data.historico) : { validas: [], grupos: [] }), [ficha.data]);
+  const devolvidas = movs.filter((g) => g.tipo === 'devolucao');
+  const [modal, setModal] = useState(null);
+  const [limite, setLimite] = useState(12);
   const solic = useLoad(() => (isTecnico ? estoqueAPI.devolucoes() : Promise.resolve([])), [isTecnico]);
   const [qtds, setQtds] = useState({}); // lote_id -> quantidade digitada (presença = selecionado)
   const [condicao, setCondicao] = useState('novo');
@@ -55,7 +61,7 @@ const EstoqueDevolucao = () => {
       notify(isTecnico
         ? `Devolução enviada para aprovação (${ok} ${ok === 1 ? 'item' : 'itens'})`
         : `Devolução registrada (${ok} ${ok === 1 ? 'item' : 'itens'}): material voltou ao almoxarifado`);
-    } catch (e) { notify(`${e.message}${ok ? ` (${ok} já devolvido(s))` : ''}`, 'err'); } finally { setConfirmar(false); setBusy(false); posse.reload(); solic.reload(); }
+    } catch (e) { notify(`${e.message}${ok ? ` (${ok} já devolvido(s))` : ''}`, 'err'); } finally { setConfirmar(false); setBusy(false); ficha.reload(); solic.reload(); }
   };
 
   return (
@@ -98,6 +104,21 @@ const EstoqueDevolucao = () => {
         </Field>
         <button className={`${s.btn} ${s.btnPrimary}`} disabled={!podeRevisar}>{isTecnico ? 'Enviar para aprovação' : 'Revisar devolução'}</button>
       </form>
+      {(isTecnico || tecnicoId) && ficha.data && (<>
+        <div className={s.card}><h2 className={s.cardTitle}>Detalhe da posse</h2>
+          <p className={s.sub}>Clique em um item para ver quando foi entregue e em quais OS foi gasto.</p>
+          <PosseDetalhada itens={ficha.data.itens} validas={validas} /></div>
+        <div className={s.card}><h2 className={s.cardTitle}>Devoluções realizadas</h2>
+          <AsyncState empty={devolvidas.length === 0} emptyTitle="Nenhuma devolução registrada">
+            <div className={s.tableWrap}><table className={s.table}><thead><tr><th>Quando</th><th>Resumo</th><th>Condição</th><th></th></tr></thead>
+              <tbody>{devolvidas.slice(0, limite).map((g) => (<tr key={g.key} className={s.clickRow} onClick={() => setModal(g)}>
+                <td data-label="Quando">{fmtDataHora(g.quando)}</td><td data-label="Resumo">{resumo(g)}</td>
+                <td data-label="Condição">{[...new Set(g.itens.map((i) => i.condicao).filter(Boolean))].join(', ') || '—'}</td>
+                <td><button type="button" className={s.chip} onClick={(e) => { e.stopPropagation(); setModal(g); }}>Detalhes</button></td></tr>))}</tbody></table></div>
+            {devolvidas.length > limite && <button type="button" className={s.chip} style={{ marginTop: 10 }} onClick={() => setLimite(limite + 12)}>Ver mais ({devolvidas.length - limite})</button>}
+          </AsyncState></div>
+        {modal && <ModalGrupo g={modal} onClose={() => setModal(null)} />}
+      </>)}
       {isTecnico && (solic.data || []).length > 0 && (
         <div className={s.card}>
           <h2 className={s.cardTitle}>Minhas solicitações</h2>

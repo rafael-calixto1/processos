@@ -58,6 +58,7 @@ export const estoqueAPI = {
   negarDevolucao: (id: number, b?: Body) => request('POST', `/estoque/devolucoes/${id}/negar`, b),
   posse: () => request('GET', '/estoque/posse'),
   minhaPosse: () => request('GET', '/estoque/posse/minha'),
+  minhaFicha: () => request('GET', '/estoque/posse/minha/ficha'),
   fichaTecnico: (id: number | string) => request('GET', `/estoque/posse/${id}`),
 };
 

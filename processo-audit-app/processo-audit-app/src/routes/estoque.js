@@ -296,16 +296,26 @@ router.get('/posse', staff, handle(async (req, res) => {
   res.json(rows.map((r) => ({ ...r, metros: Number(r.metros), pecas: Number(r.pecas) })));
 }));
 
-router.get('/posse/:tecnicoId', staff, handle(async (req, res) => {
-  const [[tec]] = await pool.query('SELECT * FROM tecnicos WHERE id = ?', [req.params.tecnicoId]);
-  if (!tec) throw new svc.ServiceError(404, 'Técnico não encontrado');
+const fichaDe = async (tec) => {
   const [os] = await pool.query(
     'SELECT id, numero, cliente, status, prazo FROM ordens_servico WHERE tecnico_id = ? ORDER BY id DESC LIMIT 50', [tec.id]);
   const [historico] = await pool.query(
-    `SELECT m.id, m.tipo, m.quantidade, m.condicao, m.criado_em, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade, o.numero AS os_numero
+    `SELECT m.id, m.tipo, m.quantidade, m.condicao, m.observacao, m.criado_em, m.lote_id, m.os_id, m.estorno_de_id, l.codigo AS lote_codigo, i.nome AS item_nome, i.unidade, o.numero AS os_numero, o.cliente AS os_cliente
      FROM estoque_movimentacoes m JOIN estoque_lotes l ON l.id = m.lote_id JOIN estoque_itens i ON i.id = m.item_id
-     LEFT JOIN ordens_servico o ON o.id = m.os_id WHERE m.tecnico_id = ? ORDER BY m.id DESC LIMIT 100`, [tec.id]);
-  res.json({ tecnico: tec, itens: await posseDe(tec.id), os, historico });
+     LEFT JOIN ordens_servico o ON o.id = m.os_id WHERE m.tecnico_id = ? ORDER BY m.id DESC LIMIT 3000`, [tec.id]);
+  return { tecnico: tec, itens: await posseDe(tec.id), os, historico };
+};
+
+router.get('/posse/minha/ficha', handle(async (req, res) => {
+  if (!req.tecnicoId) throw new svc.ServiceError(403, 'Seu usuário não está vinculado a um técnico');
+  const [[tec]] = await pool.query('SELECT * FROM tecnicos WHERE id = ?', [req.tecnicoId]);
+  res.json(await fichaDe(tec));
+}));
+
+router.get('/posse/:tecnicoId', staff, handle(async (req, res) => {
+  const [[tec]] = await pool.query('SELECT * FROM tecnicos WHERE id = ?', [req.params.tecnicoId]);
+  if (!tec) throw new svc.ServiceError(404, 'Técnico não encontrado');
+  res.json(await fichaDe(tec));
 }));
 
 export default router;
