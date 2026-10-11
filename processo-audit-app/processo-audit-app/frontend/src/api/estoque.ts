@@ -76,6 +76,13 @@ export const osAPI = {
   sugestoesServicos: () => request('GET', '/os/servicos/sugestoes'),
   rascunho: (id: number | string) => request('GET', `/os/${id}/rascunho`) as Promise<{ rascunho: Record<string, unknown> | null }>,
   salvarRascunho: (id: number | string, rascunho: Record<string, unknown>) => request('PUT', `/os/${id}/rascunho`, { rascunho }),
+  // Fotos de serviço são privadas: precisam do token, então viram um blob local (quem chama deve revogar com URL.revokeObjectURL)
+  fotoUrl: async (id: number | string, fotoId: number | string): Promise<string> => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/os/${id}/fotos/${fotoId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new ApiError(res.status, 'Não foi possível carregar a foto');
+    return URL.createObjectURL(await res.blob());
+  },
   fechar: (id: number) => request('POST', `/os/${id}/fechar`),
   cancelar: (id: number) => request('POST', `/os/${id}/cancelar`),
   estornar: (id: number, b: Body) => request('POST', `/os/${id}/estornos`, b),

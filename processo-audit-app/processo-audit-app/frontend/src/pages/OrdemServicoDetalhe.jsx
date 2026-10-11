@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, CheckCircle2, Undo2 } from 'lucide-react';
 import { osAPI } from '../api/estoque';
 import { useAuth } from '../context/AuthContext';
 import { OsFechamentoModal, ServicosCard } from '../components/estoque/OsFechamento';
+import FechamentoCard from '../components/estoque/FechamentoCard';
 import MapPreview from '../components/MapPreview';
 import { AsyncState, useLoad, useToasts, Field, ConfirmDialog, OsStatusBadge, PrioridadeBadge,
   fmtData, fmtDataHora, fmtQtd, fmtNum, styles as s } from '../components/estoque/ui';
@@ -78,6 +79,7 @@ const OrdemServicoDetalhe = () => {
             </AsyncState>
           </div>
           <ServicosCard os={os} podeEditar={aberta} onChanged={reload} notify={notify} />
+          <FechamentoCard os={os} />
           <div className={s.card}>
             <h2 className={s.cardTitle}>Histórico de status</h2>
             <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>{os.historico.map((h) => (
