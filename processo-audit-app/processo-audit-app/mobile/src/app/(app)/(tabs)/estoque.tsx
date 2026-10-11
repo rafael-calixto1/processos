@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BarraAcao } from '@/components/BarraAcao';
+import { Botao } from '@/components/Botao';
 import { Cabecalho } from '@/components/Cabecalho';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { Faixa } from '@/components/Faixa';
@@ -8,14 +11,17 @@ import { filtrarGrupos } from '@/domain/busca';
 import { agrupar } from '@/domain/posse';
 import { fmtQtd } from '@/domain/quantidade';
 import { rotuloAtualizacao } from '@/domain/tempo';
+import { devolucoesDoTecnico } from '@/domain/visao';
 import { useDados } from '@/estado/DadosProvider';
 import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
 
 export default function MeuEstoque() {
-  const { dados, carregado, semConexao, atualizar } = useDados();
+  const router = useRouter();
+  const { dados, ops, carregado, semConexao, atualizar } = useDados();
   const [busca, setBusca] = useState('');
   const grupos = useMemo(() => agrupar(dados?.posse ?? []), [dados]);
   const visiveis = useMemo(() => filtrarGrupos(grupos, busca), [grupos, busca]);
+  const abertas = useMemo(() => devolucoesDoTecnico(dados?.devolucoes ?? [], ops).filter((d) => d.estado !== 'aprovada' && d.estado !== 'negada').length, [dados, ops]);
 
   return (
     <View style={s.tela}>
@@ -26,7 +32,8 @@ export default function MeuEstoque() {
           <TextInput value={busca} onChangeText={setBusca} placeholder="Buscar item ou lote" placeholderTextColor={cores.desabilitado} style={s.input}
             accessibilityLabel="Buscar item ou lote" autoCorrect={false} autoCapitalize="none" returnKeyType="search" clearButtonMode="while-editing" />
         </View>
-        {dados ? <Faixa tom="info" icone="time-outline" texto="Saldo do último download, já descontado do que você lançou e ainda não foi enviado. O servidor confere de novo ao receber." /> : null}
+        <Botao titulo={abertas > 0 ? `Minhas devoluções (${abertas} em andamento)` : 'Minhas devoluções'} variante="secundario" onPress={() => router.push('/devolucoes')} testID="botao-minhas-devolucoes" />
+        {dados ? <Faixa tom="info" icone="time-outline" texto="Saldo do último download, já descontado do que você lançou ou separou para devolução e ainda não foi confirmado. O servidor confere de novo ao receber." /> : null}
         {semConexao && dados ? <Faixa texto="Sem conexão: mostrando o saldo guardado no aparelho." icone="cloud-offline-outline" acao={{ rotulo: 'Tentar', onPress: () => void atualizar() }} /> : null}
       </View>
       <FlatList
@@ -36,11 +43,12 @@ export default function MeuEstoque() {
         ItemSeparatorComponent={() => <View style={{ height: espaco.sm }} />}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item: g }) => (
-          <View style={s.linha} accessible accessibilityLabel={`${g.item_nome}, ${g.lote_codigo ?? `${g.lotes.length} lotes`}, ${fmtQtd(g.quantidade, g.unidade)} em posse${g.reservado > 0 ? `, mais ${fmtQtd(g.reservado, g.unidade)} reservados em lançamentos não enviados` : ''}`}>
+          <View style={s.linha} accessible accessibilityLabel={`${g.item_nome}, ${g.lote_codigo ?? `${g.lotes.length} lotes`}, ${fmtQtd(g.quantidade, g.unidade)} em posse${g.reservado > 0 ? `, mais ${fmtQtd(g.reservado, g.unidade)} reservados em lançamentos não enviados` : ''}${g.emDevolucao > 0 ? `, mais ${fmtQtd(g.emDevolucao, g.unidade)} separados para devolução` : ''}`}>
             <View style={s.info}>
               <Text style={s.nome}>{g.item_nome}</Text>
               <Text style={s.lote}>{g.lote_codigo ?? (g.lotes.length === 1 ? g.lotes[0].lote_codigo : `${g.lotes.length} lotes`)}</Text>
               {g.reservado > 0 ? <Text style={s.reservado}>Reservado em lançamentos não enviados: {fmtQtd(g.reservado, g.unidade)}</Text> : null}
+              {g.emDevolucao > 0 ? <Text style={s.reservado}>Separado para devolução: {fmtQtd(g.emDevolucao, g.unidade)}</Text> : null}
             </View>
             <Text style={s.qtd}>{fmtQtd(g.quantidade, g.unidade)}</Text>
           </View>
@@ -52,6 +60,7 @@ export default function MeuEstoque() {
                 : <EstadoVazio icone="cube-outline" titulo="Você não tem material em posse" texto="O material retirado no almoxarifado aparece aqui." />
         }
       />
+      <BarraAcao><Botao titulo="Devolver material" onPress={() => router.push('/devolver')} desabilitado={!dados || grupos.length === 0} testID="botao-devolver" /></BarraAcao>
     </View>
   );
 }

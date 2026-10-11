@@ -1,3 +1,4 @@
+import { fmtQtd } from './quantidade';
 import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, SEM_OS, idadeEmDias, type Operacao } from './operacoes';
 
 /**
@@ -53,6 +54,10 @@ export const descreverAtencao = (op: Operacao, agora: number): DescricaoAtencao 
   }
   return { titulo, oQueFazer: 'Tente de novo. Se continuar, fale com o escritório.', acoes: ['tentar_de_novo', 'descartar'] };
 };
+
+/** Linha curta para a lista de atenção: a OS da operação ou, numa devolução, o material ("Cabo óptico · LOTE-BOB-0001 · 20 m"). */
+export const rotuloDaOperacao = (op: Operacao): string =>
+  op.tipo === 'devolucao' ? `${op.payload.exibicao.item_nome} · ${op.payload.exibicao.lote_codigo} · ${fmtQtd(op.payload.corpo.quantidade, op.payload.exibicao.unidade)}` : rotuloDaOS(op);
 
 /** Linha curta para a lista: "OS #12 · Rota PL-900 → CEO-01". */
 export const rotuloDaOS = (op: Pick<Operacao, 'os_id' | 'os_numero' | 'os_cliente'>): string =>

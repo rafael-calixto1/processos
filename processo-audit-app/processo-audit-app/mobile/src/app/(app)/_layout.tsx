@@ -5,6 +5,8 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="atencao" />
+      <Stack.Screen name="devolver" />
+      <Stack.Screen name="devolucoes" />
     </Stack>
   );
 }

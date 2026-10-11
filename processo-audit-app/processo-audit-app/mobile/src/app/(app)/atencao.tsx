@@ -8,7 +8,7 @@ import { Cartao } from '@/components/Cartao';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { Faixa } from '@/components/Faixa';
 import { confirmar } from '@/components/confirmar';
-import { descreverAtencao, rotuloDaOS, type AcaoAtencao } from '@/domain/atencao';
+import { descreverAtencao, rotuloDaOperacao, type AcaoAtencao } from '@/domain/atencao';
 import { DIAS_MAX_OPERACAO, idadeEmDias, type Operacao } from '@/domain/operacoes';
 import { fmtDataHora } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
@@ -75,7 +75,7 @@ export default function Atencao() {
           const velha = item.erro?.status === null && idadeEmDias(item.criado_em, Date.now()) > DIAS_MAX_OPERACAO;
           return (
             <Cartao titulo={d.titulo}>
-              <Text style={s.os}>{rotuloDaOS(item)}</Text>
+              <Text style={s.os}>{rotuloDaOperacao(item)}</Text>
               <Text style={s.quando}>Feito em {fmtDataHora(item.criado_em)}</Text>
               <View style={s.erro} accessibilityRole="alert">
                 <Text style={s.erroTitulo}>{velha ? 'Parado por segurança' : 'O servidor não aceitou'}</Text>

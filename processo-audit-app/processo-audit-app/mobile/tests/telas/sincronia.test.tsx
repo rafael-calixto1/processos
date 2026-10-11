@@ -103,7 +103,7 @@ describe('Meu estoque: reservado', () => {
     render(<MeuEstoque />);
     expect(screen.getByText('349,5 m')).toBeTruthy();
     expect(screen.getByText('Reservado em lançamentos não enviados: 100 m')).toBeTruthy();
-    expect(screen.getByText(/já descontado do que você lançou e ainda não foi enviado/)).toBeTruthy();
+    expect(screen.getByText(/já descontado do que você lançou ou separou para devolução e ainda não foi confirmado/)).toBeTruthy();
   });
 });
 
