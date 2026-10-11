@@ -14,7 +14,7 @@ export default function AbasLayout() {
         tabBarActiveTintColor: cores.primariaEscura,
         tabBarInactiveTintColor: cores.textoSuave,
         tabBarLabelStyle: { fontSize: fonte.pequena, fontWeight: '700' },
-        tabBarStyle: { height: 62 + bottom, paddingTop: 6, paddingBottom: Math.max(bottom, 6), backgroundColor: cores.superficie, borderTopColor: cores.borda },
+        tabBarStyle: { height: 74 + bottom, paddingTop: 8, paddingBottom: Math.max(bottom, 10), backgroundColor: cores.superficie, borderTopColor: cores.borda },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Minhas OS', tabBarIcon: icone('list-outline') }} />
