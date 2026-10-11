@@ -56,3 +56,29 @@ export const validarQuantidadeGrupo = (grupo: GrupoPosse, texto: string): Result
   if (r.valor > grupo.quantidade + 1e-9) return { ok: false, erro: `Você tem ${fmtQtd(grupo.quantidade, grupo.unidade)} em posse` };
   return r;
 };
+
+/** O código do lote dentro do texto lido do QR. A etiqueta traz só o código; "LOTE-..." dentro de uma frase ou endereço também serve. */
+export const extrairCodigoLote = (texto: string): string => {
+  const t = String(texto ?? '').trim().toUpperCase();
+  return /LOTE-[A-Z0-9-]+/.exec(t)?.[0] ?? t;
+};
+
+/** O grupo de posse do lote lido (offline: casa com a posse baixada). Primeiro o texto inteiro (lotes podem ter nome livre), depois o código extraído. */
+export const acharGrupoPorCodigo = (grupos: readonly GrupoPosse[], texto: string): GrupoPosse | null => {
+  const inteiro = String(texto ?? '').trim().toUpperCase();
+  if (!inteiro) return null;
+  const casa = (codigo: string) => grupos.find((g) => g.lotes.some((l) => l.lote_codigo.toUpperCase() === codigo)) ?? null;
+  return casa(inteiro) ?? casa(extrairCodigoLote(inteiro));
+};
+
+/** Ao CORRIGIR um lançamento ainda não enviado, o que ele reservava volta a estar disponível para o novo valor. */
+export const devolverReserva = (posse: readonly PosseItem[], materiais: ReadonlyArray<{ lote_id: number; quantidade: number }>): PosseItem[] => {
+  const volta = new Map<number, number>();
+  for (const m of materiais) volta.set(m.lote_id, r2((volta.get(m.lote_id) ?? 0) + m.quantidade));
+  return posse.map((p) => {
+    const v = Math.min(volta.get(p.lote_id) ?? 0, p.reservado ?? 0);
+    if (!v) return p;
+    const reservado = r2((p.reservado ?? 0) - v);
+    return { ...p, quantidade: r2(p.quantidade + v), ...(reservado > 0 ? { reservado } : { reservado: undefined }) };
+  });
+};

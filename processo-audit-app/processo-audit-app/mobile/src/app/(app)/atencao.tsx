@@ -48,7 +48,7 @@ export default function Atencao() {
       else if (acao === 'enviar_mesmo_assim') await comandos.reenviar(op.id, { forcar: true });
       else if (acao === 'descartar') await comandos.descartar(op.id);
       else if (acao === 'voltar_a_editar') { await comandos.voltarAEditar(op.os_id); router.push({ pathname: '/os/[id]/finalizar', params: { id: String(op.os_id) } }); }
-      else if (acao === 'corrigir') router.push({ pathname: '/os/[id]/finalizar/materiais', params: { id: String(op.os_id), corrigir: String(op.id) } });
+      else if (acao === 'corrigir') router.push({ pathname: '/os/[id]/finalizar/lancamento', params: { id: String(op.os_id), corrigir: String(op.id) } });
     } catch (e) {
       setErro(mensagemDeErro(e));
     } finally {

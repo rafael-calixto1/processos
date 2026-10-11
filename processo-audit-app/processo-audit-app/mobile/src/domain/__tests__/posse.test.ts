@@ -1,4 +1,4 @@
-import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '../posse';
+import { acharGrupoPorCodigo, agrupar, devolverReserva, distribuirEntreLotes, extrairCodigoLote, validarQuantidadeGrupo } from '../posse';
 import { r2 } from '../quantidade';
 import type { PosseItem } from '../tipos';
 
@@ -130,5 +130,56 @@ describe('paridade com o web (entradas aleatórias)', () => {
       }
     }
     expect(distribuicoes).toBeGreaterThan(500); // garante que o teste exercitou de verdade
+  });
+});
+
+describe('leitura do QR do lote', () => {
+  const grupos = () => agrupar([p(11, 'LOTE-BOB-0001', 1, 449.5, 'metros', 'Cabo'), p(21, 'LOTE-UNI-0001', 2, 30), p(22, 'LOTE-UNI-0002', 2, 20), p(31, 'Bobina da Maria', 3, 100, 'metros', 'Drop')]);
+  it('a etiqueta traz só o código, em texto', () => {
+    expect(extrairCodigoLote('LOTE-BOB-0001')).toBe('LOTE-BOB-0001');
+    expect(extrairCodigoLote('  lote-bob-0001 \n')).toBe('LOTE-BOB-0001');
+  });
+  it('também acha o código dentro de uma frase ou endereço', () => {
+    expect(extrairCodigoLote('https://app.exemplo/lotes/lote-bob-0001?x=1')).toBe('LOTE-BOB-0001');
+  });
+  it('casa o lote lido com o grupo da posse, ignorando maiúsculas e espaços', () => {
+    expect(acharGrupoPorCodigo(grupos(), ' lote-bob-0001 ')?.item_nome).toBe('Cabo');
+  });
+  it('um lote de peças acha o grupo do ITEM (os lotes UNI somam)', () => {
+    const g = acharGrupoPorCodigo(grupos(), 'LOTE-UNI-0002')!;
+    expect(g.key).toBe('i2');
+    expect(g.quantidade).toBe(50);
+  });
+  it('lote com nome livre também casa, pelo texto inteiro', () => {
+    expect(acharGrupoPorCodigo(grupos(), 'bobina da maria')?.item_nome).toBe('Drop');
+  });
+  it('lote que não é do técnico, vazio ou lixo → nada', () => {
+    expect(acharGrupoPorCodigo(grupos(), 'LOTE-BOB-0099')).toBeNull();
+    expect(acharGrupoPorCodigo(grupos(), '')).toBeNull();
+    expect(acharGrupoPorCodigo(grupos(), '   ')).toBeNull();
+  });
+});
+
+describe('devolverReserva (corrigir um lançamento ainda não enviado)', () => {
+  const posse = (): PosseItem[] => [{ ...p(11, 'LOTE-BOB-0001', 1, 249.5, 'metros'), reservado: 200 }, { ...p(12, 'LOTE-BOB-0002', 1, 80, 'metros'), reservado: 20 }, p(13, 'LOTE-BOB-0003', 1, 5, 'metros')];
+  it('o que o lançamento reservava volta ao saldo disponível', () => {
+    const r = devolverReserva(posse(), [{ lote_id: 11, quantidade: 120 }]);
+    expect(r[0]).toMatchObject({ quantidade: 369.5, reservado: 80 });
+    expect(r[1]).toMatchObject({ quantidade: 80, reservado: 20 }); // outro lote: igual
+  });
+  it('devolvendo toda a reserva, o campo "reservado" some', () => {
+    const r = devolverReserva(posse(), [{ lote_id: 12, quantidade: 20 }]);
+    expect(r[1]).toMatchObject({ quantidade: 100 });
+    expect(r[1].reservado).toBeUndefined();
+  });
+  it('nunca devolve mais do que estava reservado (lote sem reserva fica como está)', () => {
+    const r = devolverReserva(posse(), [{ lote_id: 13, quantidade: 50 }, { lote_id: 11, quantidade: 9999 }]);
+    expect(r[2]).toEqual(posse()[2]);
+    expect(r[0]).toMatchObject({ quantidade: 449.5 });
+  });
+  it('não altera o original', () => {
+    const original = posse();
+    devolverReserva(original, [{ lote_id: 11, quantidade: 120 }]);
+    expect(original).toEqual(posse());
   });
 });

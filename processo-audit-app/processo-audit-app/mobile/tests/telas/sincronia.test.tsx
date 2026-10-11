@@ -146,11 +146,11 @@ describe('Requer atenção', () => {
     await waitFor(() => expect(mockDados.comandos.descartar).toHaveBeenCalledWith(5));
   });
 
-  it('"Corrigir quantidades" leva à tela de materiais da OS com o lançamento a corrigir', () => {
+  it('"Corrigir quantidades" leva ao formulário de lançamento com o lançamento a corrigir', () => {
     mockDados = comOp([lancamentoRecusado]);
     render(<Atencao />);
     fireEvent.press(screen.getByTestId('acao-corrigir-5'));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/os/[id]/finalizar/materiais', params: { id: '102', corrigir: '5' } });
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/os/[id]/finalizar/lancamento', params: { id: '102', corrigir: '5' } });
   });
 
   it('"Voltar a editar" cancela a finalização na fila e abre a finalização da OS', async () => {

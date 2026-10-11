@@ -36,6 +36,14 @@
         {
           "locationWhenInUsePermission": "O aplicativo usa a sua localização para registrar o local onde o serviço foi feito."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O aplicativo usa a câmera para ler o QR code dos lotes e para fotografar o serviço.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "scheme": "ostecnicos"

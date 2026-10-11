@@ -47,6 +47,8 @@ export const criarApi = (c: ApiClient, deps: { criarFormulario?: CriarFormulario
   buscarEndereco: (texto: string) => c.request<SugestaoEndereco[]>('GET', `/geo/search?q=${encodeURIComponent(texto)}`, { timeoutMs: 30_000 }),
   geocodificar: (e: { street: string; numero: string; city: string; uf: string; cep: string; bairro: string }) =>
     c.request<PontoGeocodificado>('GET', `/geo/geocode?${new URLSearchParams(e).toString()}`, { timeoutMs: 30_000 }),
+  /** Consulta online de um lote lido pelo QR (o técnico só enxerga lotes da própria posse: 403 caso contrário). */
+  lotePorCodigo: (codigo: string) => c.request<{ id: number; codigo: string; item_nome: string; unidade: string; minha_posse?: number }>('GET', `/estoque/lotes/${encodeURIComponent(codigo)}`, { timeoutMs: 10_000 }),
   salvarRascunho: (id: number, rascunho: Record<string, unknown>) =>
     c.request<{ ok: boolean }>('PUT', `/os/${id}/rascunho`, { body: { rascunho } }),
 });
