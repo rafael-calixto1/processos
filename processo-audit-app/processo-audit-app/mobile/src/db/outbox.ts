@@ -37,6 +37,10 @@ export const obter = async (b: Banco, id: number): Promise<Operacao | null> => {
 export const listarEmFila = async (b: Banco, usuarioId: number): Promise<Operacao[]> =>
   (await b.all<Linha>("SELECT * FROM outbox WHERE usuario_id = ? AND (estado <> 'ok' OR no_retrato = 0) ORDER BY id", [usuarioId])).map(paraOperacao);
 
+/** Todas as operações do técnico ainda guardadas (inclusive as confirmadas recentes): a visão filtra o que importa para cada conta. */
+export const listarTodas = async (b: Banco, usuarioId: number): Promise<Operacao[]> =>
+  (await b.all<Linha>('SELECT * FROM outbox WHERE usuario_id = ? ORDER BY id', [usuarioId])).map(paraOperacao);
+
 export const listarDaOS = async (b: Banco, usuarioId: number, osId: number): Promise<Operacao[]> =>
   (await b.all<Linha>('SELECT * FROM outbox WHERE usuario_id = ? AND os_id = ? ORDER BY id', [usuarioId, osId])).map(paraOperacao);
 

@@ -48,11 +48,12 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
   const atualizar = useCallback((): Promise<void> => {
     if (emAndamento.current) return emAndamento.current;
+    if (usuarioId === null) return Promise.resolve();
     ultimaTentativa.current = Date.now();
     setEstado((e) => ({ ...e, sincronizando: true, erro: null }));
     const trabalho = (async () => {
       try {
-        await sincronizar(api, banco);
+        await sincronizar(api, banco, { usuarioId });
         await recarregar();
         setEstado((e) => ({ ...e, semConexao: false, erro: null }));
       } catch (e) {
@@ -64,7 +65,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     })();
     emAndamento.current = trabalho;
     return trabalho;
-  }, [api, banco, recarregar]);
+  }, [api, banco, recarregar, usuarioId]);
 
   // Entrou (ou trocou de técnico): confere o dono dos dados, mostra o que há guardado e atualiza.
   useEffect(() => {

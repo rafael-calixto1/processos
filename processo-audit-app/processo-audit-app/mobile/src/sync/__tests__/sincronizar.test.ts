@@ -10,7 +10,7 @@ describe('sincronizar', () => {
   it('baixa o retrato, troca o espelho e registra quando sincronizou', async () => {
     const { banco } = await criarBancoDeTeste();
     const bootstrap = jest.fn(async () => criarBootstrap());
-    await sincronizar({ bootstrap }, banco, () => new Date('2026-10-11T14:00:00Z'));
+    await sincronizar({ bootstrap, detalheOS: jest.fn(async () => ({ servicos: [], materiais: [], fotos: [] })) }, banco, { usuarioId: 7, agora: () => Date.parse('2026-10-11T14:00:00Z') });
     expect((await lerDados(banco))?.os).toHaveLength(3);
     expect(await lerMeta(banco, 'sincronizado_em')).toBe('2026-10-11T14:00:00.000Z');
   });
@@ -18,8 +18,9 @@ describe('sincronizar', () => {
   it('se o servidor falha ou não há rede, o espelho anterior fica intacto e o erro sobe', async () => {
     const { banco } = await criarBancoDeTeste();
     await salvarBootstrap(banco, criarBootstrap());
-    await expect(sincronizar({ bootstrap: async () => { throw new NetworkError(); } }, banco)).rejects.toBeInstanceOf(NetworkError);
-    await expect(sincronizar({ bootstrap: async () => { throw new ApiError(500, 'Erro interno do servidor'); } }, banco)).rejects.toThrow('Erro interno');
+    const detalheOS = jest.fn(async () => ({ servicos: [], materiais: [], fotos: [] }));
+    await expect(sincronizar({ bootstrap: async () => { throw new NetworkError(); }, detalheOS }, banco, { usuarioId: 7 })).rejects.toBeInstanceOf(NetworkError);
+    await expect(sincronizar({ bootstrap: async () => { throw new ApiError(500, 'Erro interno do servidor'); }, detalheOS }, banco, { usuarioId: 7 })).rejects.toThrow('Erro interno');
     const d = (await lerDados(banco))!;
     expect(d.geradoEm).toBe('2026-10-11T13:30:00.000Z');
     expect(d.os).toHaveLength(3);

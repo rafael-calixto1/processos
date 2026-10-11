@@ -50,7 +50,7 @@ quando('app × backend real', () => {
     await garantirDono(banco, usuario.id);
 
     // sincroniza e lê do SQLite: o que o app mostraria offline
-    await sincronizar(api, banco);
+    await sincronizar(api, banco, { usuarioId: usuario.id });
     const dados = (await lerDados(banco))!;
     expect(dados.tecnico.nome).toBe('João Técnico');
     expect(dados.os.length).toBeGreaterThan(0);
