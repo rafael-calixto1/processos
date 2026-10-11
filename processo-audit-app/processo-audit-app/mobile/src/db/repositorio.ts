@@ -1,6 +1,8 @@
 import type { Banco } from './banco';
 import type { Bootstrap, Dados, OS, PosseItem } from '@/domain/tipos';
 
+import type { Ficha } from '@/domain/ficha';
+
 export type { Dados } from '@/domain/tipos';
 
 const json = <T>(texto: string): T => JSON.parse(texto) as T;
@@ -40,6 +42,16 @@ export const lerDados = async (b: Banco): Promise<Dados | null> => {
     geradoEm, tecnico: cat.tecnico, os, posse, devolucoes: cat.devolucoes ?? [], motivos: cat.motivos ?? [], checklist: cat.checklist ?? [],
     sugestoesServicos: cat.sugestoes_servicos ?? [], tiposServico: cat.tipos_servico ?? [], tecnicos: cat.tecnicos ?? [], itens: cat.itens ?? [], regras: cat.regras,
   };
+};
+
+/** Última ficha de movimentações baixada (para consultar sem sinal). Fica na tabela de catálogos: sai junto com os dados locais na troca de técnico. */
+export const salvarFicha = (b: Banco, ficha: Ficha, baixadaEm: string) =>
+  b.run('INSERT INTO catalogo (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor', ['ficha', JSON.stringify({ baixadaEm, ficha })]);
+
+export const lerFicha = async (b: Banco): Promise<{ baixadaEm: string; ficha: Ficha } | null> => {
+  const linha = await b.first<{ valor: string }>("SELECT valor FROM catalogo WHERE chave = 'ficha'");
+  if (!linha) return null;
+  try { return json<{ baixadaEm: string; ficha: Ficha }>(linha.valor); } catch { return null; }
 };
 
 /** Atualiza uma OS guardada (ex.: depois de iniciar a execução), sem esperar o próximo retrato do servidor. */

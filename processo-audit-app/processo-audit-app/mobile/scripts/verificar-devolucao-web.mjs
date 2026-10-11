@@ -118,6 +118,29 @@ try {
   confere(await id('grupo-l1').isVisible(), 'após a negação o cabo volta a poder ser devolvido (400 m disponíveis)');
   confere((await id('grupo-l1').textContent()).includes('400 m'), '…com os 400 m disponíveis');
   await foto('devolver-depois-da-decisao');
+
+  console.log('Ficha de movimentações…');
+  const voltarUma = async () => { await page.locator('[aria-label="Voltar"]:visible').first().click(); };
+  await voltarUma(); await aguardar(texto('Minhas devoluções', { exact: true }));
+  await voltarUma(); await aguardar(id('botao-ficha'));
+  await id('botao-ficha').click();
+  await aguardar(texto('Em posse agora'));
+  await aguardar(texto('Devolução', { exact: true }));
+  confere(await texto('Retirada', { exact: true }).count() >= 1, 'a ficha mostra a retirada do estoque');
+  confere(await texto('Devolução', { exact: true }).count() >= 1, '…e a devolução aprovada');
+  await foto('ficha');
+  await id('filtro-devolucao').click();
+  confere(await texto('Retirada', { exact: true }).count() === 0, 'filtro "Devoluções" esconde as retiradas');
+  await foto('ficha-filtro-devolucoes');
+  await voltarUma(); await aguardar(id('botao-ficha'));
+  console.log('Sem conexão: a ficha guardada continua abrindo…');
+  await contexto.setOffline(true);
+  await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+  await id('botao-ficha').click();
+  await aguardar(texto(/Sem conexão: mostrando a ficha guardada/), 30000);
+  confere(await texto('Em posse agora').isVisible(), 'sem rede a ficha guardada no aparelho aparece com o aviso');
+  await foto('ficha-sem-conexao');
+  await contexto.setOffline(false);
   confere(errosDaPagina.length === 0, `nenhum erro de JavaScript na página ${errosDaPagina.join(' | ')}`);
 } catch (e) {
   console.error('ERRO:', e.message);

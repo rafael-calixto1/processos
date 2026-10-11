@@ -33,6 +33,7 @@ export default function MeuEstoque() {
             accessibilityLabel="Buscar item ou lote" autoCorrect={false} autoCapitalize="none" returnKeyType="search" clearButtonMode="while-editing" />
         </View>
         <Botao titulo={abertas > 0 ? `Minhas devoluções (${abertas} em andamento)` : 'Minhas devoluções'} variante="secundario" onPress={() => router.push('/devolucoes')} testID="botao-minhas-devolucoes" />
+        <Botao titulo="Ficha de movimentações" variante="secundario" onPress={() => router.push('/ficha')} testID="botao-ficha" />
         {dados ? <Faixa tom="info" icone="time-outline" texto="Saldo do último download, já descontado do que você lançou ou separou para devolução e ainda não foi confirmado. O servidor confere de novo ao receber." /> : null}
         {semConexao && dados ? <Faixa texto="Sem conexão: mostrando o saldo guardado no aparelho." icone="cloud-offline-outline" acao={{ rotulo: 'Tentar', onPress: () => void atualizar() }} /> : null}
       </View>

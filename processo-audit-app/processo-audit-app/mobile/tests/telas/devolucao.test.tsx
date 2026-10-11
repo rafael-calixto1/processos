@@ -179,6 +179,11 @@ describe('Meu estoque → devolução', () => {
     fireEvent.press(screen.getByText('Minhas devoluções (2 em andamento)'));
     expect(mockPush).toHaveBeenCalledWith('/devolucoes');
   });
+  it('abre a Ficha de movimentações', () => {
+    render(<MeuEstoque />);
+    fireEvent.press(screen.getByTestId('botao-ficha'));
+    expect(mockPush).toHaveBeenCalledWith('/ficha');
+  });
   it('mostra o saldo já descontado e o quanto está separado para devolução', () => {
     mockDados = estadoDados({ dados: dadosDe({ devolucoes: [dev(2, { quantidade: 49.5 })] }) });
     render(<MeuEstoque />);

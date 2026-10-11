@@ -57,6 +57,8 @@ export const criarApi = (c: ApiClient, deps: { criarFormulario?: CriarFormulario
   /** O técnico só SOLICITA; o estoque aprova ou nega. Um lote por chamada. */
   solicitarDevolucao: (corpo: { lote_id: number; quantidade: number; condicao: 'novo' | 'usado'; observacao?: string }, chave: string) =>
     c.request<RespostaDevolucao>('POST', '/estoque/devolucoes', { body: corpo, idempotencyKey: chave }),
+  /** Retiradas, baixas por OS e devoluções do técnico (histórico bruto, com estornos: quem mostra agrupa e esconde os estornos). */
+  minhaFicha: () => c.request<unknown>('GET', '/estoque/posse/minha/ficha', { timeoutMs: 30_000 }),
   salvarRascunho: (id: number, rascunho: Record<string, unknown>) =>
     c.request<{ ok: boolean }>('PUT', `/os/${id}/rascunho`, { body: { rascunho } }),
 });

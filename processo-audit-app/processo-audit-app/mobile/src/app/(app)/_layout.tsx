@@ -7,6 +7,7 @@ export default function AppLayout() {
       <Stack.Screen name="atencao" />
       <Stack.Screen name="devolver" />
       <Stack.Screen name="devolucoes" />
+      <Stack.Screen name="ficha" />
     </Stack>
   );
 }
