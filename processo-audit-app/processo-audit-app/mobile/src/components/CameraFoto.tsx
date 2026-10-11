@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
 import { Carregando } from '@/components/Carregando';
 import type { FotoBruta } from '@/estado/fotos';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props {
   /** Chamada a cada foto tirada; a câmera continua aberta para a próxima. Se falhar, o erro aparece aqui. */
@@ -19,6 +20,7 @@ interface Props {
  * está aberta e a foto se perde. Botão do disparo grande, para uso com luvas.
  */
 export function CameraFoto({ aoCapturar, aoConcluir, totalTiradas }: Props) {
+  const s = useEstilos(criarEstilos);
   const [permissao, pedir] = useCameraPermissions();
   const { top, bottom } = useSafeAreaInsets();
   const camera = useRef<CameraView>(null);
@@ -65,7 +67,7 @@ export function CameraFoto({ aoCapturar, aoConcluir, totalTiradas }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: '#000' },
   topo: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: espaco.lg, paddingBottom: espaco.md, backgroundColor: 'rgba(0,0,0,0.55)' },
   dica: { color: '#fff', fontSize: fonte.destaque, fontWeight: '700', textAlign: 'center' },

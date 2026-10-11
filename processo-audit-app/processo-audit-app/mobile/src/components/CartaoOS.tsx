@@ -2,15 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { enderecoLinha, PRIORIDADE_LABEL, redeLinha, slaInfo, STATUS_LABEL, isPendente, type EstadoSla } from '@/domain/os';
 import type { OSVisao } from '@/domain/visao';
-import { cores, espaco, fonte, raio, type Tom } from '@/theme';
+import { espaco, fonte, raio, type Tom, type Paleta } from '@/theme';
 import { IndicadorSync, textoSync } from './IndicadorSync';
 import { Selo } from './Selo';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const TOM_SLA: Record<EstadoSla, Tom> = { estourado: 'erro', em_risco: 'aviso', no_prazo: 'sucesso', sem_prazo: 'neutro' };
 const TOM_STATUS: Record<OSVisao['status'], Tom> = { aberta: 'info', em_andamento: 'marca', concluida: 'sucesso', cancelada: 'neutro' };
 
 /** Linha da lista "Minhas OS": número, cliente, prazo, prioridade e onde fica. Toda a área é um alvo de toque. */
 export function CartaoOS({ os, onPress, agora }: { os: OSVisao; onPress: () => void; agora?: number }) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const pendente = isPendente(os.status);
   const sla = slaInfo(os.prazo, agora);
   const local = enderecoLinha(os);
@@ -39,6 +42,8 @@ export function CartaoOS({ os, onPress, agora }: { os: OSVisao; onPress: () => v
 }
 
 function Linha({ icone, texto }: { icone: keyof typeof Ionicons.glyphMap; texto: string }) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   return (
     <View style={s.linha}>
       <Ionicons name={icone} size={16} color={cores.textoSuave} />
@@ -47,7 +52,7 @@ function Linha({ icone, texto }: { icone: keyof typeof Ionicons.glyphMap; texto:
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   cartao: { backgroundColor: cores.superficie, borderRadius: raio.lg, borderWidth: 1, borderColor: cores.borda, padding: espaco.lg, gap: espaco.sm },
   pressionado: { backgroundColor: cores.primariaClara },
   topo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: espaco.sm, flexWrap: 'wrap' },

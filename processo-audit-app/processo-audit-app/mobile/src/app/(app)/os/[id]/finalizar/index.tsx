@@ -13,7 +13,8 @@ import { ETAPAS, type ChaveEtapa } from '@/domain/etapas';
 import { resumoDaEtapa } from '@/domain/resumoEtapas';
 import { useDados } from '@/estado/DadosProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const ROTA: Record<ChaveEtapa, string> = {
   descricao: 'descricao', motivo: 'motivo', local: 'local', checklist: 'checklist', usados: 'materiais', retirados: 'retirados', fotos: 'fotos', participantes: 'participantes',
@@ -21,6 +22,8 @@ const ROTA: Record<ChaveEtapa, string> = {
 
 /** Hub da finalização: progresso, as 8 etapas na ordem do sistema e o botão Finalizar fixo (travado até estar tudo certo). */
 export default function HubFinalizacao() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { ops, comandos } = useDados();
@@ -138,7 +141,7 @@ export default function HubFinalizacao() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { padding: espaco.lg, gap: espaco.md, paddingBottom: espaco.xxl },
   trilho: { height: 14, borderRadius: raio.pilula, backgroundColor: cores.neutroClaro, overflow: 'hidden' },

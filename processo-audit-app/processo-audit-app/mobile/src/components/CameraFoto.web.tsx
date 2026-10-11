@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
 import { Faixa } from '@/components/Faixa';
 import type { FotoBruta } from '@/estado/fotos';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props { aoCapturar: (foto: FotoBruta) => Promise<void>; aoConcluir: () => void; totalTiradas: number }
 
@@ -21,6 +22,7 @@ const imagemDeTeste = async (n: number): Promise<FotoBruta> => {
 };
 
 export function CameraFoto({ aoCapturar, aoConcluir, totalTiradas }: Props) {
+  const s = useEstilos(criarEstilos);
   const { top } = useSafeAreaInsets();
   const [ocupada, setOcupada] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function CameraFoto({ aoCapturar, aoConcluir, totalTiradas }: Props) {
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo, paddingHorizontal: espaco.lg, gap: espaco.lg },
   titulo: { fontSize: fonte.grande, fontWeight: '800', color: cores.primariaEscura },
   contador: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },

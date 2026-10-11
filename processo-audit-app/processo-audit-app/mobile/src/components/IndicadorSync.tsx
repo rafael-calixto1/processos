@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import type { EstadoSync } from '@/domain/visao';
-import { espaco, fonte, tons, type Tom } from '@/theme';
+import { espaco, fonte, type Tom, type Paleta } from '@/theme';
+import { useEstilos, useTons } from '@/estado/tema';
 
 const VISUAL: Record<EstadoSync, { icone: keyof typeof Ionicons.glyphMap; tom: Tom }> = {
   sincronizado: { icone: 'checkmark-circle-outline', tom: 'sucesso' },
@@ -14,6 +15,8 @@ export const textoSync = (estado: EstadoSync, pendencias = 0): string =>
 
 /** Ícone + texto do estado de envio de uma OS (nunca só cor: o texto sempre acompanha). */
 export function IndicadorSync({ estado, pendencias = 0 }: { estado: EstadoSync; pendencias?: number }) {
+  const s = useEstilos(criarEstilos);
+  const tons = useTons();
   const v = VISUAL[estado];
   const cor = tons[v.tom].texto;
   return (
@@ -23,7 +26,7 @@ export function IndicadorSync({ estado, pendencias = 0 }: { estado: EstadoSync; 
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   caixa: { flexDirection: 'row', alignItems: 'center', gap: espaco.xs },
   texto: { fontSize: fonte.pequena, fontWeight: '700' },
 });

@@ -14,10 +14,13 @@ import { useApp } from '@/estado/AppProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
 import { capturarPosicao } from '@/estado/localizacao';
 import { useOnline } from '@/estado/rede';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 /** Onde o serviço foi feito: GPS (com a precisão à vista), coordenadas do poste (funciona sem sinal) ou busca de endereço (precisa de internet). */
 export default function Local() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const f = useFinalizacao();
   const { api, servidor } = useApp();
   const online = useOnline();
@@ -138,7 +141,7 @@ export default function Local() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   coordenadas: { fontSize: fonte.grande, fontWeight: '800', color: cores.primariaEscura },
   origem: { fontSize: fonte.corpo + 1, fontWeight: '700', color: cores.texto },
   endereco: { fontSize: fonte.corpo, color: cores.textoSuave, lineHeight: 22 },

@@ -1,11 +1,14 @@
 import { forwardRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 interface Props extends TextInputProps { rotulo: string; erro?: string | null; senha?: boolean }
 
 /** Campo de texto com rótulo sempre visível, mensagem de erro e (para senha) botão de mostrar/ocultar. */
 export const Campo = forwardRef<TextInput, Props>(function Campo({ rotulo, erro, senha, style, ...resto }, ref) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const [oculta, setOculta] = useState(true);
   return (
     <View style={s.grupo}>
@@ -30,7 +33,7 @@ export const Campo = forwardRef<TextInput, Props>(function Campo({ rotulo, erro,
   );
 });
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   grupo: { gap: espaco.xs },
   rotulo: { fontSize: fonte.pequena + 1, fontWeight: '700', color: cores.textoSuave },
   caixa: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderWidth: 2, borderColor: cores.borda, borderRadius: raio.md, backgroundColor: cores.superficie, paddingHorizontal: espaco.md },

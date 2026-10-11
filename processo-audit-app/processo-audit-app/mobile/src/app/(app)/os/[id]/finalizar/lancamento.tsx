@@ -17,12 +17,15 @@ import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
 import { useOnline } from '@/estado/rede';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const LIMITE_SUGESTOES = 5;
 
 /** Novo lançamento (ou correção de um que o servidor recusou): serviço, trecho e material da posse, com o limite sempre à vista. */
 export default function Lancamento() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const { id, corrigir } = useLocalSearchParams<{ id: string; corrigir?: string }>();
   const router = useRouter();
   const f = useFinalizacao();
@@ -170,7 +173,7 @@ export default function Lancamento() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   campo: { minHeight: Math.max(ALVO_MINIMO, 56), borderWidth: 2, borderColor: cores.borda, borderRadius: raio.md, paddingHorizontal: espaco.md, fontSize: fonte.corpo + 1, color: cores.texto, backgroundColor: cores.superficie },
   campoQtd: { flex: 1, fontSize: fonte.destaque + 2 },
   campoErro: { borderColor: cores.erro },

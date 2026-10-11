@@ -13,13 +13,15 @@ import { agruparFicha, filtrarGruposFicha, FILTROS_FICHA, posseDetalhada, resumo
 import { fmtQtd } from '@/domain/quantidade';
 import { fmtDataHora, rotuloAtualizacao } from '@/domain/tempo';
 import { useFicha } from '@/estado/useFicha';
-import { ALVO_MINIMO, cores, espaco, fonte, raio, type Tom } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Tom, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const PAGINA = 12;
 const TOM: Record<string, Tom> = { retirada: 'info', baixa_os: 'aviso', devolucao: 'sucesso' };
 
 /** Ficha de movimentações: o que o técnico recebeu, gastou em OS e devolveu (estornos não aparecem), como na tela do escritório. */
 export default function Ficha() {
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { ficha, baixadaEm, carregando, atualizando, semConexao, erro, atualizar } = useFicha();
   const [filtro, setFiltro] = useState<FiltroFicha>('todos');
@@ -72,6 +74,8 @@ export default function Ficha() {
 }
 
 function LinhaPosse({ p, aberto, alternar }: { p: PosseDetalhada; aberto: boolean; alternar: () => void }) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   return (
     <View style={s.posse}>
       <Pressable onPress={alternar} testID={`posse-${p.lote_id}`} accessibilityRole="button" accessibilityState={{ expanded: aberto }}
@@ -94,6 +98,8 @@ function LinhaPosse({ p, aberto, alternar }: { p: PosseDetalhada; aberto: boolea
 }
 
 function LinhaGrupo({ g, aberto, alternar }: { g: GrupoFicha; aberto: boolean; alternar: () => void }) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   return (
     <View style={s.grupo}>
       <Pressable onPress={alternar} testID={`grupo-${g.key}`} accessibilityRole="button" accessibilityState={{ expanded: aberto }}
@@ -121,14 +127,14 @@ function LinhaGrupo({ g, aberto, alternar }: { g: GrupoFicha; aberto: boolean; a
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   lista: { padding: espaco.lg, flexGrow: 1 },
   titulo: { fontSize: fonte.titulo, fontWeight: '800', color: cores.primariaEscura },
   nota: { fontSize: fonte.corpo, color: cores.textoSuave },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.sm, marginBottom: espaco.sm },
   chip: { minHeight: ALVO_MINIMO, justifyContent: 'center', paddingHorizontal: espaco.lg, borderRadius: raio.pilula, borderWidth: 2, borderColor: cores.borda, backgroundColor: cores.superficie },
-  chipAtivo: { backgroundColor: cores.primariaEscura, borderColor: cores.primariaEscura },
+  chipAtivo: { backgroundColor: cores.destaqueFundo, borderColor: cores.destaqueFundo },
   chipTexto: { fontSize: fonte.corpo, fontWeight: '700', color: cores.textoSuave },
   chipTextoAtivo: { color: '#fff' },
   posse: { gap: espaco.sm, borderTopWidth: 1, borderTopColor: cores.borda, paddingTop: espaco.sm },

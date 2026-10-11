@@ -3,9 +3,11 @@ import { Tabs } from 'expo-router/js-tabs';
 import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDados } from '@/estado/DadosProvider';
-import { cores, fonte } from '@/theme';
+import { fonte } from '@/theme';
+import { useCores } from '@/estado/tema';
 
 export default function AbasLayout() {
+  const cores = useCores();
   const { bottom } = useSafeAreaInsets();
   const { contagens } = useDados();
   const icone = (nome: keyof typeof Ionicons.glyphMap) => ({ color, size }: { color: ColorValue; size: number }) => <Ionicons name={nome} size={size + 2} color={color} />;
@@ -13,6 +15,7 @@ export default function AbasLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: cores.fundo },
         tabBarActiveTintColor: cores.primariaEscura,
         tabBarInactiveTintColor: cores.textoSuave,
         tabBarLabelStyle: { fontSize: fonte.pequena, fontWeight: '700' },

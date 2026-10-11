@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Botao } from '@/components/Botao';
 import { Cabecalho } from '@/components/Cabecalho';
 import { Cartao, Dado } from '@/components/Cartao';
+import { Segmento } from '@/components/Segmento';
 import { Faixa } from '@/components/Faixa';
 import { confirmar } from '@/components/confirmar';
 import { escolher } from '@/components/escolher';
@@ -13,14 +14,23 @@ import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
 import { useEstadoSessao } from '@/estado/useSessao';
 import { descartarTudoLocal, resumoDoTrabalho } from '@/sync/sincronizar';
-import { cores, espaco } from '@/theme';
+import { espaco, type Paleta } from '@/theme';
+import { aplicarPreferencia, PREFERENCIAS, useEstilos, type PreferenciaTema } from '@/estado/tema';
 
 export default function Conta() {
-  const { sessao, servidor, banco, arquivos } = useApp();
+  const s = useEstilos(criarEstilos);
+  const { sessao, servidor, banco, arquivos, tema } = useApp();
+  const [preferencia, setPreferencia] = useState<PreferenciaTema>(tema.atual());
   const estado = useEstadoSessao();
   const { dados, sincronizando, sincronizadoEm, erro, semConexao, atualizar, contagens, pausadoPorSessao } = useDados();
   const [saindo, setSaindo] = useState(false);
   const usuario = estado.status === 'logado' ? estado.usuario : null;
+
+  const escolherTema = (p: PreferenciaTema) => {
+    setPreferencia(p);
+    aplicarPreferencia(p);
+    void tema.definir(p);
+  };
 
   const sair = async () => {
     if (!usuario) return;
@@ -70,6 +80,9 @@ export default function Conta() {
           <Dado rotulo="Baixado neste aparelho em" valor={fmtDataHora(sincronizadoEm)} />
           <Botao titulo="Sincronizar agora" variante="secundario" onPress={() => void atualizar()} carregando={sincronizando} testID="botao-sincronizar" />
         </Cartao>
+        <Cartao titulo="Aparência">
+          <Segmento rotulo="Tema do aplicativo" opcoes={PREFERENCIAS} valor={preferencia} onChange={escolherTema} testID="tema" />
+        </Cartao>
         <Cartao titulo="Aplicativo">
           <Dado rotulo="Servidor" valor={servidor.url()} />
           <Dado rotulo="Versão" valor={versaoApp()} />
@@ -80,7 +93,7 @@ export default function Conta() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { padding: espaco.lg, gap: espaco.lg },
 });

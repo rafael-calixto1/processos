@@ -13,11 +13,13 @@ import { Selo } from '@/components/Selo';
 import { enderecoLinha, isPendente, PRIORIDADE_LABEL, redeLinha, slaInfo, STATUS_LABEL, urlMapa } from '@/domain/os';
 import { fmtData, fmtDataHora, fmtHora } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
-import { cores, espaco, fonte, type Tom } from '@/theme';
+import { espaco, fonte, type Tom, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 const TOM_SLA = { estourado: 'erro', em_risco: 'aviso', no_prazo: 'sucesso', sem_prazo: 'neutro' } as const satisfies Record<string, Tom>;
 
 export default function DetalheOS() {
+  const s = useEstilos(criarEstilos);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { dados, carregado, comandos } = useDados();
@@ -106,7 +108,7 @@ export default function DetalheOS() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { padding: espaco.lg, gap: espaco.lg },
   selos: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.sm },

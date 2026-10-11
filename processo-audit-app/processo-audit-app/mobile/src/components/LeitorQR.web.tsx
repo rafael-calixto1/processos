@@ -3,12 +3,15 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
 import { Faixa } from '@/components/Faixa';
-import { cores, espaco, fonte, raio } from '@/theme';
+import { espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 interface Props { aoLer: (texto: string) => void; aoFechar: () => void }
 
 /** SIMULAÇÃO do leitor, só para a pré-visualização no navegador (sem câmera): digita-se o que o QR da etiqueta traria — o código do lote. */
 export function LeitorQR({ aoLer, aoFechar }: Props) {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const { top } = useSafeAreaInsets();
   const [texto, setTexto] = useState('');
   return (
@@ -21,7 +24,7 @@ export function LeitorQR({ aoLer, aoFechar }: Props) {
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo, paddingHorizontal: espaco.lg, gap: espaco.lg },
   titulo: { fontSize: fonte.grande, fontWeight: '800', color: cores.primariaEscura },
   campo: { minHeight: 56, borderWidth: 2, borderColor: cores.borda, borderRadius: raio.md, paddingHorizontal: espaco.md, fontSize: fonte.destaque, color: cores.texto, backgroundColor: cores.superficie },

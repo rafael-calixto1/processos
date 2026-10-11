@@ -16,12 +16,15 @@ import { acharGrupoPorCodigo, agrupar, extrairCodigoLote, validarQuantidadeGrupo
 import { fmtQtd } from '@/domain/quantidade';
 import type { CondicaoMaterial } from '@/domain/tipos';
 import { useDados } from '@/estado/DadosProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const CONDICOES = [{ valor: 'novo', rotulo: 'Novo' }, { valor: 'usado', rotulo: 'Usado' }] as const;
 
 /** Devolver material ao estoque: o técnico só SOLICITA; o saldo muda quando o estoque aprova. Funciona sem sinal (vai para a fila). */
 export default function Devolver() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { dados, carregado, comandos } = useDados();
   const grupos = useMemo(() => agrupar(dados?.posse ?? []), [dados]);
@@ -131,7 +134,7 @@ export default function Devolver() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   corpo: { flex: 1 },
   conteudo: { padding: espaco.lg, gap: espaco.lg, paddingBottom: espaco.xxl },

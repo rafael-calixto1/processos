@@ -3,9 +3,11 @@ import { EstadoVazio } from '@/components/EstadoVazio';
 import { LinhaOpcao } from '@/components/LinhaOpcao';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte } from '@/theme';
+import { useCores } from '@/estado/tema';
 
 export default function Participantes() {
+  const cores = useCores();
   const f = useFinalizacao();
   const equipe = f.dados?.tecnicos ?? [];
   const max = f.dados?.regras.participantes_max ?? 20;

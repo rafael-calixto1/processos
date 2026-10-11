@@ -10,13 +10,16 @@ import type { Retirado } from '@/domain/etapas';
 import { parseQuantidade } from '@/domain/quantidade';
 import type { Unidade } from '@/domain/tipos';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 const novaChave = () => `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const ROTULO_UNIDADE: Record<Unidade, string> = { metros: 'm', pecas: 'un' };
 
 /** Material retirado da rede: só informativo (o saldo do estoque não muda), mas a quantidade, a unidade e a condição são obrigatórias. */
 export default function Retirados() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const f = useFinalizacao();
   const r = f.rascunho;
   const [adicionando, setAdicionando] = useState(false);
@@ -96,7 +99,7 @@ export default function Retirados() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   pergunta: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },
   nota: { fontSize: fonte.pequena + 1, color: cores.textoSuave, lineHeight: 20 },
   vazio: { fontSize: fonte.corpo, color: cores.textoSuave, textAlign: 'center' },

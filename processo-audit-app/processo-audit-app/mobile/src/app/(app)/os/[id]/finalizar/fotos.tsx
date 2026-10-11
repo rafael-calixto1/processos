@@ -12,12 +12,15 @@ import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
 import { escolherDaGaleria, prepararFoto, recuperarGaleriaPendente, type FotoBruta } from '@/estado/fotos';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
-const COR: Record<SituacaoFoto, string> = { aguardando: cores.aviso, enviando: cores.aviso, enviada: cores.sucesso, erro: cores.erro };
+const corDe = (cores: Paleta): Record<SituacaoFoto, string> => ({ aguardando: cores.aviso, enviando: cores.aviso, enviada: cores.sucesso, erro: cores.erro });
 
 /** Fotos do serviço: câmera do próprio app e galeria, comprimidas no aparelho e enviadas em segundo plano (inclusive depois, sem sinal). */
 export default function Fotos() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const f = useFinalizacao();
   const { comandos, ops } = useDados();
   const { arquivos } = useApp();
@@ -82,7 +85,7 @@ export default function Fotos() {
           return (
             <View key={foto.client_uuid} style={s.item} testID={`foto-${foto.client_uuid}`}>
               {foto.arquivo ? <Image source={{ uri: foto.arquivo }} style={s.imagem} accessibilityLabel="Foto do serviço" /> : <View style={[s.imagem, s.semArquivo]}><Ionicons name="checkmark-done" size={36} color={cores.sucesso} /></View>}
-              <Text style={[s.situacao, { color: COR[sit] }]} testID={`situacao-${foto.client_uuid}`}>{ROTULO_SITUACAO[sit]}</Text>
+              <Text style={[s.situacao, { color: corDe(cores)[sit] }]} testID={`situacao-${foto.client_uuid}`}>{ROTULO_SITUACAO[sit]}</Text>
               {f.editavel ? (
                 <Pressable onPress={() => void remover(foto.client_uuid)} accessibilityRole="button" accessibilityLabel="Remover foto" style={s.remover} testID={`remover-${foto.client_uuid}`}>
                   <Ionicons name="trash-outline" size={24} color={cores.erro} />
@@ -97,7 +100,7 @@ export default function Fotos() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   contador: { fontSize: fonte.destaque, fontWeight: '800', color: cores.primariaEscura },
   vazio: { alignItems: 'center', gap: espaco.sm, padding: espaco.xl, borderRadius: raio.lg, backgroundColor: cores.superficie, borderWidth: 1, borderColor: cores.borda },
   vazioTitulo: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },

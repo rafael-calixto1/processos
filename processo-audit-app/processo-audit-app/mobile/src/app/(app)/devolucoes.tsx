@@ -15,7 +15,8 @@ import { fmtDataHora } from '@/domain/tempo';
 import { devolucoesDoTecnico, type DevolucaoVisao, type EstadoDevolucao } from '@/domain/visao';
 import { useDados } from '@/estado/DadosProvider';
 import type { Tom } from '@/theme';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 const SELO: Record<EstadoDevolucao, { texto: string; tom: Tom; icone: 'time-outline' | 'cloud-upload-outline' | 'alert-circle-outline' | 'hourglass-outline' | 'checkmark-circle-outline' | 'close-circle-outline' }> = {
   na_fila: { texto: 'Na fila para enviar', tom: 'neutro', icone: 'time-outline' },
@@ -28,6 +29,7 @@ const SELO: Record<EstadoDevolucao, { texto: string; tom: Tom; icone: 'time-outl
 
 /** Minhas devoluções: o que está no aparelho, o que o estoque ainda vai decidir e o que já foi aprovado ou negado (com o motivo). */
 export default function Devolucoes() {
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { dados, ops, carregado, comandos, atualizar, sincronizando, semConexao } = useDados();
   const [erro, setErro] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function Devolucoes() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   lista: { padding: espaco.lg, flexGrow: 1 },
   topo: { flexDirection: 'row', alignItems: 'center', gap: espaco.md },

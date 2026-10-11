@@ -4,12 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
 import { Carregando } from '@/components/Carregando';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props { aoLer: (texto: string) => void; aoFechar: () => void }
 
 /** Leitor de QR code do lote (câmera traseira). Lê UMA vez e avisa; sem permissão, explica e deixa digitar/escolher na lista. */
 export function LeitorQR({ aoLer, aoFechar }: Props) {
+  const s = useEstilos(criarEstilos);
   const [permissao, pedir] = useCameraPermissions();
   const { top, bottom } = useSafeAreaInsets();
   const jaLeu = useRef(false);
@@ -44,7 +46,7 @@ export function LeitorQR({ aoLer, aoFechar }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: '#000' },
   topo: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: espaco.lg, paddingBottom: espaco.md, backgroundColor: 'rgba(0,0,0,0.55)' },
   dica: { color: '#fff', fontSize: fonte.destaque, fontWeight: '700', textAlign: 'center' },

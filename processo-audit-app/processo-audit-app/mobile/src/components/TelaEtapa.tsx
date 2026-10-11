@@ -7,7 +7,8 @@ import { Cabecalho } from '@/components/Cabecalho';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { Faixa } from '@/components/Faixa';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { cores, espaco } from '@/theme';
+import { espaco, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props {
   titulo: string;
@@ -22,6 +23,7 @@ interface Props {
  * estados de carregando, OS indisponível e "finalização já na fila" (somente leitura) resolvidos num lugar só.
  */
 export function TelaEtapa({ titulo, concluida, acao, children }: Props) {
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const f = useFinalizacao();
   const voltar = async () => {
@@ -53,7 +55,7 @@ export function TelaEtapa({ titulo, concluida, acao, children }: Props) {
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   corpo: { flex: 1 },
   conteudo: { padding: espaco.lg, gap: espaco.lg, paddingBottom: espaco.xxl },

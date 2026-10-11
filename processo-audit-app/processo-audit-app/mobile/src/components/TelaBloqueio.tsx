@@ -5,7 +5,8 @@ import { mensagemDeErro } from '@/api/erros';
 import { Botao } from '@/components/Botao';
 import { Faixa } from '@/components/Faixa';
 import { confirmar } from '@/components/confirmar';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props {
   donoNome: string | null;
@@ -19,6 +20,7 @@ interface Props {
  * entre voltar para a conta dona dos dados (para enviá-los) ou descartá-los, depois de uma confirmação explícita.
  */
 export function TelaBloqueio({ donoNome, pendencias, onSair, onDescartar }: Props) {
+  const s = useEstilos(criarEstilos);
   const { top, bottom } = useSafeAreaInsets();
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function TelaBloqueio({ donoNome, pendencias, onSair, onDescartar }: Prop
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { paddingHorizontal: espaco.lg, gap: espaco.lg },
   titulo: { fontSize: fonte.grande, fontWeight: '800', color: cores.primariaEscura },

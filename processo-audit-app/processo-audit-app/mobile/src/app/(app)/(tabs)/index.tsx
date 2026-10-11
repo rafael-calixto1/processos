@@ -9,11 +9,14 @@ import { Faixa } from '@/components/Faixa';
 import { isPendente, ordenarPorPrazo } from '@/domain/os';
 import { rotuloAtualizacao } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 type Filtro = 'pendentes' | 'encerradas';
 
 export default function MinhasOS() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { dados, carregado, sincronizando, semConexao, erro, atualizar, contagens, pausadoPorSessao, sincronizadoEm } = useDados();
   const [filtro, setFiltro] = useState<Filtro>('pendentes');
@@ -67,6 +70,7 @@ export default function MinhasOS() {
 }
 
 function Aba({ rotulo, ativa, onPress }: { rotulo: string; ativa: boolean; onPress: () => void }) {
+  const s = useEstilos(criarEstilos);
   return (
     <Pressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: ativa }} accessibilityLabel={rotulo} style={[s.aba, ativa && s.abaAtiva]}>
       <Text style={[s.abaTexto, ativa && s.abaTextoAtivo]}>{rotulo}</Text>
@@ -74,11 +78,11 @@ function Aba({ rotulo, ativa, onPress }: { rotulo: string; ativa: boolean; onPre
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   abas: { flexDirection: 'row', gap: espaco.sm, padding: espaco.lg, paddingBottom: espaco.sm },
   aba: { flex: 1, minHeight: ALVO_MINIMO, alignItems: 'center', justifyContent: 'center', borderRadius: raio.pilula, borderWidth: 2, borderColor: cores.borda, backgroundColor: cores.superficie },
-  abaAtiva: { backgroundColor: cores.primariaEscura, borderColor: cores.primariaEscura },
+  abaAtiva: { backgroundColor: cores.destaqueFundo, borderColor: cores.destaqueFundo },
   abaTexto: { fontSize: fonte.corpo, fontWeight: '700', color: cores.textoSuave },
   abaTextoAtivo: { color: '#fff' },
   avisos: { paddingHorizontal: espaco.lg, gap: espaco.sm },

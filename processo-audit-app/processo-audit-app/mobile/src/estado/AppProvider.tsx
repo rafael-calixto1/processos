@@ -8,13 +8,15 @@ import { GerenciadorSessao } from '@/auth/gerenciadorSessao';
 import { Carregando } from '@/components/Carregando';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { ConfigServidor } from '@/config/servidor';
+import { ConfigTema } from '@/config/tema';
+import { aplicarPreferencia } from './tema';
 import type { Banco } from '@/db/banco';
 import { abrirBanco } from '@/db/expoBanco';
 import type { PortaArquivos } from '@/sync/outbox';
 import { portaArquivos } from './arquivos';
 import { descricaoDispositivo } from './dispositivo';
 
-export interface Servicos { sessao: GerenciadorSessao; api: Api; banco: Banco; servidor: ConfigServidor; arquivos: PortaArquivos }
+export interface Servicos { sessao: GerenciadorSessao; api: Api; banco: Banco; servidor: ConfigServidor; tema: ConfigTema; arquivos: PortaArquivos }
 const Contexto = createContext<Servicos | null>(null);
 
 export const useApp = (): Servicos => {
@@ -26,6 +28,8 @@ export const useApp = (): Servicos => {
 const montar = async (): Promise<Servicos> => {
   const servidor = new ConfigServidor(armazenamentoSeguro, process.env.EXPO_PUBLIC_API_URL);
   await servidor.carregar();
+  const tema = new ConfigTema(armazenamentoSeguro);
+  aplicarPreferencia(await tema.carregar()); // antes da primeira tela: sem piscar do claro para o escuro
   const ref: { sessao?: GerenciadorSessao } = {};
   const cliente = new ApiClient({
     baseUrl: () => {
@@ -39,7 +43,7 @@ const montar = async (): Promise<Servicos> => {
   const sessao = new GerenciadorSessao({ armazenamento: armazenamentoSeguro, api: () => api, dispositivo: descricaoDispositivo });
   ref.sessao = sessao;
   const [banco] = await Promise.all([abrirBanco(), sessao.restaurar()]);
-  return { sessao, api, banco, servidor, arquivos: portaArquivos };
+  return { sessao, api, banco, servidor, tema, arquivos: portaArquivos };
 };
 
 /** Monta uma vez o servidor configurado, a sessão (restaurada do cofre) e o banco local; até lá mostra "Carregando". */

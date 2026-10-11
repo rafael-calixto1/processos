@@ -8,7 +8,8 @@ import { Campo } from '@/components/Campo';
 import { Faixa } from '@/components/Faixa';
 import { useApp } from '@/estado/AppProvider';
 import { useEstadoSessao } from '@/estado/useSessao';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 const textoDoErro = (e: unknown): string => {
   if (e instanceof ApiError && e.status === 429) {
@@ -20,6 +21,7 @@ const textoDoErro = (e: unknown): string => {
 };
 
 export default function Login() {
+  const s = useEstilos(criarEstilos);
   const { sessao, servidor } = useApp();
   const estado = useEstadoSessao();
   const router = useRouter();
@@ -86,7 +88,7 @@ export default function Login() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { flexGrow: 1, justifyContent: 'center', padding: espaco.xl, gap: espaco.lg },
   marca: { gap: espaco.xs, marginBottom: espaco.md },

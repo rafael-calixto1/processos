@@ -8,7 +8,8 @@ import { Faixa } from '@/components/Faixa';
 import { MapaTrecho, type MensagemDoMapa } from '@/components/MapaTrecho';
 import { adicionarPonto, fmtMetros, metrosEmLinhaReta, montarRota, moverPonto, MAX_PONTOS, novoPonto, removerUltimo, rotuloDoPonto, type PontoGeo, type RotaDoServidor, type RotaTrecho } from '@/domain/trecho';
 import { useApp } from '@/estado/AppProvider';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props {
   centro: PontoGeo;
@@ -24,6 +25,7 @@ interface Props {
  * o trecho fica em linha reta entre os pontos. Ponto que não está sobre uma via é recusado com a mensagem do servidor.
  */
 export function EditorTrecho({ centro, inicial, origem, aoConfirmar, aoFechar }: Props) {
+  const s = useEstilos(criarEstilos);
   const { api } = useApp();
   const { bottom } = useSafeAreaInsets();
   const [pontos, setPontos] = useState<PontoGeo[]>(inicial?.pontos ?? []);
@@ -96,7 +98,7 @@ export function EditorTrecho({ centro, inicial, origem, aoConfirmar, aoFechar }:
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   avisos: { gap: espaco.xs, padding: espaco.sm },
   mapa: { flex: 1, backgroundColor: cores.neutroClaro },

@@ -16,18 +16,21 @@ import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
 import { useOnline } from '@/estado/rede';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { cores, espaco, fonte, raio } from '@/theme';
+import { espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
-const ESTADO: Record<LancamentoVisao['estado'], { texto: string; cor: string }> = {
+const estadoDe = (cores: Paleta): Record<LancamentoVisao['estado'], { texto: string; cor: string }> => ({
   enviado: { texto: 'Enviado ao servidor', cor: cores.sucesso },
   ok: { texto: 'Enviado ao servidor', cor: cores.sucesso },
   pendente: { texto: 'Aguardando envio', cor: cores.aviso },
   enviando: { texto: 'Enviando…', cor: cores.aviso },
   atencao: { texto: 'O servidor não aceitou', cor: cores.erro },
-};
+});
 
 /** Materiais utilizados = lançamentos (serviço + trecho + material da posse) ou "não usei material". */
 export default function Materiais() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const f = useFinalizacao();
@@ -71,7 +74,7 @@ export default function Materiais() {
       ) : null}
 
       {f.lancamentos.map((l) => {
-        const v = ESTADO[l.estado];
+        const v = estadoDe(cores)[l.estado];
         const editavel = f.editavel && l.origem === 'local' && (l.estado === 'pendente' || l.estado === 'atencao');
         return (
           <Cartao key={l.chave}>
@@ -100,7 +103,7 @@ export default function Materiais() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   pergunta: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },
   nota: { fontSize: fonte.pequena + 1, color: cores.textoSuave, lineHeight: 20 },
   vazio: { padding: espaco.lg, borderRadius: raio.lg, backgroundColor: cores.superficie, borderWidth: 1, borderColor: cores.borda, gap: espaco.xs },

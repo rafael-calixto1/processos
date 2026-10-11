@@ -5,9 +5,12 @@ import { Segmento } from '@/components/Segmento';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { erroChecklist } from '@/domain/resumoEtapas';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 export default function Checklist() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const f = useFinalizacao();
   const itens = f.dados?.checklist ?? [];
   const definir = (codigo: string, valor: boolean | string) => f.alterar((r) => ({ ...r, checklist: { ...r.checklist, [codigo]: valor } }));
@@ -45,7 +48,7 @@ export default function Checklist() {
     </TelaEtapa>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   item: { gap: espaco.sm, paddingVertical: espaco.sm },
   rotulo: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },
   obrig: { fontSize: fonte.pequena, color: cores.erro, fontWeight: '800' },

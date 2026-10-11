@@ -13,9 +13,12 @@ import { fmtQtd } from '@/domain/quantidade';
 import { rotuloAtualizacao } from '@/domain/tempo';
 import { devolucoesDoTecnico } from '@/domain/visao';
 import { useDados } from '@/estado/DadosProvider';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 export default function MeuEstoque() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { dados, ops, carregado, semConexao, atualizar } = useDados();
   const [busca, setBusca] = useState('');
@@ -66,7 +69,7 @@ export default function MeuEstoque() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   topo: { padding: espaco.lg, gap: espaco.sm },
   busca: { flexDirection: 'row', alignItems: 'center', gap: espaco.sm, minHeight: 56, borderWidth: 2, borderColor: cores.borda, borderRadius: raio.md, backgroundColor: cores.superficie, paddingHorizontal: espaco.md },

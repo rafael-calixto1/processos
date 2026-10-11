@@ -2,9 +2,12 @@ import { StyleSheet, Text, TextInput } from 'react-native';
 import { Cartao } from '@/components/Cartao';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
-import { cores, espaco, fonte, raio } from '@/theme';
+import { espaco, fonte, raio, type Paleta } from '@/theme';
+import { useCores, useEstilos } from '@/estado/tema';
 
 export default function Descricao() {
+  const cores = useCores();
+  const s = useEstilos(criarEstilos);
   const f = useFinalizacao();
   const min = f.dados?.regras.descricao_min_caracteres ?? 11;
   const max = f.dados?.regras.descricao_max_caracteres ?? 5000;
@@ -26,7 +29,7 @@ export default function Descricao() {
     </TelaEtapa>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   rotulo: { fontSize: fonte.destaque, fontWeight: '700', color: cores.texto },
   campo: { minHeight: 200, borderWidth: 2, borderColor: cores.borda, borderRadius: raio.md, padding: espaco.md, fontSize: fonte.destaque, color: cores.texto, backgroundColor: cores.superficie },
   contador: { fontSize: fonte.corpo, fontWeight: '700' },

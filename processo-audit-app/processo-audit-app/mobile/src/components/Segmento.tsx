@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
+import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props<T extends string> {
   rotulo: string; // para leitor de tela
@@ -12,6 +13,7 @@ interface Props<T extends string> {
 
 /** Escolha entre poucas opções (Sim/Não, Novo/Usado): botões grandes lado a lado, o escolhido bem destacado. */
 export function Segmento<T extends string>({ rotulo, opcoes, valor, onChange, desabilitado, testID }: Props<T>) {
+  const s = useEstilos(criarEstilos);
   return (
     <View style={s.grupo} accessibilityRole="radiogroup" accessibilityLabel={rotulo} testID={testID}>
       {opcoes.map((o) => {
@@ -26,10 +28,10 @@ export function Segmento<T extends string>({ rotulo, opcoes, valor, onChange, de
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   grupo: { flexDirection: 'row', gap: espaco.sm },
   botao: { flex: 1, minHeight: Math.max(ALVO_MINIMO, 56), alignItems: 'center', justifyContent: 'center', borderRadius: raio.md, borderWidth: 2, borderColor: cores.borda, backgroundColor: cores.superficie, paddingHorizontal: espaco.md },
-  ativo: { backgroundColor: cores.primariaEscura, borderColor: cores.primariaEscura },
+  ativo: { backgroundColor: cores.destaqueFundo, borderColor: cores.destaqueFundo },
   desabilitado: { opacity: 0.5 },
   texto: { fontSize: fonte.destaque, fontWeight: '700', color: cores.textoSuave },
   textoAtivo: { color: '#fff' },

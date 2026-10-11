@@ -1,11 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { cores, espaco, fonte, raio } from '@/theme';
+import { espaco, fonte, raio, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 interface Props { html: string; online: boolean; origem?: string; altura?: number; testID?: string; rotulo?: string }
 
 /** Mostra uma página de mapa (HTML com Leaflet) num WebView. Sem internet mostra um aviso em vez de um quadro em branco. */
 export function PaginaMapa({ html, online, origem, altura = 260, testID = 'mapa-local', rotulo }: Props) {
+  const s = useEstilos(criarEstilos);
   if (!online) {
     return (
       <View style={[s.caixa, s.sem, { height: altura }]} accessible accessibilityLabel="Mapa indisponível sem internet" testID="mapa-sem-conexao">
@@ -20,7 +22,7 @@ export function PaginaMapa({ html, online, origem, altura = 260, testID = 'mapa-
     </View>
   );
 }
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   caixa: { borderRadius: raio.lg, overflow: 'hidden', borderWidth: 1, borderColor: cores.borda, backgroundColor: cores.neutroClaro },
   mapa: { flex: 1, backgroundColor: cores.neutroClaro },
   sem: { alignItems: 'center', justifyContent: 'center', padding: espaco.lg },

@@ -12,7 +12,8 @@ import { descreverAtencao, rotuloDaOperacao, type AcaoAtencao } from '@/domain/a
 import { DIAS_MAX_OPERACAO, idadeEmDias, type Operacao } from '@/domain/operacoes';
 import { fmtDataHora } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
-import { cores, espaco, fonte } from '@/theme';
+import { espaco, fonte, type Paleta } from '@/theme';
+import { useEstilos } from '@/estado/tema';
 
 const ROTULOS: Record<AcaoAtencao, string> = {
   tentar_de_novo: 'Tentar de novo',
@@ -24,6 +25,7 @@ const ROTULOS: Record<AcaoAtencao, string> = {
 
 /** "Requer atenção": tudo o que o servidor recusou. Nada some sozinho: cada item mostra a mensagem do servidor e o que fazer. */
 export default function Atencao() {
+  const s = useEstilos(criarEstilos);
   const router = useRouter();
   const { ops, comandos, atualizar, sincronizando } = useDados();
   const [ocupado, setOcupado] = useState<number | null>(null);
@@ -98,7 +100,7 @@ export default function Atencao() {
   );
 }
 
-const s = StyleSheet.create({
+const criarEstilos = (cores: Paleta) => StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   lista: { padding: espaco.lg, flexGrow: 1 },
   os: { fontSize: fonte.corpo, fontWeight: '700', color: cores.texto },
