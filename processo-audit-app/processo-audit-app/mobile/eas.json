@@ -23,7 +23,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.SEU-DOMINIO.com.br/api"
+        "EXPO_PUBLIC_API_URL": "http://10.100.100.130:5998/api"
       }
     },
     "production": {

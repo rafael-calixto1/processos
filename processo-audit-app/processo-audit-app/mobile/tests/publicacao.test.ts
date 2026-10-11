@@ -26,9 +26,17 @@ describe('checklist de publicação', () => {
   it('APK de teste interno (--preview) não exige projeto EAS, atualização pelo ar, identificador nem URL de produção; ainda exige URL https de preview, commit e ícones', () => {
     const teste = pronto({ soPreview: true, app: app({ extra: {}, updates: {} }), identificadorConfirmado: false, eas: { build: { preview: { env: { EXPO_PUBLIC_API_URL: 'https://api.empresa.com.br/api' } }, production: { env: { EXPO_PUBLIC_API_URL: 'https://api.SEU-DOMINIO.com.br/api' } } } } });
     expect(faltando(teste)).toEqual([]);
-    expect(faltando({ ...teste, eas: eas('http://10.0.0.5:5002/api') })).toEqual(['url-preview']);
+    expect(faltando({ ...teste, eas: eas('http://api.empresa.com.br/api') })).toEqual(['url-preview']); // http de endereço público não vale nem em teste
     expect(faltando({ ...teste, repositorioLimpo: false })).toEqual(['repositorio-limpo']);
     expect(faltando({ ...teste, arquivosExistem: [true, false, true, true] })).toEqual(['icones']);
+  });
+
+  it('teste interno (--preview): http de REDE PRIVADA vale (10.x, 192.168.x, 172.16–31.x); a produção continua exigindo https', () => {
+    const internoNoPreview = (url: string) => pronto({ soPreview: true, eas: { build: { preview: { env: { EXPO_PUBLIC_API_URL: url } }, production: { env: { EXPO_PUBLIC_API_URL: 'https://api.empresa.com.br/api' } } } } });
+    for (const ok of ['http://10.100.100.130:5998/api', 'http://192.168.0.20:5002/api', 'http://172.16.4.1/api', 'http://172.31.255.254:80/api']) expect(faltando(internoNoPreview(ok))).toEqual([]);
+    for (const ruim of ['http://172.32.0.1/api', 'http://11.0.0.1/api', 'http://10.100.100.130', 'http://8.8.8.8:5002/api']) expect(faltando(internoNoPreview(ruim))).toEqual(['url-preview']);
+    // sem --preview (build de produção) rede privada NÃO basta
+    expect(faltando(pronto({ eas: eas('http://10.100.100.130:5998/api') }))).toEqual(['url-preview', 'url-production']);
   });
 
   it('versão e código de versão precisam existir', () => {

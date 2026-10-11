@@ -20,8 +20,13 @@ const verificar = ({ app, eas, arquivosExistem, repositorioLimpo, identificadorC
     const u = eas?.build?.[perfil]?.env?.EXPO_PUBLIC_API_URL;
     return typeof u === 'string' && /^https:\/\/[^\s/]+\.[^\s/]+/.test(u) && !/SEU-|exemplo\.com|localhost/i.test(u);
   };
-  item('url-preview', urlOk('preview'), 'Perfil "preview" aponta para uma URL https de verdade (eas.json → build.preview.env.EXPO_PUBLIC_API_URL)',
-    'Hoje é um modelo ("SEU-DOMINIO"). Builds de produção do Android bloqueiam http://, então o servidor precisa de HTTPS público.');
+  // Teste interno: o perfil "preview" libera http (app.config.js) para a rede da empresa; endereço de rede privada vale. A produção nunca.
+  const redeInterna = (perfil) => {
+    const u = eas?.build?.[perfil]?.env?.EXPO_PUBLIC_API_URL;
+    return typeof u === 'string' && /^http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\//.test(u);
+  };
+  item('url-preview', urlOk('preview') || (soPreview && redeInterna('preview')), 'Perfil "preview" aponta para um servidor alcançável (eas.json → build.preview.env.EXPO_PUBLIC_API_URL)',
+    'Use uma URL https de verdade ou, só para teste interno (--preview), um endereço da rede da empresa (http://10.x.x.x:porta/api). Só funciona com o celular nessa rede.');
   item('url-production', urlOk('production'), 'Perfil "production" aponta para uma URL https de verdade', 'Mesma URL do preview, normalmente.', !soPreview);
   item('icones', arquivosExistem.every(Boolean), 'Ícone, ícone adaptativo e splash existem', 'Rode a geração dos arquivos em mobile/assets.');
   item('repositorio-limpo', repositorioLimpo, 'Tudo commitado (o EAS Build usa o último commit: "requireCommit": true)', 'Faça o commit das mudanças antes de gerar o build.');

@@ -19,13 +19,16 @@ Este guia é do que **você** precisa fazer (contas, senhas e chaves ficam com v
 | 6 | iOS (só se quiser): conta Apple Developer (US$ 99/ano) | Sem ela, só Android. |
 | 7 | Push de nova OS (4c): projeto no **Firebase** e a credencial FCM enviada ao EAS por você | O push do Android depende dele. |
 
-## Gerar o APK para testar no celular (perfil preview)
+## Gerar o APK para testar no celular (perfil preview) — sem HTTPS
+O perfil **preview** foi feito para teste interno **sem precisar de URL https**: ele libera `http://` só nele (`app.config.js`) e já aponta para o servidor de teste da rede da empresa (`http://10.100.100.130:5998/api`). Isso funciona com o celular **na mesma rede** (Wi-Fi da empresa). Na tela de login ainda dá para trocar o endereço do servidor sem gerar outro build. O perfil **production** nunca libera `http`.
+
+Pré-requisitos: o servidor de teste no ar (porta 5998) e um **token do Expo** só para o terminal (crie em *Access tokens*, perfil de robô; cole escondido com `read -rs EXPO_TOKEN && export EXPO_TOKEN` e apague o token depois).
 ```bash
 cd mobile
-npm run verificar:publicacao -- --preview      # confere URL https, commit e ícones
+npm run verificar:publicacao -- --preview      # confere URL, commit e ícones
 npx eas-cli@latest build --platform android --profile preview
 ```
-No fim o EAS mostra um link/QR para baixar e instalar o APK (permita "instalar apps desconhecidos"). Teste com o roteiro `docs/ROTEIRO_TESTE_MANUAL.md` — agora **a splash, o ícone e a permissão de câmera** passam a valer de verdade.
+A primeira vez o EAS pergunta se deve **gerar a chave de assinatura** do Android: responda sim (ela fica guardada no EAS; depois baixe uma cópia com `npx eas-cli@latest credentials`). No fim o EAS mostra um link/QR para baixar e instalar o APK (permita "instalar apps desconhecidos"). Teste com o roteiro `docs/ROTEIRO_TESTE_MANUAL.md`: agora **a splash, o ícone, o nome "CW Campo" e a permissão de câmera** passam a valer de verdade. Cada build consome 1 dos builds do plano gratuito.
 
 ## Atualizar pelo ar (sem novo APK)
 ```bash

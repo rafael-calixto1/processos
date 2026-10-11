@@ -103,6 +103,17 @@ describe('build e distribuição (EAS)', () => {
     expect(JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).name).toBe(app.slug);
   });
 
+  it('http (sem certificado) só nos perfis de TESTE (development e preview); produção e prebuild local nunca', () => {
+    const temHttp = (perfil: string | undefined) => (comPerfil(perfil).plugins as unknown[]).some((p) => Array.isArray(p) && p[0] === 'expo-build-properties' && (p[1] as any)?.android?.usesCleartextTraffic === true);
+    expect(temHttp('preview')).toBe(true);
+    expect(temHttp('development')).toBe(true);
+    expect(temHttp('production')).toBe(false);
+    expect(temHttp(undefined)).toBe(false);
+    expect(JSON.stringify(app.plugins)).not.toMatch(/usesCleartextTraffic/); // nunca no app.json estático
+    expect(eas.build.production.env.EXPO_PUBLIC_API_URL).not.toMatch(/^http:/); // e a URL de produção nunca é http
+    expect(comPerfil('preview').plugins.length).toBe(app.plugins.length + 1); // o resto dos plugins passa intacto
+  });
+
   it('dados do aparelho não vão para a nuvem do Google (restaurar a fila de envio em outro celular repetiria operações)', () => {
     expect(app.android.allowBackup).toBe(false);
   });
