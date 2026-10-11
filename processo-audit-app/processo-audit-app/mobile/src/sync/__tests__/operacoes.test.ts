@@ -155,12 +155,12 @@ describe('trecho marcado no mapa', () => {
     expect(erro?.message).toBe('O trecho marcado no mapa precisa de 2 a 25 pontos válidos.');
     expect(await listarTodas(banco, 7)).toHaveLength(0);
   });
-  it('a lista de lançamentos mostra quantos pontos e quantos metros foram marcados', async () => {
+  it('a lista de lançamentos traz a rota marcada', async () => {
     const { ctx, estado } = await montar();
     await registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota });
     
     const e = await estado();
-    expect(lancamentosDaOS(101, null, e.ops)[0].rota).toEqual({ pontos: 2, metros: 1850 });
+    expect(lancamentosDaOS(101, null, e.ops)[0].rota).toEqual(rota);
   });
 });
 

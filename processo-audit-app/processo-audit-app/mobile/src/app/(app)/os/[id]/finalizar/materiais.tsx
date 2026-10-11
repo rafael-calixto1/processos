@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { mensagemDeErro } from '@/api/erros';
 import { Botao } from '@/components/Botao';
 import { Cartao } from '@/components/Cartao';
+import { MapaDoTrecho } from '@/components/MapaDoTrecho';
 import { Faixa } from '@/components/Faixa';
 import { Segmento } from '@/components/Segmento';
 import { TelaEtapa } from '@/components/TelaEtapa';
@@ -11,7 +12,9 @@ import { confirmar } from '@/components/confirmar';
 import { fmtQtd } from '@/domain/quantidade';
 import { fmtMetros } from '@/domain/trecho';
 import type { LancamentoVisao } from '@/domain/visao';
+import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
+import { useOnline } from '@/estado/rede';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
 import { cores, espaco, fonte, raio } from '@/theme';
 
@@ -29,6 +32,10 @@ export default function Materiais() {
   const router = useRouter();
   const f = useFinalizacao();
   const { comandos } = useDados();
+  const { servidor } = useApp();
+  const online = useOnline();
+  const urlServidor = servidor?.url?.();
+  const origemDoServidor = urlServidor ? new URL(urlServidor).origin : undefined;
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const comLancamento = f.lancamentos.length > 0;
@@ -70,7 +77,12 @@ export default function Materiais() {
           <Cartao key={l.chave}>
             <Text style={s.nome}>{l.descricao}</Text>
             {l.trecho ? <Text style={s.trecho}>Trecho: <Text style={s.negrito}>{l.trecho}</Text></Text> : null}
-            {l.rota ? <Text style={s.trecho} testID={`rota-${l.chave}`}>Marcado no mapa: {l.rota.pontos} pontos · ≈ {fmtMetros(l.rota.metros)}</Text> : null}
+            {l.rota ? (
+              <>
+                <Text style={s.trecho} testID={`rota-${l.chave}`}>Marcado no mapa: {l.rota.pontos.length} pontos · ≈ {fmtMetros(l.rota.metros)}</Text>
+                <MapaDoTrecho rota={l.rota} online={online} origem={origemDoServidor} />
+              </>
+            ) : null}
             {l.linhas.map((x, i) => <Text key={i} style={s.linha}>{x.item_nome} — <Text style={s.negrito}>{fmtQtd(x.quantidade, x.unidade)}</Text> · {x.lote_codigo}</Text>)}
             <Text style={[s.estado, { color: v.cor }]} accessibilityLabel={`Situação: ${v.texto}`}>{v.texto}</Text>
             {l.estado === 'atencao' && l.erro ? <View style={s.erro} accessibilityRole="alert"><Text style={s.erroTexto}>{l.erro.mensagem}</Text></View> : null}

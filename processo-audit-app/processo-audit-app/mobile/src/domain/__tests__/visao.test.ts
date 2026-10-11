@@ -139,6 +139,19 @@ describe('lançamentos da OS (servidor + fila)', () => {
     expect(l.map((x) => [x.chave, x.origem, x.estado])).toEqual([['s5', 'servidor', 'enviado'], [expect.stringMatching(/^o/), 'local', 'pendente']]);
     expect(l[0].linhas).toEqual([{ item_nome: 'Cabo', unidade: 'metros', lote_codigo: 'LOTE-1', quantidade: 200 }]);
   });
+  it('o trecho marcado no mapa aparece nos lançamentos do servidor (rota_trecho) e nos da fila', () => {
+    const rota = { pontos: [{ lat: -23.5, lng: -46.3 }, { lat: -23.51, lng: -46.31 }], metros: 1850, caminho: [[-23.5, -46.3], [-23.51, -46.31]] as Array<[number, number]> };
+    const comRota: DetalheOS = { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: rota } : s)) };
+    const doServidor = lancamentosDaOS(101, comRota, [])[0];
+    expect(doServidor.rota).toEqual(rota);
+    const daFila = op('lancamento', 101, { payload: { corpo: { descricao: 'x', trecho: 'y', materiais: [{ lote_id: 11, quantidade: 1 }], rota }, exibicao: { linhas: [] } } });
+    expect(lancamentosDaOS(101, null, [daFila])[0].rota).toEqual(rota);
+  });
+  it('rota_trecho vazia ou inválida no servidor é ignorada (sem quebrar a lista)', () => {
+    const ruim: DetalheOS = { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: { pontos: [{ lat: 1, lng: 1 }], metros: 5, caminho: [] } } : s)) };
+    expect(lancamentosDaOS(101, ruim, [])[0].rota).toBeUndefined();
+    expect(lancamentosDaOS(101, { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: null } : s)) }, [])[0].rota).toBeUndefined();
+  });
   it('uma da fila já confirmada e já presente no cache não é contada duas vezes', () => {
     const confirmada = op('lancamento', 101, { estado: 'ok', ok_em: 1, resposta: { id: 5 } });
     expect(lancamentosDaOS(101, detalhe, [confirmada])).toHaveLength(1);

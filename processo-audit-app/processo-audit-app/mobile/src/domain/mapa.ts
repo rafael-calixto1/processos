@@ -74,3 +74,28 @@ export const htmlDoEditorTrecho = ({ centro, pontos = [], caminho = [] }: Entrad
 })();
 </script></body></html>`;
 };
+
+/** Página só de leitura com o trecho já marcado: início (verde), fim (vermelho), pontos do meio (azul) e o caminho; ajusta o zoom para mostrar tudo. */
+export const htmlDoTrecho = ({ pontos, caminho = [] }: { pontos: ReadonlyArray<{ lat: number; lng: number }>; caminho?: ReadonlyArray<readonly [number, number]> }): string => {
+  const pts = numeros(pontos);
+  if (pts.length < 2) throw new RangeError('O trecho precisa de ao menos 2 pontos');
+  const cam = caminho.map(([la, ln]) => [Number(la), Number(ln)]).filter(([la, ln]) => Number.isFinite(la) && Number.isFinite(ln));
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<link rel="stylesheet" href="${LEAFLET}.css"><style>html,body,#m{height:100%;margin:0}.erro{font:16px sans-serif;padding:16px;color:#4a5d50}
+.pino{width:30px;height:30px;border-radius:15px;border:3px solid #fff;color:#fff;font:bold 14px sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.4)}</style></head>
+<body><div id="m"></div><script src="${LEAFLET}.js"></script><script>
+(function(){
+  var el=document.getElementById('m');
+  if(!window.L){el.innerHTML='<p class="erro">Não foi possível carregar o mapa. Verifique a conexão.</p>';return;}
+  var pts=${JSON.stringify(pts)},cam=${JSON.stringify(cam)};
+  var map=L.map('m',{zoomControl:true});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  var ll=pts.map(function(p){return [p.lat,p.lng];});
+  if(cam.length>1){L.polyline(cam,{color:'#2563eb',weight:5,opacity:.85}).addTo(map);}
+  else{L.polyline(ll,{color:'#2563eb',weight:4,opacity:.8,dashArray:'8 10'}).addTo(map);}
+  pts.forEach(function(p,i){var n=pts.length,cor=i===0?'#15803d':(i===n-1?'#dc2626':'#2563eb'),nome=i===0?'I':(i===n-1?'F':String(i+1));
+    L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="pino" style="background:'+cor+'">'+nome+'</div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map);});
+  map.fitBounds(L.latLngBounds(cam.length>1?cam:ll),{maxZoom:18,padding:[24,24]});
+})();
+</script></body></html>`;
+};

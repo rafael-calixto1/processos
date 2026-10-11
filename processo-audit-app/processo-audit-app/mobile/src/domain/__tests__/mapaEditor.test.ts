@@ -1,4 +1,4 @@
-import { htmlDoEditorTrecho } from '../mapa';
+import { htmlDoEditorTrecho, htmlDoTrecho } from '../mapa';
 
 describe('htmlDoEditorTrecho', () => {
   const base = { centro: { lat: -23.5429, lng: -46.3112 } };
@@ -46,5 +46,29 @@ describe('htmlDoEditorTrecho', () => {
     expect(() => htmlDoEditorTrecho({ centro: { lat: 95, lng: 0 } })).toThrow(RangeError);
     expect(() => htmlDoEditorTrecho({ centro: { lat: '1;alert(1)' as unknown as number, lng: 0 } })).toThrow(RangeError);
     expect(htmlDoEditorTrecho({ ...base, pontos: [{ lat: '1</script>' as unknown as number, lng: 2 }] })).not.toContain('</script>"');
+  });
+});
+
+describe('htmlDoTrecho (só leitura, na lista de lançamentos)', () => {
+  const pontos = [{ lat: -23.5, lng: -46.3 }, { lat: -23.505, lng: -46.305 }, { lat: -23.51, lng: -46.31 }];
+  it('desenha I verde, pontos do meio azuis e F vermelho, ajustando o zoom para caber tudo', () => {
+    const h = htmlDoTrecho({ pontos, caminho: [[-23.5, -46.3], [-23.51, -46.31]] });
+    expect(h).toContain('var pts=[{"lat":-23.5,"lng":-46.3},{"lat":-23.505,"lng":-46.305},{"lat":-23.51,"lng":-46.31}]');
+    expect(h).toContain('#15803d'); expect(h).toContain('#dc2626'); expect(h).toContain('#2563eb');
+    expect(h).toContain('fitBounds');
+    expect(h).toContain('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+  });
+  it('não deixa arrastar nem tocar (é só para olhar) e avisa se o mapa não carregar', () => {
+    const h = htmlDoTrecho({ pontos });
+    expect(h).not.toContain('draggable');
+    expect(h).not.toContain('postMessage');
+    expect(h).toContain('Não foi possível carregar o mapa. Verifique a conexão.');
+  });
+  it('linha tracejada (reta) quando não há caminho pelas ruas', () => {
+    expect(htmlDoTrecho({ pontos })).toContain("dashArray:'8 10'");
+  });
+  it('exige 2 pontos e descarta coordenadas inválidas', () => {
+    expect(() => htmlDoTrecho({ pontos: [pontos[0]] })).toThrow(RangeError);
+    expect(() => htmlDoTrecho({ pontos: [pontos[0], { lat: 99, lng: 0 }] })).toThrow(RangeError);
   });
 });

@@ -103,7 +103,7 @@ export interface Dados {
 /** O que `GET /os/:id` devolve e o app guarda para trabalhar sem sinal (só os campos que a tela usa). */
 export interface DetalheOS {
   baixado_em: string;
-  servicos: Array<{ id: number; descricao: string; trecho: string | null; quantidade: number; criado_em: string }>;
+  servicos: Array<{ id: number; descricao: string; trecho: string | null; quantidade: number; criado_em: string; rota_trecho?: { pontos: Array<{ lat: number; lng: number }>; metros: number; caminho: Array<[number, number]> } | null }>;
   materiais: Array<{ id: number; servico_id: number | null; item_nome: string; lote_codigo: string; unidade: Unidade; quantidade: number; estorno_id: number | null }>;
   fotos: Array<{ id: number; client_uuid: string | null }>;
 }

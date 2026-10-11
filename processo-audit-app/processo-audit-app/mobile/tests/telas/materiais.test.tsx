@@ -23,6 +23,8 @@ jest.mock('@/estado/AppProvider', () => ({ useApp: () => ({ api: mockApi }) }));
 jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
 jest.mock('@/components/confirmar', () => ({ confirmar: (...a: unknown[]) => mockConfirmar(...a) }));
 let mockEditor: any = null;
+let mockMapaTrecho: any = null;
+jest.mock('@/components/MapaDoTrecho', () => ({ MapaDoTrecho: (p: unknown) => { mockMapaTrecho = p; return require('react').createElement('MapaDoTrechoMock', { testID: 'mapa-do-trecho-mock' }); } }));
 jest.mock('@/components/EditorTrecho', () => ({
   EditorTrecho: (p: any) => {
     mockEditor = p;
@@ -366,9 +368,29 @@ describe('Novo lançamento: trecho marcado no mapa', () => {
 });
 
 describe('Lista de lançamentos mostra o trecho marcado', () => {
-  it('"Marcado no mapa: N pontos · ≈ X" para os da fila', () => {
-    mockFin = valorFinalizacao(101, { lancamentos: [lanc({ rota: { pontos: 3, metros: 1850 } })] });
+  it('os da fila: resumo e o trecho desenhado no mapa', () => {
+    mockFin = valorFinalizacao(101, { lancamentos: [lanc({ rota: mockRotaDoEditor })] });
     render(<Materiais />);
     expect(screen.getByTestId('rota-o1').props.children.join('')).toBe('Marcado no mapa: 3 pontos · ≈ 1,85 km');
+    expect(mockMapaTrecho).toMatchObject({ rota: mockRotaDoEditor, online: true });
+  });
+  it('os que já foram enviados ao servidor TAMBÉM mostram o trecho (antes sumia depois do envio)', () => {
+    mockFin = valorFinalizacao(101, { lancamentos: [lanc({ chave: 's5', origem: 'servidor', estado: 'enviado', operacaoId: undefined, rota: mockRotaDoEditor })] });
+    render(<Materiais />);
+    expect(screen.getByTestId('rota-s5')).toBeTruthy();
+    expect(screen.getByTestId('mapa-do-trecho-mock')).toBeTruthy();
+  });
+  it('lançamento sem trecho marcado não mostra mapa', () => {
+    mockFin = valorFinalizacao(101, { lancamentos: [lanc()] });
+    render(<Materiais />);
+    expect(screen.queryByTestId('mapa-do-trecho-mock')).toBeNull();
+    expect(screen.queryByText(/Marcado no mapa/)).toBeNull();
+  });
+  it('sem internet o mapa vira aviso (o resumo continua)', () => {
+    mockOnline = false;
+    mockFin = valorFinalizacao(101, { lancamentos: [lanc({ rota: mockRotaDoEditor })] });
+    render(<Materiais />);
+    expect(mockMapaTrecho.online).toBe(false);
+    expect(screen.getByTestId('rota-o1')).toBeTruthy();
   });
 });

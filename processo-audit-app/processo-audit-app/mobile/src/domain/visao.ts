@@ -1,5 +1,6 @@
 import { emFila, contaComoPendencia, type ErroOp, type EstadoOp, type Operacao } from './operacoes';
 import { r2 } from './quantidade';
+import { montarRota, rotaValida, type RotaTrecho } from './trecho';
 import type { Dados, DetalheOS, OS, Unidade } from './tipos';
 
 /**
@@ -84,7 +85,7 @@ export interface LancamentoVisao {
   estado: 'enviado' | EstadoOp;
   operacaoId?: number;
   erro?: ErroOp | null;
-  rota?: { pontos: number; metros: number }; // trecho marcado no mapa (só nos da fila)
+  rota?: RotaTrecho; // trecho marcado no mapa, quando o técnico marcou (do servidor ou da fila)
 }
 
 /**
@@ -99,7 +100,8 @@ export const lancamentosDaOS = (osId: number, detalhe: DetalheOS | null, ops: re
     const linhas = (detalhe?.materiais ?? [])
       .filter((m) => m.servico_id === s.id && !m.estorno_id)
       .map((m) => ({ item_nome: m.item_nome, unidade: m.unidade, lote_codigo: m.lote_codigo, quantidade: m.quantidade }));
-    if (linhas.length) doServidor.push({ chave: `s${s.id}`, origem: 'servidor', descricao: s.descricao, trecho: s.trecho, linhas, estado: 'enviado' });
+    const rota = s.rota_trecho ? montarRota(s.rota_trecho.pontos ?? [], { metros: s.rota_trecho.metros ?? 0, caminho: s.rota_trecho.caminho ?? [] }) : null;
+    if (linhas.length) doServidor.push({ chave: `s${s.id}`, origem: 'servidor', descricao: s.descricao, trecho: s.trecho, linhas, estado: 'enviado', ...(rota && rotaValida(rota) && { rota }) });
   }
   const locais: LancamentoVisao[] = [];
   for (const o of ops) {
@@ -109,7 +111,7 @@ export const lancamentosDaOS = (osId: number, detalhe: DetalheOS | null, ops: re
       chave: `o${o.id}`, origem: 'local', descricao: o.payload.corpo.descricao, trecho: o.payload.corpo.trecho || null,
       linhas: o.payload.exibicao.linhas.map((l) => ({ item_nome: l.item_nome, unidade: l.unidade, lote_codigo: l.lote_codigo, quantidade: l.quantidade })),
       estado: o.estado, operacaoId: o.id, erro: o.erro,
-      ...(o.payload.corpo.rota && { rota: { pontos: o.payload.corpo.rota.pontos.length, metros: o.payload.corpo.rota.metros } }),
+      ...(o.payload.corpo.rota && { rota: o.payload.corpo.rota }),
     });
   }
   return [...doServidor, ...locais];
