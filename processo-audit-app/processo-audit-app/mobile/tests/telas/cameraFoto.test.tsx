@@ -4,6 +4,8 @@ let mockPermissao: any = { granted: true, canAskAgain: true };
 const mockPedir = jest.fn(async () => undefined);
 let mockPropsCamera: any = null;
 const mockTirar = jest.fn();
+const mockConfig = jest.fn(async () => undefined);
+jest.mock('@/estado/configuracoes', () => ({ abrirConfiguracoes: () => mockConfig() }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('expo-camera', () => {
   const React = require('react');
@@ -38,6 +40,13 @@ describe('CameraFoto (câmera do próprio app)', () => {
     render(<CameraFoto aoCapturar={jest.fn()} aoConcluir={jest.fn()} totalTiradas={0} />);
     expect(screen.getByText(/Abra as Configurações do aparelho/)).toBeTruthy();
     expect(screen.queryByTestId('camera-permitir')).toBeNull();
+    fireEvent.press(screen.getByTestId('camera-configuracoes'));
+    expect(mockConfig).toHaveBeenCalledTimes(1);
+  });
+  it('permissão ainda pode ser pedida: não mostra "Abrir configurações"', () => {
+    mockPermissao = { granted: false, canAskAgain: true };
+    render(<CameraFoto aoCapturar={jest.fn()} aoConcluir={jest.fn()} totalTiradas={0} />);
+    expect(screen.queryByTestId('camera-configuracoes')).toBeNull();
   });
   it('o botão do disparo só vale depois de a câmera estar pronta', async () => {
     render(<CameraFoto aoCapturar={jest.fn()} aoConcluir={jest.fn()} totalTiradas={0} />);

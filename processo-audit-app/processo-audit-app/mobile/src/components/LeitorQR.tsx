@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
+import { abrirConfiguracoes } from '@/estado/configuracoes';
 import { Carregando } from '@/components/Carregando';
 import { espaco, fonte, type Paleta } from '@/theme';
 import { useEstilos } from '@/estado/tema';
@@ -24,7 +25,7 @@ export function LeitorQR({ aoLer, aoFechar }: Props) {
         <Text style={s.avisoTexto}>
           {permissao.canAskAgain ? 'Permita o uso da câmera para ler o QR code da etiqueta do lote.' : 'A câmera está bloqueada para este aplicativo. Abra as Configurações do aparelho e permita o uso da câmera.'} Se preferir, escolha o material na lista.
         </Text>
-        {permissao.canAskAgain ? <Botao titulo="Permitir câmera" onPress={() => void pedir()} testID="leitor-permitir" /> : null}
+        {permissao.canAskAgain ? <Botao titulo="Permitir câmera" onPress={() => void pedir()} testID="leitor-permitir" /> : <Botao titulo="Abrir configurações" onPress={() => void abrirConfiguracoes()} testID="leitor-configuracoes" />}
         <Botao titulo="Escolher na lista" variante="secundario" onPress={aoFechar} testID="leitor-fechar" />
       </View>
     );

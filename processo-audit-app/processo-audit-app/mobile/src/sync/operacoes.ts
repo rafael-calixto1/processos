@@ -302,7 +302,7 @@ export const reenviarOperacao = (c: ContextoComandos, operacaoId: number, opcoes
   const op = await obter(tx, operacaoId);
   if (!op || op.usuario_id !== c.usuarioId || op.estado !== 'atencao') throw new ErroOperacao('Este item não está mais aguardando atenção.');
   if (idadeEmDias(op.criado_em, agoraDe(c)) > DIAS_MAX_REENVIO_FORCADO) {
-    throw new ErroOperacao(`Esta operação tem mais de ${DIAS_MAX_REENVIO_FORCADO} dias e não pode mais ser enviada com segurança. Descarte-a e fale com o escritório.`);
+    throw new ErroOperacao(`Este envio tem mais de ${DIAS_MAX_REENVIO_FORCADO} dias e não pode mais ser feito com segurança. Descarte-o e fale com o escritório.`);
   }
   await reenviar(tx, operacaoId, agoraDe(c), opcoes);
 });

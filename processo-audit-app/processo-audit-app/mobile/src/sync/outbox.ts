@@ -148,10 +148,10 @@ export class MotorOutbox {
     if (op.tipo === 'rascunho') return null; // é só uma cópia de segurança
     const dias = idadeEmDias(op.criado_em, this.p.agora());
     if (dias > DIAS_MAX_REENVIO_FORCADO) {
-      return { status: null, mensagem: `Esta operação foi feita há mais de ${DIAS_MAX_REENVIO_FORCADO} dias e não pode mais ser enviada com segurança. Fale com o escritório para conferir o que já foi registrado.` };
+      return { status: null, mensagem: `Este envio foi feito há mais de ${DIAS_MAX_REENVIO_FORCADO} dias e não pode mais ser feito com segurança. Fale com o escritório para conferir o que já foi registrado.` };
     }
     if (dias > DIAS_MAX_OPERACAO && !op.forcada) {
-      return { status: null, mensagem: `Esta operação foi feita há mais de ${DIAS_MAX_OPERACAO} dias e ainda não chegou ao servidor. Confira com o escritório se ela já foi registrada antes de enviar.` };
+      return { status: null, mensagem: `Este envio foi feito há mais de ${DIAS_MAX_OPERACAO} dias e ainda não chegou ao servidor. Confira com o escritório se ele já foi registrado antes de enviar.` };
     }
     return null;
   }
@@ -226,7 +226,7 @@ export class MotorOutbox {
     const tentativa = op.tentativas + 1; // `op` foi lido antes de a reserva contar esta tentativa
     if (!(e instanceof NetworkError) && !(e instanceof ApiError) && tentativa >= MAX_TENTATIVAS_INESPERADAS) {
       const msg = e instanceof Error ? e.message : 'erro desconhecido';
-      await marcarAtencao(banco, op.id, { status: null, mensagem: `O aplicativo não conseguiu enviar esta operação (${msg}). Tente de novo ou fale com o suporte.` }, agora);
+      await marcarAtencao(banco, op.id, { status: null, mensagem: `O aplicativo não conseguiu fazer este envio (${msg}). Tente de novo ou fale com o suporte.` }, agora);
       return { tipo: 'atencao', erro: { status: null, mensagem: msg } };
     }
     await reagendar(banco, op.id, agora + Math.max(this.backoff(tentativa), (v as { esperaMs?: number }).esperaMs ?? 0), agora);

@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 let mockPermissao: any = null;
 const mockPedir = jest.fn(async () => undefined);
 let mockPropsCamera: any = null;
+const mockConfig = jest.fn(async () => undefined);
+jest.mock('@/estado/configuracoes', () => ({ abrirConfiguracoes: () => mockConfig() }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('expo-camera', () => ({
   useCameraPermissions: () => [mockPermissao, mockPedir],
@@ -34,6 +36,8 @@ describe('LeitorQR (câmera)', () => {
     render(<LeitorQR aoLer={jest.fn()} aoFechar={jest.fn()} />);
     expect(screen.getByText(/Abra as Configurações do aparelho/)).toBeTruthy();
     expect(screen.queryByTestId('leitor-permitir')).toBeNull();
+    fireEvent.press(screen.getByTestId('leitor-configuracoes'));
+    expect(mockConfig).toHaveBeenCalledTimes(1);
   });
   it('com permissão: câmera traseira lendo só QR code', () => {
     mockPermissao = { granted: true, canAskAgain: true };

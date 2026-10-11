@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao } from '@/components/Botao';
+import { abrirConfiguracoes } from '@/estado/configuracoes';
 import { Carregando } from '@/components/Carregando';
 import type { FotoBruta } from '@/estado/fotos';
 import { espaco, fonte, type Paleta } from '@/theme';
@@ -34,7 +35,7 @@ export function CameraFoto({ aoCapturar, aoConcluir, totalTiradas }: Props) {
       <View style={[s.aviso, { paddingTop: top + espaco.xl, paddingBottom: bottom + espaco.xl }]}>
         <Text style={s.avisoTitulo} accessibilityRole="header">Precisamos da câmera</Text>
         <Text style={s.avisoTexto}>{permissao.canAskAgain ? 'Permita o uso da câmera para fotografar o serviço.' : 'A câmera está bloqueada para este aplicativo. Abra as Configurações do aparelho e permita o uso da câmera.'} Você também pode escolher fotos da galeria.</Text>
-        {permissao.canAskAgain ? <Botao titulo="Permitir câmera" onPress={() => void pedir()} testID="camera-permitir" /> : null}
+        {permissao.canAskAgain ? <Botao titulo="Permitir câmera" onPress={() => void pedir()} testID="camera-permitir" /> : <Botao titulo="Abrir configurações" onPress={() => void abrirConfiguracoes()} testID="camera-configuracoes" />}
         <Botao titulo="Voltar" variante="secundario" onPress={aoConcluir} testID="camera-concluir" />
       </View>
     );

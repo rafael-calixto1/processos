@@ -19,6 +19,7 @@ export default function AbasLayout() {
         tabBarActiveTintColor: cores.primariaEscura,
         tabBarInactiveTintColor: cores.textoSuave,
         tabBarLabelStyle: { fontSize: fonte.pequena, fontWeight: '700' },
+        tabBarAllowFontScaling: false, // a barra tem altura fixa: com a fonte do aparelho no máximo o texto cortaria
         tabBarStyle: { height: 74 + bottom, paddingTop: 8, paddingBottom: Math.max(bottom, 10), backgroundColor: cores.superficie, borderTopColor: cores.borda },
       }}
     >

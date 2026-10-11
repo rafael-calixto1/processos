@@ -42,7 +42,7 @@ export default function Atencao() {
         if (!ok) return;
       }
       if (acao === 'enviar_mesmo_assim') {
-        const ok = await confirmar('Enviar mesmo assim?', 'Esta operação é antiga. Se o escritório já registrou isto, o material pode ser baixado em duplicidade.', 'Enviar');
+        const ok = await confirmar('Enviar mesmo assim?', 'Este envio é antigo. Se o escritório já registrou isto, o material pode ser baixado em duplicidade.', 'Enviar');
         if (!ok) return;
       }
       setOcupado(op.id);

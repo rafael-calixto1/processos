@@ -63,7 +63,7 @@ export default function DetalheOS() {
         </View>
 
         <Cartao titulo="Serviço">
-          <Dado rotulo="Cliente / intervenção" valor={os.cliente} />
+          <Dado rotulo="Nome da OS" valor={os.cliente} />
           <Dado rotulo="Tipo de serviço" valor={os.tipo_servico} />
           <Dado rotulo="Descrição" valor={os.descricao} />
           <Dado rotulo="Prazo" valor={fmtData(os.prazo)} />

@@ -76,7 +76,7 @@ export default function Conta() {
         <Cartao titulo="Envio ao servidor">
           <Dado rotulo="Aguardando envio" valor={String(contagens.pendentes + contagens.enviando)} />
           <Dado rotulo="Requerem atenção" valor={String(contagens.atencao)} />
-          <Dado rotulo="Retrato do servidor de" valor={fmtDataHora(dados?.geradoEm)} />
+          <Dado rotulo="Dados do servidor de" valor={fmtDataHora(dados?.geradoEm)} />
           <Dado rotulo="Baixado neste aparelho em" valor={fmtDataHora(sincronizadoEm)} />
           <Botao titulo="Sincronizar agora" variante="secundario" onPress={() => void atualizar()} carregando={sincronizando} testID="botao-sincronizar" />
         </Cartao>

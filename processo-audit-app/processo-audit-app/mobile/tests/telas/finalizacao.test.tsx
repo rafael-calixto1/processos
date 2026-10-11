@@ -23,6 +23,9 @@ jest.mock('@/components/confirmar', () => ({ confirmar: (...a: unknown[]) => moc
 jest.mock('@/estado/AppProvider', () => ({ useApp: () => ({ api: mockApi }) }));
 jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
 jest.mock('@/components/MapaLocal', () => ({ MapaLocal: (p: unknown) => { mockMapa = p; return require('react').createElement('Mapa', { testID: 'mapa-mock' }); } }));
+const mockConfig = jest.fn(async () => undefined);
+const mockConfigGps = jest.fn(async () => undefined);
+jest.mock('@/estado/configuracoes', () => ({ abrirConfiguracoes: () => mockConfig(), abrirConfiguracoesDeLocalizacao: () => mockConfigGps() }));
 jest.mock('@/estado/localizacao', () => ({ capturarPosicao: (...a: unknown[]) => mockCapturar(...a) }));
 
 import Hub from '@/app/(app)/os/[id]/finalizar/index';
@@ -325,6 +328,27 @@ describe('Local do endereço', () => {
     fireEvent.press(screen.getByTestId('botao-gps'));
     expect(await screen.findByText(texto)).toBeTruthy();
     expect(mockFin.rascunho.local).toBeNull();
+  });
+  it('GPS bloqueado oferece "Abrir configurações"; GPS desligado oferece "Ligar a localização"; os outros erros não oferecem nada', async () => {
+    mockCapturar.mockRejectedValue(new ErroLocalizacao('permissao_bloqueada'));
+    const { unmount } = render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    fireEvent.press(await screen.findByTestId('gps-configuracoes'));
+    expect(mockConfig).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('gps-ligar')).toBeNull();
+    unmount();
+    mockCapturar.mockRejectedValue(new ErroLocalizacao('gps_desligado'));
+    const segunda = render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    fireEvent.press(await screen.findByTestId('gps-ligar'));
+    expect(mockConfigGps).toHaveBeenCalledTimes(1);
+    segunda.unmount();
+    mockCapturar.mockRejectedValue(new ErroLocalizacao('tempo_esgotado'));
+    render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    await screen.findByText(/obter a posição a tempo/);
+    expect(screen.queryByTestId('gps-configuracoes')).toBeNull();
+    expect(screen.queryByTestId('gps-ligar')).toBeNull();
   });
   it('coordenadas do poste: um toque, funciona sem internet', () => {
     mockOnline = false;

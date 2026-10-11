@@ -12,6 +12,7 @@ import { ErroLocalizacao, localDoEndereco, localDoGps, localDoPoste, qualidadeDa
 import { urlDoPonto } from '@/domain/mapa';
 import { useApp } from '@/estado/AppProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
+import { abrirConfiguracoes, abrirConfiguracoesDeLocalizacao } from '@/estado/configuracoes';
 import { capturarPosicao } from '@/estado/localizacao';
 import { useOnline } from '@/estado/rede';
 import { ALVO_MINIMO, espaco, fonte, raio, type Paleta } from '@/theme';
@@ -28,6 +29,7 @@ export default function Local() {
   const origemDoServidor = urlServidor ? new URL(urlServidor).origin : undefined;
   const [obtendo, setObtendo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [codigoGps, setCodigoGps] = useState<string | null>(null);
   const [simulado, setSimulado] = useState(false);
   const [texto, setTexto] = useState('');
   const [buscando, setBuscando] = useState(false);
@@ -63,13 +65,14 @@ export default function Local() {
   };
 
   const gps = async () => {
-    setErro(null); setObtendo(true);
+    setErro(null); setCodigoGps(null); setObtendo(true);
     try {
       const pos = await capturarPosicao();
       setSimulado(Boolean(pos.simulado));
       definir(localDoGps(pos));
     } catch (e) {
       setErro(e instanceof ErroLocalizacao ? e.message : mensagemDeErro(e));
+      if (e instanceof ErroLocalizacao) setCodigoGps(e.codigo);
     } finally { setObtendo(false); }
   };
 
@@ -120,6 +123,8 @@ export default function Local() {
       {local?.origem === 'address' && local.aproximado ? <Faixa tom="aviso" icone="warning-outline" texto="Posição aproximada: a rua não está no mapa. Se puder, confirme pelo GPS no local." /> : null}
       {simulado && local?.origem === 'gps' ? <Faixa tom="aviso" icone="flask-outline" texto="SIMULAÇÃO: esta pré-visualização no navegador não tem GPS. No celular a posição é a real." /> : null}
       {erro ? <Faixa tom="erro" texto={erro} /> : null}
+      {codigoGps === 'permissao_bloqueada' ? <Botao titulo="Abrir configurações" variante="secundario" onPress={() => void abrirConfiguracoes()} testID="gps-configuracoes" /> : null}
+      {codigoGps === 'gps_desligado' ? <Botao titulo="Ligar a localização" variante="secundario" onPress={() => void abrirConfiguracoesDeLocalizacao()} testID="gps-ligar" /> : null}
 
       <Botao titulo={obtendo ? 'Obtendo GPS…' : 'Capturar posição por GPS'} onPress={gps} carregando={obtendo} desabilitado={!f.editavel} testID="botao-gps" />
       {poste ? <Botao titulo={`Usar coordenadas do ${f.os?.poste_id ?? 'local da OS'}`} variante="secundario" onPress={() => definir(poste)} desabilitado={!f.editavel} testID="botao-poste" /> : <Text style={s.nota}>Esta OS não tem coordenadas do poste.</Text>}
