@@ -306,4 +306,24 @@ quando('execução de campo × backend real', () => {
     await expect(app.api.lotePorCodigo(compra.corpo.lotes[0].codigo)).rejects.toMatchObject({ status: 403, message: 'Este lote não está em sua posse' });
     await expect(app.api.lotePorCodigo('LOTE-NAO-EXISTE-9')).rejects.toMatchObject({ status: 404, message: 'Lote não encontrado' });
   });
+
+  it('trecho marcado no mapa: o servidor grava a rota inteira (pontos, distância e caminho com início e fim) junto com o lançamento', async () => {
+    const c = await criarCenario({ metros: 100 });
+    const app = await criarApp();
+    await app.baixar();
+    await iniciarOS(app.ctx, c.osId);
+    const caminho = Array.from({ length: 2500 }, (_, i) => [-23.5 - i / 1e5, -46.3 + i / 2e5] as [number, number]); // 2500 pontos: o app reduz para 600 antes de enviar
+    const pontos = [{ lat: -23.5, lng: -46.3 }, { lat: -23.51, lng: -46.305 }, { lat: -23.525, lng: -46.2875 }];
+    await registrarLancamento(app.ctx, { osId: c.osId, descricao: 'Lançamento de cabo', trecho: 'A → C', rota: { pontos, metros: 3120, caminho }, itens: [{ chaveGrupo: `l${c.cabo.loteId}`, quantidade: '20' }] });
+    await app.drenar();
+    const f = consulta<any>('fechamento', c.osId);
+    expect(f.servicos).toHaveLength(1);
+    const rota = JSON.parse(f.servicos[0].rota_trecho);
+    expect(rota.pontos).toEqual(pontos);
+    expect(rota.metros).toBe(3120);
+    expect(rota.caminho).toHaveLength(600); // nada foi cortado pelo limite de 700 do servidor
+    expect(rota.caminho[0]).toEqual(caminho[0]);
+    expect(rota.caminho[599]).toEqual(caminho[2499]); // o FIM do trecho chegou
+    expect(soma(await movimentacoes(c.osId))).toBe(20);
+  });
 });

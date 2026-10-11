@@ -3,7 +3,7 @@ import { salvarBootstrap } from '@/db/repositorio';
 import { lerRascunho, listarFotos, obterFoto, salvarDetalhe } from '@/db/trabalho';
 import { rascunhoVazio, type Rascunho } from '@/domain/etapas';
 import { agrupar } from '@/domain/posse';
-import { aplicarPendencias } from '@/domain/visao';
+import { aplicarPendencias, lancamentosDaOS } from '@/domain/visao';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { criarBootstrap } from '@/testing/fixtures';
 import { uuid } from '@/testing/operacoes';
@@ -118,6 +118,49 @@ describe('registrarLancamento', () => {
     const ini = (await iniciarOS(ctx, 102))!;
     const op = await registrarLancamento(ctx, lanc(102));
     expect(op.depende_de).toEqual([ini.id]);
+  });
+});
+
+describe('trecho marcado no mapa', () => {
+  const rota = { pontos: [{ lat: -23.5, lng: -46.3 }, { lat: -23.51, lng: -46.31 }], metros: 1850, caminho: [[-23.5, -46.3], [-23.51, -46.31]] as Array<[number, number]> };
+  it('a rota vai no corpo congelado do lançamento (é o que o servidor grava)', async () => {
+    const { ctx } = await montar();
+    const op = await registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota });
+    expect((op.payload as { corpo: { rota: unknown } }).corpo.rota).toEqual(rota);
+  });
+  it('sem rota o corpo não ganha o campo', async () => {
+    const { ctx } = await montar();
+    const op = await registrarLancamento(ctx, lanc(101, [['l11', '10']]));
+    expect((op.payload as { corpo: object }).corpo).not.toHaveProperty('rota');
+    const op2 = await registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota: null });
+    expect((op2.payload as { corpo: object }).corpo).not.toHaveProperty('rota');
+  });
+  it('caminho muito longo é reduzido para 600 pontos, sem perder o início nem o fim (o servidor cortaria em 700)', async () => {
+    const { ctx } = await montar();
+    const caminho = Array.from({ length: 2500 }, (_, i) => [-23.5 - i / 1e5, -46.3] as [number, number]);
+    const op = await registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota: { ...rota, caminho } });
+    const gravado = (op.payload as { corpo: { rota: { caminho: Array<[number, number]> } } }).corpo.rota.caminho;
+    expect(gravado).toHaveLength(600);
+    expect(gravado[0]).toEqual(caminho[0]);
+    expect(gravado[599]).toEqual(caminho[2499]);
+  });
+  it.each([
+    ['um ponto só', { ...rota, pontos: [rota.pontos[0]] }],
+    ['26 pontos', { ...rota, pontos: Array.from({ length: 26 }, (_, i) => ({ lat: -23 - i / 100, lng: -46 })) }],
+    ['coordenada impossível', { ...rota, pontos: [rota.pontos[0], { lat: 99, lng: 0 }] }],
+  ])('recusa rota inválida (%s) sem enfileirar nada', async (_n, ruim) => {
+    const { ctx, banco } = await montar();
+    const erro = await pedir(registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota: ruim }));
+    expect(erro).toBeInstanceOf(ErroOperacao);
+    expect(erro?.message).toBe('O trecho marcado no mapa precisa de 2 a 25 pontos válidos.');
+    expect(await listarTodas(banco, 7)).toHaveLength(0);
+  });
+  it('a lista de lançamentos mostra quantos pontos e quantos metros foram marcados', async () => {
+    const { ctx, estado } = await montar();
+    await registrarLancamento(ctx, { ...lanc(101, [['l11', '10']]), rota });
+    
+    const e = await estado();
+    expect(lancamentosDaOS(101, null, e.ops)[0].rota).toEqual({ pontos: 2, metros: 1850 });
   });
 });
 

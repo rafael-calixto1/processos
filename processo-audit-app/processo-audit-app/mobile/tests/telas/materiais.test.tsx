@@ -9,6 +9,7 @@ let mockConfirmar = jest.fn(async (..._a: unknown[]) => true);
 let mockOnline = true;
 let mockParams: Record<string, string> = { id: '101' };
 let mockTextoQR = 'LOTE-BOB-0001';
+const mockRotaDoEditor = { pontos: [{ lat: -23.5, lng: -46.3 }, { lat: -23.505, lng: -46.305 }, { lat: -23.51, lng: -46.31 }], metros: 1850, caminho: [[-23.5, -46.3], [-23.51, -46.31]] as Array<[number, number]> };
 const mockApi = { lotePorCodigo: jest.fn() };
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -21,6 +22,16 @@ jest.mock('@/estado/FinalizacaoProvider', () => ({ useFinalizacao: () => mockFin
 jest.mock('@/estado/AppProvider', () => ({ useApp: () => ({ api: mockApi }) }));
 jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
 jest.mock('@/components/confirmar', () => ({ confirmar: (...a: unknown[]) => mockConfirmar(...a) }));
+let mockEditor: any = null;
+jest.mock('@/components/EditorTrecho', () => ({
+  EditorTrecho: (p: any) => {
+    mockEditor = p;
+    const { Pressable, Text } = require('react-native'); const React = require('react');
+    return React.createElement(React.Fragment, null,
+      React.createElement(Pressable, { testID: 'editor-confirmar', onPress: () => p.aoConfirmar(mockRotaDoEditor) }, React.createElement(Text, null, 'usar')),
+      React.createElement(Pressable, { testID: 'editor-fechar', onPress: p.aoFechar }, React.createElement(Text, null, 'fechar')));
+  },
+}));
 jest.mock('@/components/LeitorQR', () => ({
   LeitorQR: ({ aoLer, aoFechar }: { aoLer: (t: string) => void; aoFechar: () => void }) => {
     const { Pressable, Text } = require('react-native');
@@ -161,7 +172,7 @@ describe('Novo lançamento', () => {
     fireEvent.changeText(screen.getByTestId('qtd-i2'), '35');
     fireEvent.press(salvar());
     await waitFor(() => expect(mockDados.comandos.registrarLancamento).toHaveBeenCalledWith({
-      osId: 101, descricao: 'Lançamento de cabo ASU 12F', trecho: 'PL-0932 → PL-0945',
+      osId: 101, descricao: 'Lançamento de cabo ASU 12F', trecho: 'PL-0932 → PL-0945', rota: null,
       itens: [{ chaveGrupo: 'l11', quantidade: '350,5' }, { chaveGrupo: 'i2', quantidade: '35' }],
     }));
     expect(mockBack).toHaveBeenCalled();
@@ -228,7 +239,7 @@ describe('Novo lançamento', () => {
       render(<Lancamento />);
       fireEvent.changeText(screen.getByTestId('qtd-l11'), '300');
       fireEvent.press(salvar());
-      await waitFor(() => expect(mockDados.comandos.substituirLancamento).toHaveBeenCalledWith(7, { descricao: 'Lançamento de cabo', trecho: 'A → B', itens: [{ chaveGrupo: 'l11', quantidade: '300' }] }));
+      await waitFor(() => expect(mockDados.comandos.substituirLancamento).toHaveBeenCalledWith(7, { descricao: 'Lançamento de cabo', trecho: 'A → B', rota: null, itens: [{ chaveGrupo: 'l11', quantidade: '300' }] }));
       expect(mockDados.comandos.registrarLancamento).not.toHaveBeenCalled();
     });
   });
@@ -281,3 +292,83 @@ describe('Novo lançamento', () => {
   });
 });
 
+describe('Novo lançamento: trecho marcado no mapa', () => {
+  const preencherMateriais = () => {
+    fireEvent.changeText(screen.getByTestId('campo-servico'), 'Lançamento de cabo ASU 12F');
+    fireEvent.press(screen.getByTestId('grupo-l11'));
+    fireEvent.changeText(screen.getByTestId('qtd-l11'), '100');
+  };
+  it('abre o editor centrado no local da OS e, ao confirmar, mostra o resumo e sugere o texto do trecho', () => {
+    render(<Lancamento />);
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    expect(mockEditor.centro).toEqual({ lat: -23.5445, lng: -46.3118 }); // coordenadas da OS (poste)
+    expect(mockEditor.inicial).toBeNull();
+    fireEvent.press(screen.getByTestId('editor-confirmar'));
+    expect(screen.getByText('Trecho marcado no mapa: 3 pontos · ≈ 1,85 km pelas ruas')).toBeTruthy();
+    expect(screen.getByTestId('campo-trecho').props.value).toBe('-23.50000, -46.30000 → -23.51000, -46.31000');
+    expect(screen.getByText('Editar trecho no mapa')).toBeTruthy();
+  });
+  it('NÃO sobrescreve um trecho que o técnico já digitou', () => {
+    render(<Lancamento />);
+    fireEvent.changeText(screen.getByTestId('campo-trecho'), 'PL-0932 → PL-0945');
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    fireEvent.press(screen.getByTestId('editor-confirmar'));
+    expect(screen.getByTestId('campo-trecho').props.value).toBe('PL-0932 → PL-0945');
+  });
+  it('fechar o editor volta ao formulário sem mudar nada', () => {
+    render(<Lancamento />);
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    fireEvent.press(screen.getByTestId('editor-fechar'));
+    expect(screen.getByTestId('campo-servico')).toBeTruthy();
+    expect(screen.queryByTestId('trecho-marcado')).toBeNull();
+  });
+  it('salvar leva a rota junto com o lançamento', async () => {
+    render(<Lancamento />);
+    preencherMateriais();
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    fireEvent.press(screen.getByTestId('editor-confirmar'));
+    fireEvent.press(screen.getByTestId('botao-salvar-lancamento'));
+    await waitFor(() => expect(mockDados.comandos.registrarLancamento).toHaveBeenCalledWith(expect.objectContaining({ rota: mockRotaDoEditor, trecho: '-23.50000, -46.30000 → -23.51000, -46.31000' })));
+  });
+  it('sem trecho marcado a rota vai vazia (continua valendo só o texto)', async () => {
+    render(<Lancamento />);
+    preencherMateriais();
+    fireEvent.changeText(screen.getByTestId('campo-trecho'), 'PL-1 → PL-2');
+    fireEvent.press(screen.getByTestId('botao-salvar-lancamento'));
+    await waitFor(() => expect(mockDados.comandos.registrarLancamento).toHaveBeenCalledWith(expect.objectContaining({ rota: null, trecho: 'PL-1 → PL-2' })));
+  });
+  it('remover o trecho do mapa tira só a rota (o texto fica)', () => {
+    render(<Lancamento />);
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    fireEvent.press(screen.getByTestId('editor-confirmar'));
+    fireEvent.press(screen.getByTestId('botao-remover-trecho'));
+    expect(screen.queryByTestId('trecho-marcado')).toBeNull();
+    expect(screen.getByTestId('campo-trecho').props.value).not.toBe('');
+  });
+  it('sem internet o mapa fica indisponível e o texto continua sendo a saída', () => {
+    mockOnline = false;
+    render(<Lancamento />);
+    expect(screen.getByTestId('botao-marcar-trecho').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText(/Sem internet: o mapa precisa de conexão\. Digite o trecho acima/)).toBeTruthy();
+  });
+  it('ao corrigir um lançamento, abre com o trecho que já estava marcado', () => {
+    const op = opDe('lancamento', { id: 7, os_id: 101, estado: 'atencao', erro: { status: 400, mensagem: 'x' },
+      payload: { corpo: { descricao: 'Lançamento', trecho: 'A → B', materiais: [{ lote_id: 11, quantidade: 10 }], rota: mockRotaDoEditor }, exibicao: { linhas: [] } } });
+    mockParams = { id: '101', corrigir: '7' };
+    mockDados = estadoDados({ ops: [op] });
+    mockFin = valorFinalizacao(101, { dados: dadosDe({}, [op]) });
+    render(<Lancamento />);
+    expect(screen.getByText('Trecho marcado no mapa: 3 pontos · ≈ 1,85 km pelas ruas')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('botao-marcar-trecho'));
+    expect(mockEditor.inicial).toEqual(mockRotaDoEditor);
+    expect(mockEditor.centro).toEqual({ lat: -23.5, lng: -46.3 }); // reabre onde o trecho começa
+  });
+});
+
+describe('Lista de lançamentos mostra o trecho marcado', () => {
+  it('"Marcado no mapa: N pontos · ≈ X" para os da fila', () => {
+    mockFin = valorFinalizacao(101, { lancamentos: [lanc({ rota: { pontos: 3, metros: 1850 } })] });
+    render(<Materiais />);
+    expect(screen.getByTestId('rota-o1').props.children.join('')).toBe('Marcado no mapa: 3 pontos · ≈ 1,85 km');
+  });
+});

@@ -6,11 +6,13 @@ import { ApiError, mensagemDeErro } from '@/api/erros';
 import { Botao } from '@/components/Botao';
 import { Cartao } from '@/components/Cartao';
 import { Faixa } from '@/components/Faixa';
+import { EditorTrecho } from '@/components/EditorTrecho';
 import { LeitorQR } from '@/components/LeitorQR';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { filtrarGrupos, normalizar } from '@/domain/busca';
 import { acharGrupoPorCodigo, agrupar, devolverReserva, extrairCodigoLote, validarQuantidadeGrupo, type GrupoPosse } from '@/domain/posse';
 import { fmtNum, fmtQtd } from '@/domain/quantidade';
+import { CENTRO_PADRAO, fmtMetros, textoDoTrecho, type RotaTrecho } from '@/domain/trecho';
 import { useApp } from '@/estado/AppProvider';
 import { useDados } from '@/estado/DadosProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
@@ -25,7 +27,7 @@ export default function Lancamento() {
   const router = useRouter();
   const f = useFinalizacao();
   const { comandos, ops } = useDados();
-  const { api } = useApp();
+  const { api, servidor } = useApp();
   const online = useOnline();
 
   const antigo = corrigir ? ops.find((o) => o.id === Number(corrigir) && o.tipo === 'lancamento') : undefined;
@@ -44,6 +46,8 @@ export default function Lancamento() {
     }
     return Object.fromEntries(Object.entries(inicial).map(([k, v]) => [k, fmtNum(v).replace(/\./g, '')]));
   });
+  const [rota, setRota] = useState<RotaTrecho | null>(antigo && antigo.tipo === 'lancamento' ? antigo.payload.corpo.rota ?? null : null);
+  const [marcando, setMarcando] = useState(false);
   const [busca, setBusca] = useState('');
   const [lendo, setLendo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -78,13 +82,24 @@ export default function Lancamento() {
 
   const salvar = async () => {
     setErro(null); setSalvando(true);
-    const entrada = { descricao, trecho, itens: selecionados.map((g) => ({ chaveGrupo: g.key, quantidade: qtds[g.key] })) };
+    const entrada = { descricao, trecho, rota, itens: selecionados.map((g) => ({ chaveGrupo: g.key, quantidade: qtds[g.key] })) };
     try {
       if (antigo) await comandos.substituirLancamento(antigo.id, entrada); else await comandos.registrarLancamento({ osId: Number(id), ...entrada });
       if (router.canGoBack()) router.back(); else router.replace({ pathname: '/os/[id]/finalizar/materiais', params: { id: String(id) } });
     } catch (e) { setErro(mensagemDeErro(e)); } finally { setSalvando(false); }
   };
 
+  if (marcando) {
+    const ponto = f.rascunho.local ?? (f.os?.latitude != null && f.os.longitude != null ? { lat: f.os.latitude, lng: f.os.longitude } : null);
+    const urlServidor = servidor?.url?.();
+    return (
+      <EditorTrecho
+        centro={rota?.pontos[0] ?? (ponto ? { lat: ponto.lat, lng: ponto.lng } : CENTRO_PADRAO)} inicial={rota} origem={urlServidor ? new URL(urlServidor).origin : undefined}
+        aoFechar={() => setMarcando(false)}
+        aoConfirmar={(r) => { setRota(r); if (!trecho.trim()) setTrecho(textoDoTrecho(r.pontos)); setMarcando(false); }}
+      />
+    );
+  }
   if (lendo) return <LeitorQR aoLer={(t) => void aoLerQR(t)} aoFechar={() => setLendo(false)} />;
 
   return (
@@ -104,6 +119,14 @@ export default function Lancamento() {
 
       <Cartao titulo="Trecho">
         <TextInput testID="campo-trecho" accessibilityLabel="Trecho" value={trecho} onChangeText={setTrecho} placeholder="Ex.: PL-0932 → PL-0945" placeholderTextColor={cores.desabilitado} style={s.campo} maxLength={255} />
+        {rota ? (
+          <View style={s.rota} testID="trecho-marcado" accessible accessibilityLabel={`Trecho marcado no mapa: ${rota.pontos.length} pontos, cerca de ${fmtMetros(rota.metros)}`}>
+            <Text style={s.rotaTexto}>Trecho marcado no mapa: {rota.pontos.length} pontos · ≈ {fmtMetros(rota.metros)}{rota.caminho.length ? ' pelas ruas' : ' em linha reta'}</Text>
+          </View>
+        ) : null}
+        <Botao titulo={rota ? 'Editar trecho no mapa' : 'Marcar o trecho no mapa'} variante="secundario" onPress={() => setMarcando(true)} desabilitado={!online} testID="botao-marcar-trecho" />
+        {!online ? <Text style={s.nota}>Sem internet: o mapa precisa de conexão. Digite o trecho acima (ex.: PL-0932 → PL-0945).</Text> : null}
+        {rota ? <Botao titulo="Remover trecho do mapa" variante="fantasma" onPress={() => setRota(null)} testID="botao-remover-trecho" /> : null}
       </Cartao>
 
       <Cartao titulo="Materiais usados neste trecho">
@@ -155,6 +178,8 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.sm },
   chip: { minHeight: ALVO_MINIMO, justifyContent: 'center', paddingHorizontal: espaco.md, borderRadius: raio.pilula, backgroundColor: cores.primariaClara, borderWidth: 1, borderColor: cores.primaria },
   chipTexto: { fontSize: fonte.pequena + 1, fontWeight: '700', color: cores.primariaEscura },
+  rota: { backgroundColor: cores.primariaClara, borderRadius: raio.md, padding: espaco.md },
+  rotaTexto: { fontSize: fonte.corpo, fontWeight: '700', color: cores.primariaEscura },
   grupo: { gap: espaco.sm },
   linhaGrupo: { flexDirection: 'row', alignItems: 'center', gap: espaco.md, minHeight: 64, paddingHorizontal: espaco.md, paddingVertical: espaco.sm, borderRadius: raio.md, borderWidth: 2, borderColor: cores.borda, backgroundColor: cores.superficie },
   linhaMarcada: { borderColor: cores.primariaBotao, backgroundColor: cores.primariaClara },

@@ -45,6 +45,7 @@ Ligue o **modo avião** (Wi-Fi e dados desligados).
 - [ ] **Ler QR do lote**: pede permissão da câmera, lê a etiqueta e seleciona o cabo ("Lote … encontrado").
 - [ ] Digite **mais do que a posse** (ex.: 999 m): aparece **"Você tem 400 m em posse"** e o botão Salvar trava.
 - [ ] Em conectores, digite **2,5**: "Este item é contado em unidades: informe um número inteiro".
+- [ ] **Marcar o trecho no mapa** (precisa de internet): toque no ponto de **início**, nos pontos do meio e no **fim** (aparecem I, 2, 3… F); o trajeto é traçado pelas ruas e mostra a distância. Arraste um ponto, use **Desfazer último** e **Limpar**. Toque num lugar sem rua: deve recusar com "Marque os pontos sobre uma rua, estrada ou rodovia." Ao **Usar este trecho**, o campo *Trecho* é sugerido (se estava vazio). Sem internet o botão fica indisponível e o texto continua valendo.
 - [ ] Salve **120,5 m**. Em **Meu estoque** o cabo mostra **279,5 m** com **"Reservado em lançamentos não enviados: 120,5 m"**.
 - [ ] Faça um 2º lançamento de **300 m** → recusado ("Você tem 279,5 m em posse"): **não dá para usar o mesmo material duas vezes sem sinal**.
 - [ ] **Corrigir quantidades** e **Remover** funcionam num lançamento "Aguardando envio" (a reserva acompanha).
@@ -65,7 +66,7 @@ Ligue o **modo avião** (Wi-Fi e dados desligados).
 ## F. Religar e conferir (a prova principal)
 Desligue o modo avião, abra o app e toque **Sincronizar agora**.
 - [ ] Os envios caem para 0 e a OS vai para **Encerradas** como **Concluída**.
-- [ ] **No sistema web**, no detalhe da OS (card de fechamento): descrição, motivo, local (com origem GPS), checklist com rótulos, retirados, participantes e **as fotos abrem**.
+- [ ] **No sistema web**, no detalhe da OS: o lançamento aparece com o **trecho desenhado no mapa**; no card de fechamento: descrição, motivo, local (com origem GPS e o nome da rua), checklist com rótulos, retirados, participantes e **as fotos abrem**.
 - [ ] **Estoque → histórico do lote**: **uma única baixa por lançamento** (120,5 m — não duas).
 - [ ] Meu estoque do app: cabo **279,5 m**, sem "reservado".
 - [ ] **A foto chegou com conteúdo** (abre e é a que você tirou). *Este é o primeiro ponto a observar: o envio de foto em multipart pelo `File` do expo-file-system só foi provado em teste automático com um substituto.*

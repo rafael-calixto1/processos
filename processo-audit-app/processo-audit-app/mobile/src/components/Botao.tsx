@@ -40,7 +40,7 @@ export function Botao({ titulo, onPress, variante = 'primario', carregando, desa
 
 const s = StyleSheet.create({
   base: { minHeight: Math.max(ALVO_MINIMO, 52), paddingHorizontal: espaco.xl, borderRadius: raio.md, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  texto: { fontSize: fonte.destaque, fontWeight: '700' },
+  texto: { fontSize: fonte.destaque, fontWeight: '700', textAlign: 'center' },
   inativo: { opacity: 0.45 },
   pressionado: { opacity: 0.8 },
 });

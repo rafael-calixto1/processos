@@ -63,7 +63,7 @@ try {
     const [fotos] = await pool.query('SELECT id, arquivo, mime, tamanho, client_uuid, lat, lng FROM os_fotos WHERE os_id = ? ORDER BY id', [id]);
     const [retirados] = await pool.query('SELECT item_id, descricao, quantidade, unidade, condicao FROM os_materiais_retirados WHERE os_id = ? ORDER BY id', [id]);
     const [[{ n: rascunhos }]] = await pool.query('SELECT COUNT(*) AS n FROM os_rascunhos WHERE os_id = ?', [id]);
-    const [servicos] = await pool.query('SELECT id, descricao, trecho, quantidade FROM os_servicos WHERE os_id = ? ORDER BY id', [id]);
+    const [servicos] = await pool.query('SELECT id, descricao, trecho, quantidade, rota_trecho FROM os_servicos WHERE os_id = ? ORDER BY id', [id]);
     saida({ os, fechamento: f ?? null, fotos, retirados: retirados.map((r) => ({ ...r, quantidade: Number(r.quantidade) })), rascunhos, servicos });
   } else if (comando === 'posse') {
     const [r] = await pool.query('UPDATE estoque_posse SET quantidade = ? WHERE lote_id = ? AND tecnico_id = ?', [Number(args[2]), Number(args[0]), Number(args[1])]);

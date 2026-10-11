@@ -84,6 +84,7 @@ export interface LancamentoVisao {
   estado: 'enviado' | EstadoOp;
   operacaoId?: number;
   erro?: ErroOp | null;
+  rota?: { pontos: number; metros: number }; // trecho marcado no mapa (só nos da fila)
 }
 
 /**
@@ -108,6 +109,7 @@ export const lancamentosDaOS = (osId: number, detalhe: DetalheOS | null, ops: re
       chave: `o${o.id}`, origem: 'local', descricao: o.payload.corpo.descricao, trecho: o.payload.corpo.trecho || null,
       linhas: o.payload.exibicao.linhas.map((l) => ({ item_nome: l.item_nome, unidade: l.unidade, lote_codigo: l.lote_codigo, quantidade: l.quantidade })),
       estado: o.estado, operacaoId: o.id, erro: o.erro,
+      ...(o.payload.corpo.rota && { rota: { pontos: o.payload.corpo.rota.pontos.length, metros: o.payload.corpo.rota.metros } }),
     });
   }
   return [...doServidor, ...locais];

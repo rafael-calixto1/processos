@@ -9,6 +9,7 @@ import { Segmento } from '@/components/Segmento';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { confirmar } from '@/components/confirmar';
 import { fmtQtd } from '@/domain/quantidade';
+import { fmtMetros } from '@/domain/trecho';
 import type { LancamentoVisao } from '@/domain/visao';
 import { useDados } from '@/estado/DadosProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
@@ -69,6 +70,7 @@ export default function Materiais() {
           <Cartao key={l.chave}>
             <Text style={s.nome}>{l.descricao}</Text>
             {l.trecho ? <Text style={s.trecho}>Trecho: <Text style={s.negrito}>{l.trecho}</Text></Text> : null}
+            {l.rota ? <Text style={s.trecho} testID={`rota-${l.chave}`}>Marcado no mapa: {l.rota.pontos} pontos · ≈ {fmtMetros(l.rota.metros)}</Text> : null}
             {l.linhas.map((x, i) => <Text key={i} style={s.linha}>{x.item_nome} — <Text style={s.negrito}>{fmtQtd(x.quantidade, x.unidade)}</Text> · {x.lote_codigo}</Text>)}
             <Text style={[s.estado, { color: v.cor }]} accessibilityLabel={`Situação: ${v.texto}`}>{v.texto}</Text>
             {l.estado === 'atencao' && l.erro ? <View style={s.erro} accessibilityRole="alert"><Text style={s.erroTexto}>{l.erro.mensagem}</Text></View> : null}

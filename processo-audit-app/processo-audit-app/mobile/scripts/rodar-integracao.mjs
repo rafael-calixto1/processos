@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const mobile = path.resolve(aqui, '..');
 const raiz = path.resolve(mobile, '..');
-const PORTA = process.env.PORTA_TESTE || '5998';
+const PORTA = process.env.PORTA_TESTE || '5997'; // 5998 costuma ser o backend de teste usado no celular
 const DB_TESTE = 'processo_audit_test';
 
 if (process.env.DB_NAME && process.env.DB_NAME !== DB_TESTE) {
@@ -21,6 +21,10 @@ if (process.env.DB_NAME && process.env.DB_NAME !== DB_TESTE) {
   process.exit(2);
 }
 const ambiente = { ...process.env, DB_NAME: DB_TESTE, PORT: PORTA };
+
+// Este executor RECRIA o banco de teste. Se já há um servidor nessa porta, alguém (ou o celular) está usando o banco: não continue.
+const portaOcupada = await fetch(`http://localhost:${PORTA}/api/health`).then(() => true, () => false);
+if (portaOcupada) { console.error(`Recusado: já há um servidor respondendo na porta ${PORTA}. Pare-o (ou use PORTA_TESTE=<outra>) — este executor recria o banco ${DB_TESTE}.`); process.exit(3); }
 
 const preparar = spawnSync(process.execPath, ['scripts/teste_mobile.js', 'preparar'], { cwd: raiz, env: ambiente, encoding: 'utf8' });
 if (preparar.status !== 0) { console.error(preparar.stdout, preparar.stderr); process.exit(preparar.status ?? 1); }

@@ -1,3 +1,4 @@
+import type { RotaTrecho } from './trecho';
 import type { Unidade } from './tipos';
 
 /**
@@ -20,7 +21,7 @@ export interface PayloadIniciar { corpo: { iniciado_em: string } }
 
 export interface LinhaLancamento { item_nome: string; unidade: Unidade; lote_id: number; lote_codigo: string; quantidade: number }
 export interface PayloadLancamento {
-  corpo: { descricao: string; trecho: string; materiais: Array<{ lote_id: number; quantidade: number }> };
+  corpo: { descricao: string; trecho: string; materiais: Array<{ lote_id: number; quantidade: number }>; rota?: RotaTrecho };
   exibicao: { linhas: LinhaLancamento[] }; // só para mostrar na tela; não vai ao servidor
 }
 

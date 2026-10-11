@@ -9,7 +9,7 @@ Feito com Expo (SDK 57), React Native, TypeScript e Expo Router. Tudo em portugu
 | Já funciona | Ainda não |
 |---|---|
 | Login só para técnico, sessão que se renova sozinha, tokens no cofre do aparelho | Envio em **segundo plano** com o app fechado (Fase 4; hoje envia com o app aberto) |
-| **Executar uma OS inteira sem sinal**: iniciar, descrição, motivo, local (GPS, poste ou endereço), checklist, **lançamentos de material** (limite da posse sempre à vista, FIFO por lote, QR do lote), materiais retirados, **fotos** (câmera do app e galeria, comprimidas), participantes e **finalizar** | Rota desenhada no mapa, devolução de material, push, build instalável (Fase 4) |
+| **Executar uma OS inteira sem sinal**: iniciar, descrição, motivo, local (GPS, poste ou endereço), checklist, **lançamentos de material** (limite da posse sempre à vista, FIFO por lote, QR do lote, **trecho marcado no mapa** tocando início, pontos e fim), materiais retirados, **fotos** (câmera do app e galeria, comprimidas), participantes e **finalizar** | Devolução de material, push, build instalável (Fase 4). O mapa do trecho precisa de internet (offline vale o trecho digitado) |
 | **Fila de envio** (outbox): tudo vai para o servidor depois, na ordem certa, **sem duplicar baixa** (chave de idempotência congelada por operação) | Testado só em teste automático e no navegador: câmera, GPS, QR e modo avião **reais** (ver `docs/ROTEIRO_TESTE_MANUAL.md`) |
 | **Sincronização visível**: ícone por OS, contador, "Sincronizar agora", tela **Requer atenção** (recusas do servidor com a mensagem dele e a ação possível) | |
 | Logout e troca de técnico **sem perder trabalho não enviado** (descartar só com dupla confirmação) | |

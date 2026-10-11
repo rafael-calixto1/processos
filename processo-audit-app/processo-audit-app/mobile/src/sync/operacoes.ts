@@ -6,6 +6,7 @@ import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type CorpoFi
 import { isPendente } from '@/domain/os';
 import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '@/domain/posse';
 import { parseQuantidade } from '@/domain/quantidade';
+import { MAX_PONTOS, reduzirCaminho, rotaValida, type RotaTrecho } from '@/domain/trecho';
 import type { StatusOS } from '@/domain/tipos';
 import { fotosDaOS, lancamentosComMaterial } from '@/domain/visao';
 import { carregarEstadoLocal, type EstadoLocal } from './estadoLocal';
@@ -69,6 +70,7 @@ export interface EntradaLancamento {
   descricao: string;
   trecho: string;
   itens: Array<{ chaveGrupo: string; quantidade: string }>; // chave do grupo de posse (agrupar) e a quantidade como digitada
+  rota?: RotaTrecho | null; // trecho marcado no mapa (opcional): 2 a 25 pontos
 }
 
 const montarLancamento = async (tx: Banco, c: ContextoComandos, e: EntradaLancamento): Promise<Extract<NovaOperacao, { tipo: 'lancamento' }>> => {
@@ -81,6 +83,7 @@ const montarLancamento = async (tx: Banco, c: ContextoComandos, e: EntradaLancam
   if (!trecho) throw new ErroOperacao('Informe o trecho (ex.: PL-0932 → PL-0945).');
   if (trecho.length > 255) throw new ErroOperacao('O trecho pode ter no máximo 255 caracteres.');
   if (!e.itens.length) throw new ErroOperacao('Escolha ao menos um material da sua posse.');
+  if (e.rota && !rotaValida(e.rota)) throw new ErroOperacao(`O trecho marcado no mapa precisa de 2 a ${MAX_PONTOS} pontos válidos.`);
 
   const grupos = agrupar(estado.visao.posse);
   const vistos = new Set<string>();
@@ -99,7 +102,7 @@ const montarLancamento = async (tx: Banco, c: ContextoComandos, e: EntradaLancam
       linhas.push({ item_nome: g.item_nome, unidade: g.unidade, lote_id: baixa.lote_id, lote_codigo: lote.lote_codigo, quantidade: baixa.quantidade });
     }
   }
-  return { ...base(c, os), depende_de: dependenciaDeInicio(doOS), tipo: 'lancamento', payload: { corpo: { descricao, trecho, materiais }, exibicao: { linhas } } };
+  return { ...base(c, os), depende_de: dependenciaDeInicio(doOS), tipo: 'lancamento', payload: { corpo: { descricao, trecho, materiais, ...(e.rota && { rota: { pontos: e.rota.pontos, metros: e.rota.metros, caminho: reduzirCaminho(e.rota.caminho) } }) }, exibicao: { linhas } } };
 };
 
 export const registrarLancamento = (c: ContextoComandos, e: EntradaLancamento): Promise<Operacao> => c.banco.transacao(async (tx) =>
