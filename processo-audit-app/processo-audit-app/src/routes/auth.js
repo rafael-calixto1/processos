@@ -13,14 +13,31 @@ const router = express.Router();
 const limiteEmail = criarLimitador({ max: 10 });
 const limiteIp = criarLimitador({ max: 40 });
 const limiteRefresh = criarLimitador({ max: 60 });
+const limiteRegistro = criarLimitador({ max: 5, janelaMs: 60 * 60 * 1000 }); // cadastros por IP por hora (só vale com o cadastro público ligado)
+
+/** Cadastro por conta própria (cria um usuário só-leitura): DESLIGADO por padrão. Para ligar: ALLOW_PUBLIC_REGISTER=1 no ambiente do servidor. */
+export const cadastroPublicoLigado = () => process.env.ALLOW_PUBLIC_REGISTER === '1';
 
 // Registro
 router.post('/register', async (req, res) => {
   try {
+    if (!cadastroPublicoLigado()) {
+      return res.status(403).json({ error: 'O cadastro por conta própria está desativado. Peça a um administrador para criar o seu acesso.' });
+    }
+    const espera = limiteRegistro.segundosRestantes(req.ip);
+    if (espera > 0) {
+      res.set('Retry-After', String(espera));
+      return res.status(429).json({ error: `Muitos cadastros deste endereço. Tente de novo em ${Math.ceil(espera / 60)} min.` });
+    }
+    limiteRegistro.falha(req.ip); // cada tentativa conta, não só as que falham
+
     const { email, password, name } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

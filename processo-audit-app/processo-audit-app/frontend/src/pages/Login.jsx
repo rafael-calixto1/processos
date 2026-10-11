@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import styles from './Auth.module.css';
@@ -80,7 +80,7 @@ const Login = () => {
         </form>
 
         <p className={styles.footer}>
-          Não tem conta? <Link to="/register">Registre-se aqui</Link>
+          Não tem acesso? Peça a um administrador para criar a sua conta.
         </p>
       </div>
 

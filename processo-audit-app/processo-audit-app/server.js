@@ -21,7 +21,8 @@ import painelRoutes from './src/routes/painel.js';
 import { tecnicosRouter, fornecedoresRouter, equipamentosRouter } from './src/routes/cadastros.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
 import { requestLogger } from './src/middlewares/requestLogger.js';
-import { criarOpcoesCors } from './src/config/cors.js';
+import { criarOpcoesCors, origensPermitidas } from './src/config/cors.js';
+import { opcaoTrustProxy } from './src/config/proxy.js';
 import { limparOperacoesAntigas } from './src/services/idempotencia.js';
 
 dotenv.config();
@@ -29,13 +30,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Trust proxy for correct IP detection
-app.set('trust proxy', true);
+// IP do cliente atrás de proxy: só confia no X-Forwarded-For de proxy da mesma máquina (ou do que TRUST_PROXY disser). Ver src/config/proxy.js
+app.set('trust proxy', opcaoTrustProxy());
 
 // Request logger (corpo só com LOG_BODIES=1, sempre redigido; nunca em /auth nem em upload)
 app.use(requestLogger);
 
 // Middlewares
+if (!origensPermitidas().length) console.warn('[segurança] CORS_ALLOWED_ORIGINS não definido: o servidor aceita pedidos de navegador de qualquer origem. Defina a lista em produção (ver docs/ENDURECIMENTO.md).');
 app.use(cors(criarOpcoesCors()));
 
 app.use(express.json({ limit: '50mb' }));
