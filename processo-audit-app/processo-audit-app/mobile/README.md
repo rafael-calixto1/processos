@@ -4,15 +4,18 @@ App dos técnicos de campo para ver e executar as Ordens de Serviço e acompanha
 
 Feito com Expo (SDK 57), React Native, TypeScript e Expo Router. Tudo em português do Brasil.
 
-## Estado atual (Fase 3)
+## Estado atual (Fase 4a)
 
 | Já funciona | Ainda não |
 |---|---|
 | Login só para técnico, sessão que se renova sozinha, tokens no cofre do aparelho | Envio em **segundo plano** com o app fechado (Fase 4; hoje envia com o app aberto) |
-| **Executar uma OS inteira sem sinal**: iniciar, descrição, motivo, local (GPS, poste ou endereço), checklist, **lançamentos de material** (limite da posse sempre à vista, FIFO por lote, QR do lote, **trecho marcado no mapa** tocando início, pontos e fim), materiais retirados, **fotos** (câmera do app e galeria, comprimidas), participantes e **finalizar** | Devolução de material, push, build instalável (Fase 4). O mapa do trecho precisa de internet (offline vale o trecho digitado) |
+| **Executar uma OS inteira sem sinal**: iniciar, descrição, motivo, local (GPS, poste ou endereço), checklist, **lançamentos de material** (limite da posse sempre à vista, FIFO por lote, QR do lote, **trecho marcado no mapa** tocando início, pontos e fim), materiais retirados, **fotos** (câmera do app e galeria, comprimidas), participantes e **finalizar** | Push de nova OS, build instalável e publicação (Fase 4b/4c). O mapa do trecho precisa de internet (offline vale o trecho digitado; marcado sem traçado, é traçado pelas ruas antes do primeiro envio) |
 | **Fila de envio** (outbox): tudo vai para o servidor depois, na ordem certa, **sem duplicar baixa** (chave de idempotência congelada por operação) | Testado só em teste automático e no navegador: câmera, GPS, QR e modo avião **reais** (ver `docs/ROTEIRO_TESTE_MANUAL.md`) |
 | **Sincronização visível**: ícone por OS, contador, "Sincronizar agora", tela **Requer atenção** (recusas do servidor com a mensagem dele e a ação possível) | |
 | Logout e troca de técnico **sem perder trabalho não enviado** (descartar só com dupla confirmação) | |
+| **Fase 4a — Devolução de material** pela mesma fila (sem sinal também): o técnico **solicita**, o material fica **separado** na hora, o estoque aprova ou nega e o app mostra a decisão com o **motivo** (tela *Minhas devoluções*); um pedido por lote, com chave de idempotência | **Exige o backend novo** (chave de idempotência em `POST /estoque/devolucoes` e `devolucoes` no bootstrap): subir o app antes do deploy do servidor pode duplicar pedido em rede ruim |
+| **Fase 4a — Ficha de movimentações**: posse com recebido/usado por lote e histórico agrupado como no web (sem estornos), guardada no aparelho para consultar sem sinal | O web esconde a baixa inteira quando há **estorno parcial**; a ficha do app repete o mesmo comportamento de propósito (paridade com o escritório) |
+| **Fase 4a — Aparência**: tema Automático/Claro/Escuro (contraste conferido em teste), ícone e splash da marca, botão para abrir as configurações quando câmera/GPS foram bloqueados, varredura de acessibilidade no código | Leitor de tela, fonte grande, desempenho em aparelho lento e o visual do ícone/splash **só se confirmam em aparelho/build** |
 
 Como funciona por baixo (resumo): o banco local guarda o **retrato** do servidor e, **à parte**, a fila do que o técnico fez; a tela mostra retrato + fila (posse já descontada do reservado, OS "em andamento" antes de o servidor saber). Um novo retrato nunca apaga nem duplica trabalho pendente. O motor envia **uma operação por vez**: iniciar → lançamentos e fotos → finalizar (que espera todas as da OS). Falha de rede/5xx/429 tenta de novo com espera crescente; recusa por regra (400/403/404/409/422) vira "requer atenção"; login recusado pausa tudo sem perder nada; o que ficou "enviando" quando o app foi encerrado é reenviado com a **mesma** chave.
 
@@ -60,6 +63,15 @@ DB_NAME=processo_audit_test OS_ID=<id da OS do técnico> node scripts/verificar-
 
 Percorre uma OS inteira **offline** (celular 390×844) e confere no banco de teste que tudo chegou ao religar. **Câmera, GPS e leitor de QR são SIMULAÇÕES marcadas na tela**; capturas de exemplo em `docs/capturas/`.
 
+Roteiros extras da Fase 4a (mesma preparação; usar uma porta própria para não esbarrar no servidor de teste de outro ciclo):
+
+```bash
+APP_URL=http://localhost:3996 API_URL=http://localhost:5996/api node scripts/verificar-devolucao-web.mjs docs/capturas-devolucao   # devolução, ficha e ficha sem conexão
+APP_URL=http://localhost:3996 node scripts/verificar-tema-web.mjs docs/capturas-tema                                                # telas nos temas claro e escuro
+```
+
+> Ao reconstruir o build web depois de trocar a porta da API use `expo export ... --clear`: sem isso o Expo reaproveita a URL antiga e o app fala com o servidor errado (aconteceu).
+
 ### Ver as telas no computador (opcional)
 
 O app de verdade é Android/iOS, mas dá para olhar as telas no navegador (com SQLite e tudo):
@@ -98,5 +110,5 @@ Decisões que valem saber:
 
 ## Pendências conhecidas
 
-- Ícones e splash são os padrões do Expo (trocar na Fase 4). `android.package` e `ios.bundleIdentifier` (`br.com.conexaoweb.ostecnicos`) são provisórios.
+- Ícone e splash agora são da marca (Fase 4a), mas só aparecem em build instalado, não no Expo Go. `android.package` e `ios.bundleIdentifier` (`br.com.conexaoweb.ostecnicos`) ainda são provisórios (definitivos na Fase 4b/4c; no Google Play o identificador não muda depois de publicado).
 - `npm audit` aponta vulnerabilidades (`braces`, `node-forge`, `uuid`, `decode-uri-component`, `sprintf-js`) em dependências transitivas do `@expo/cli`, do Metro e do Jest: são ferramentas de build e de teste, que não vão dentro do app instalado. **Não** rode `npm audit fix --force` (quebra o SDK); acompanhe pelas atualizações do Expo.

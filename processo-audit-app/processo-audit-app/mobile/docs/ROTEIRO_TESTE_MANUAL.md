@@ -1,4 +1,4 @@
-# Roteiro de teste no celular (modo avião) — Fase 3
+# Roteiro de teste no celular (modo avião) — Fases 3 e 4a
 
 Para quem vai testar com um **aparelho de verdade e o Expo Go**. O que foi provado por teste automático está no README; este roteiro cobre o que **só o aparelho prova**: câmera, GPS, leitura de QR, modo avião de verdade e o envio de foto pelo sistema de arquivos do celular.
 
@@ -21,6 +21,8 @@ Pelo sistema web (entre como `estoque@exemplo.com`/`admin@exemplo.com` apontando
 2. Uma **compra de conectores** (tipo *unidade*, lotes de 30 e 20) e **retire os dois lotes para o João**.
 3. Uma **OS** para o João com latitude/longitude (para o botão "coordenadas do poste").
 4. **Imprima ou abra na tela** a etiqueta QR do lote da bobina (o QR contém só o código, ex.: `LOTE-BOB-0001`).
+
+> **Fase 4a: reinicie o backend de teste com o código novo.** A devolução pelo app depende de duas mudanças do servidor (chave de idempotência em `POST /estoque/devolucoes` e `devolucoes` no `bootstrap`). Um servidor de teste que já estava no ar **não** as tem: pare-o (pelo PID) e suba de novo com o comando acima. Sem isso, a devolução do app pode duplicar pedido em rede ruim e o saldo separado não aparece.
 
 **App:** em `mobile/.env` coloque `EXPO_PUBLIC_API_URL=http://<IP-do-computador>:5998/api`, rode `npx expo start --clear` e abra no Expo Go.
 
@@ -85,6 +87,41 @@ Repita B–E com uma OS nova, desta vez com **3 fotos**. Religue a rede, toque *
 - [ ] Deixe o app aberto **mais de 15 min** (o login de 15 min vence) e então use/ligue a rede: **segue funcionando**, sem pedir senha.
 - [ ] Com pendências, **Conta → Sair**: oferece **"Sair e manter"** (padrão), "Sair e descartar tudo" (pede **segunda confirmação**) e Cancelar.
 - [ ] Saia mantendo e **entre como `ana@exemplo.com`**: aparece **"Há trabalho não enviado neste aparelho"** e **nada** do João é mostrado nem apagado. "Sair desta conta" volta ao login; entrando como João, a fila continua e é enviada.
+
+## K. Fase 4a — Devolução de material (sem sinal → rede → decisão do estoque)
+Pré-requisito: seção A feita (o João tem 400 m de cabo e 50 conectores).
+- [ ] **Meu estoque → Devolver material**. Sem escolher nada, **"Pedir devolução" está travado**.
+- [ ] Marque o cabo, digite **999**: aparece **"Você tem 400 m em posse"** em vermelho e o botão continua travado. Digite **100** → mostra "Você pode devolver até 400 m". Escolha **Usado**.
+- [ ] Marque os conectores, digite **35** e **não** escolha novo/usado: botão **continua travado** (o app nunca assume a condição). Escolha **Novo**.
+- [ ] **Ler QR do lote** (câmera real): lê a etiqueta da bobina e marca o item sozinho. Um QR de lote que não é seu mostra "não está na sua posse".
+- [ ] Ligue o **modo avião** e toque **Pedir devolução de 2 itens**: abre **Minhas devoluções** com **3 pedidos "Na fila para enviar"** (cabo + 2 lotes de conector; o conector é repartido entre os lotes). Em **Meu estoque** o saldo já caiu e aparece **"Separado para devolução"**.
+- [ ] Em **Nova OS/lançamento** o material separado **não** pode ser usado (limite mostra o saldo já descontado).
+- [ ] Toque **Cancelar pedido** num dos três: pede confirmação; ao confirmar o material volta ao saldo. (Refaça o pedido se cancelou.)
+- [ ] Desligue o modo avião: em segundos os pedidos viram **"Aguardando o estoque"**. No sistema web (**Estoque → Devoluções, entrando como estoque**) aparecem **exatamente 3 solicitações** (nenhuma duplicada).
+- [ ] No web, **negue o cabo com um motivo** e **aprove** os conectores. Em **Conta → Sincronizar agora** e **Minhas devoluções**: o cabo aparece **"Negada" com o motivo** e "O material continua com você"; os conectores "Aprovada". O cabo voltou a estar disponível (400 m); o saldo dos conectores diminuiu.
+- [ ] (Conflito) Sem sinal, peça devolver 300 m do cabo; **no web, o estoque faz uma devolução direta de 250 m do João**; ligue a rede: o pedido vira **"Requer atenção"** com a mensagem do servidor ("Você possui apenas 150…"). **Descartar** devolve o material ao saldo.
+
+## L. Fase 4a — Ficha de movimentações
+- [ ] **Meu estoque → Ficha de movimentações**: mostra "Em posse agora" (com recebido/usado por lote) e o **Histórico** com retiradas, baixas por OS e devoluções **sem estornos**. Os filtros Todos/Retiradas/Baixas em OS/Devoluções funcionam; "Ver mais" carrega mais 12.
+- [ ] Toque numa linha do histórico e numa linha de "Em posse agora": abre os itens / "Entregue em" / "Gasto nas OS".
+- [ ] Confira com o web (**Estoque → Posse → João**): os números e agrupamentos são os mesmos.
+- [ ] Modo avião, abra a ficha de novo: aparece a **última ficha guardada** com o aviso "Sem conexão: mostrando a ficha guardada".
+
+## M. Fase 4a — Trecho no mapa
+- [ ] No lançamento, **Marcar o trecho no mapa**: toque no início, em pontos do meio e no fim; **arraste um ponto** (o traçado pelas ruas refaz). Mostra a distância "pelas ruas".
+- [ ] Ponto fora de rua é recusado com a mensagem do servidor ("Marque os pontos sobre uma rua…").
+- [ ] **Sem internet o botão do mapa fica desabilitado** e o aviso orienta digitar o trecho (ex.: PL-0932 → PL-0945).
+- [ ] (Traçar depois) Marque o trecho **com internet fraca** (ou com o servidor de rotas fora) e salve: o trecho fica "em linha reta". Ao enviar com boa conexão, no web a rota aparece **seguindo as ruas** (o app traça antes do primeiro envio).
+- [ ] Mais de 25 pontos: o app impede ("Limite de 25 pontos atingido").
+
+## N. Fase 4a — Aparência, ícone e permissões
+- [ ] **Conta → Aparência**: *Automático / Claro / Escuro*. Escuro muda tudo na hora; fica salvo ao fechar e abrir o app. Barra de status (hora/bateria) legível sobre o cabeçalho verde nos dois temas. Com *Automático*, o app segue a mudança do tema do aparelho.
+- [ ] Leia todas as telas no tema escuro **sob luz forte** e no claro **à noite**: nada ilegível.
+- [ ] **Ícone e splash da marca** só aparecem em **build instalado** (no Expo Go aparece o ícone do Expo): confira no build `preview` (Fase 4c).
+- [ ] **Permissão de câmera negada**: ao negar em "Ler QR" e em "Tirar foto", o app explica em português e oferece **Permitir câmera**; se marcar "não perguntar de novo", mostra **Abrir configurações** (e o botão leva às configurações do app).
+- [ ] **GPS**: permissão bloqueada → "Abrir configurações"; GPS desligado → "Ligar a localização" (leva à tela de localização do Android).
+- [ ] **Fonte grande**: em Configurações do aparelho, aumente o tamanho da fonte ao máximo: telas rolam e botões continuam tocáveis; a barra de abas não corta o texto.
+- [ ] **TalkBack** ligado: percorra Minhas OS → detalhe → Devolver material: cada botão e campo é lido com nome e função (ex.: "Quantidade de Cabo óptico a devolver").
 
 ## J. O que ainda NÃO foi testado em aparelho (confirme você)
 Câmera, GPS, QR, modo avião e fechamento forçado reais · upload de foto via `File` do expo-file-system · galeria com o Android encerrando o app (`getPendingResultAsync`) · HEIC no iPhone · permissões negadas em cada tela · desempenho em aparelho lento · teclado e toque com luvas.
