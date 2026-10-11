@@ -1,4 +1,4 @@
-import type { NovaOperacao } from '@/domain/operacoes';
+import { SEM_OS, type NovaOperacao } from '@/domain/operacoes';
 
 /** UUID de teste previsível: uuid(1) → 00000000-0000-4000-8000-000000000001. */
 export const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -46,3 +46,9 @@ export const novaFinalizar = (osId: number, extra: Partial<Comum> = {}): NovaOpe
     },
   };
 };
+
+export const novaDevolucao = (loteId = 11, quantidade = 20, condicao: 'novo' | 'usado' = 'usado', extra: Partial<Comum> = {}): NovaOperacao =>
+  ({
+    ...comum(SEM_OS, { os_numero: null, os_cliente: null, ...extra }), tipo: 'devolucao',
+    payload: { corpo: { lote_id: loteId, quantidade, condicao }, exibicao: { item_nome: 'Cabo óptico ASU 12F', unidade: 'metros' as const, lote_codigo: `LOTE-${loteId}` } },
+  });

@@ -8,6 +8,7 @@ export interface GrupoPosse {
   lote_codigo: string | null; // null quando o item soma vários lotes (itens por unidade)
   quantidade: number;
   reservado: number; // reservado em lançamentos ainda não confirmados pelo servidor (a quantidade já vem descontada)
+  emDevolucao: number; // separado para devolução, na fila ou aguardando aprovação do estoque (também já descontado)
   lotes: PosseItem[]; // do mais antigo para o mais novo (lote_id crescente)
 }
 
@@ -15,12 +16,13 @@ export interface GrupoPosse {
 export const agrupar = (posse: readonly PosseItem[]): GrupoPosse[] => {
   const grupos = new Map<string, GrupoPosse>();
   for (const p of posse) {
-    if (!(p.quantidade > 0) && !((p.reservado ?? 0) > 0)) continue; // lote todo reservado continua aparecendo, com saldo zero
+    if (!(p.quantidade > 0) && !((p.reservado ?? 0) > 0) && !((p.emDevolucao ?? 0) > 0)) continue; // lote todo reservado continua aparecendo, com saldo zero
     const porUnidade = String(p.lote_codigo).startsWith('LOTE-UNI');
     const key = porUnidade ? `i${p.item_id}` : `l${p.lote_id}`;
-    const g = grupos.get(key) ?? { key, item_nome: p.item_nome, unidade: p.unidade, lote_codigo: porUnidade ? null : p.lote_codigo, quantidade: 0, reservado: 0, lotes: [] };
+    const g = grupos.get(key) ?? { key, item_nome: p.item_nome, unidade: p.unidade, lote_codigo: porUnidade ? null : p.lote_codigo, quantidade: 0, reservado: 0, emDevolucao: 0, lotes: [] };
     g.quantidade = r2(g.quantidade + p.quantidade);
     g.reservado = r2(g.reservado + (p.reservado ?? 0));
+    g.emDevolucao = r2(g.emDevolucao + (p.emDevolucao ?? 0));
     g.lotes.push(p);
     grupos.set(key, g);
   }

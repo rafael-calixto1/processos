@@ -21,7 +21,7 @@ export const salvarBootstrap = (b: Banco, d: Bootstrap): Promise<void> => b.tran
   for (const p of d.posse) await tx.run('INSERT INTO posse (lote_id, item_id, dados) VALUES (?,?,?)', [p.lote_id, p.item_id, JSON.stringify(p)]);
   const catalogos: Record<string, unknown> = {
     tecnico: d.tecnico, motivos: d.motivos, checklist: d.checklist, sugestoes_servicos: d.sugestoes_servicos,
-    tipos_servico: d.tipos_servico, tecnicos: d.tecnicos, itens: d.itens, regras: d.regras,
+    tipos_servico: d.tipos_servico, tecnicos: d.tecnicos, itens: d.itens, regras: d.regras, devolucoes: d.devolucoes ?? [],
   };
   for (const [chave, valor] of Object.entries(catalogos)) {
     await tx.run('INSERT INTO catalogo (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor', [chave, JSON.stringify(valor)]);
@@ -37,7 +37,7 @@ export const lerDados = async (b: Banco): Promise<Dados | null> => {
   const os = (await b.all<{ dados: string }>('SELECT dados FROM os ORDER BY ordem')).map((r) => json<OS>(r.dados));
   const posse = (await b.all<{ dados: string }>('SELECT dados FROM posse ORDER BY item_id, lote_id')).map((r) => json<PosseItem>(r.dados));
   return {
-    geradoEm, tecnico: cat.tecnico, os, posse, motivos: cat.motivos ?? [], checklist: cat.checklist ?? [],
+    geradoEm, tecnico: cat.tecnico, os, posse, devolucoes: cat.devolucoes ?? [], motivos: cat.motivos ?? [], checklist: cat.checklist ?? [],
     sugestoesServicos: cat.sugestoes_servicos ?? [], tiposServico: cat.tipos_servico ?? [], tecnicos: cat.tecnicos ?? [], itens: cat.itens ?? [], regras: cat.regras,
   };
 };

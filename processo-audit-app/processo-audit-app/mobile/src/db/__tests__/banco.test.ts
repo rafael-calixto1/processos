@@ -25,6 +25,18 @@ describe('migrações', () => {
 });
 
 describe('salvarBootstrap / lerDados', () => {
+  it('guarda as devoluções do técnico e, com servidor antigo (sem o campo), devolve lista vazia', async () => {
+    const { banco } = await criarBancoDeTeste();
+    const devolucoes = [{ id: 5, lote_id: 11, lote_codigo: 'LOTE-BOB-0001', item_id: 1, item_nome: 'Cabo óptico ASU 12F', unidade: 'metros' as const, quantidade: 30, condicao: 'usado' as const, observacao: null, status: 'negada' as const, solicitado_em: '2026-10-10T10:00:00.000Z', revisado_em: '2026-10-10T11:00:00.000Z', motivo_negacao: 'Peça danificada' }];
+    await salvarBootstrap(banco, criarBootstrap({ devolucoes }));
+    expect((await lerDados(banco))?.devolucoes).toEqual(devolucoes);
+    await salvarBootstrap(banco, criarBootstrap()); // próximo retrato sem devoluções: não sobra nada do anterior
+    expect((await lerDados(banco))?.devolucoes).toEqual([]);
+    const { devolucoes: _, ...semCampo } = criarBootstrap({ devolucoes });
+    await salvarBootstrap(banco, semCampo);
+    expect((await lerDados(banco))?.devolucoes).toEqual([]);
+  });
+
   it('antes da primeira sincronização não há dados', async () => {
     const { banco } = await criarBancoDeTeste();
     expect(await lerDados(banco)).toBeNull();

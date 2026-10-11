@@ -9,7 +9,7 @@ import { criarBootstrap } from '@/testing/fixtures';
 import { uuid } from '@/testing/operacoes';
 import { carregarEstadoLocal } from '../estadoLocal';
 import {
-  adicionarFoto, descartarOperacao, ErroOperacao, finalizarOS, iniciarOS, registrarLancamento, reenviarOperacao, removerFotoDaOS, removerLancamento, salvarRascunhoLocal, substituirLancamento, voltarAEditar,
+  adicionarFoto, descartarOperacao, ErroOperacao, finalizarOS, iniciarOS, registrarLancamento, reenviarOperacao, removerFotoDaOS, removerLancamento, salvarRascunhoLocal, solicitarDevolucao, substituirLancamento, voltarAEditar,
   type ContextoComandos,
 } from '../operacoes';
 
@@ -449,4 +449,92 @@ it('o estado carregado combina retrato e fila (e o retrato bruto continua intact
   expect(e.dados.posse.find((p) => p.lote_id === 11)?.quantidade).toBe(449.5);
   expect(e.visao.posse.find((p) => p.lote_id === 11)?.quantidade).toBe(349.5);
   expect(agrupar(aplicarPendencias(e.dados, e.ops).posse).find((g) => g.key === 'l11')?.quantidade).toBe(349.5);
+});
+
+describe('solicitarDevolucao', () => {
+  const item = (chaveGrupo: string, quantidade: string, condicao: 'novo' | 'usado' | null = 'usado') => ({ chaveGrupo, quantidade, condicao });
+
+  it('congela o pedido (lote, quantidade, condição e observação), não pertence a nenhuma OS e separa o material na hora', async () => {
+    const { ctx, posse, banco } = await montar();
+    const [op] = await solicitarDevolucao(ctx, { itens: [item('l11', '120,5', 'novo')], observacao: '  sobra do lance  ' });
+    expect(op).toMatchObject({ tipo: 'devolucao', os_id: 0, os_numero: null, estado: 'pendente', depende_de: [] });
+    expect(op.payload).toEqual({
+      corpo: { lote_id: 11, quantidade: 120.5, condicao: 'novo', observacao: 'sobra do lance' },
+      exibicao: { item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', lote_codigo: 'LOTE-BOB-0001' },
+    });
+    expect(await posse(11)).toMatchObject({ quantidade: 329, emDevolucao: 120.5 });
+    expect(await listarTodas(banco, 7)).toHaveLength(1);
+  });
+
+  it('item que soma vários lotes vira um pedido por lote, do mais antigo ao mais novo', async () => {
+    const { ctx } = await montar();
+    const ops = await solicitarDevolucao(ctx, { itens: [item('i2', '35', 'novo')] });
+    expect(ops.map((o) => o.tipo === 'devolucao' && [o.payload.corpo.lote_id, o.payload.corpo.quantidade])).toEqual([[21, 30], [22, 5]]);
+    expect(new Set(ops.map((o) => o.chave)).size).toBe(2); // uma chave de idempotência por pedido
+    expect(new Set(ops.map((o) => o.client_uuid)).size).toBe(2);
+  });
+
+  it('a condição (novo/usado) é obrigatória e nunca assumida', async () => {
+    const { ctx, banco } = await montar();
+    const e = await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '10', null)] }));
+    expect(e).toBeInstanceOf(ErroOperacao);
+    expect(e?.message).toMatch(/novo ou usado/);
+    expect(await listarTodas(banco, 7)).toHaveLength(0);
+  });
+
+  it('não deixa passar da posse, nem de peça quebrada, nem quantidade vazia', async () => {
+    const { ctx, banco } = await montar();
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '450')] })))?.message).toMatch(/Você tem 449,5 m em posse/);
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('i2', '1,5')] })))?.message).toMatch(/número inteiro/);
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '')] })))?.message).toMatch(/Informe a quantidade/);
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [] })))?.message).toMatch(/ao menos um material/);
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '1')], observacao: 'x'.repeat(501) })))?.message).toMatch(/500 caracteres/);
+    expect(await listarTodas(banco, 7)).toHaveLength(0);
+  });
+
+  it('dois toques seguidos não devolvem o mesmo material duas vezes', async () => {
+    const { ctx, banco } = await montar();
+    await solicitarDevolucao(ctx, { itens: [item('l11', '400')] });
+    const e = await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '400')] }));
+    expect(e?.message).toMatch(/Você tem 49,5 m em posse/);
+    expect(await listarTodas(banco, 7)).toHaveLength(1);
+  });
+
+  it('tudo ou nada: se um item é inválido, nenhum pedido é gravado', async () => {
+    const { ctx, banco } = await montar();
+    const e = await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '10'), item('i2', '51')] }));
+    expect(e).toBeInstanceOf(ErroOperacao);
+    expect(await listarTodas(banco, 7)).toHaveLength(0);
+  });
+
+  it('o material separado não pode ser usado em lançamento, e o já reservado em lançamento não pode ser devolvido', async () => {
+    const { ctx } = await montar();
+    await solicitarDevolucao(ctx, { itens: [item('l11', '400')] });
+    expect((await pedir(registrarLancamento(ctx, lanc(101, [['l11', '100']]))))?.message).toMatch(/Você tem 49,5 m em posse/);
+    await registrarLancamento(ctx, lanc(101, [['l11', '40']]));
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '10')] })))?.message).toMatch(/Você tem 9,5 m em posse/);
+  });
+
+  it('o que o servidor já tem aguardando aprovação também conta (não dá para pedir de novo o mesmo material)', async () => {
+    const { ctx } = await montar(criarBootstrap({ devolucoes: [{
+      id: 1, lote_id: 11, lote_codigo: 'LOTE-BOB-0001', item_id: 1, item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', quantidade: 440, condicao: 'novo', observacao: null,
+      status: 'pendente', solicitado_em: '2026-10-11T10:00:00.000Z', revisado_em: null, motivo_negacao: null,
+    }] }));
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '10')] })))?.message).toMatch(/Você tem 9,5 m em posse/);
+  });
+
+  it('descartar um pedido que ainda não saiu devolve o material para uso', async () => {
+    const { ctx, posse } = await montar();
+    const [op] = await solicitarDevolucao(ctx, { itens: [item('l11', '100')] });
+    expect((await posse(11)).quantidade).toBe(349.5);
+    await descartarOperacao(ctx, op.id);
+    expect(await posse(11)).toMatchObject({ quantidade: 449.5 });
+    expect((await posse(11)).emDevolucao).toBeUndefined();
+  });
+
+  it('sem dados baixados no aparelho, recusa com explicação', async () => {
+    const { banco } = await criarBancoDeTeste();
+    const ctx: ContextoComandos = { banco, usuarioId: 7, uuid: () => uuid(1), agora: () => T0 };
+    expect((await pedir(solicitarDevolucao(ctx, { itens: [item('l11', '1')] })))?.message).toMatch(/Baixe os seus dados/);
+  });
 });

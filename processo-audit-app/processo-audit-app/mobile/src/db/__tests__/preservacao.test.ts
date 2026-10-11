@@ -1,13 +1,14 @@
 import { aplicarPendencias } from '@/domain/visao';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { criarBootstrap, criarOS } from '@/testing/fixtures';
-import { novaFoto, novaIniciar, novoLancamento, uuid } from '@/testing/operacoes';
+import { novaDevolucao, novaFoto, novaIniciar, novoLancamento, uuid } from '@/testing/operacoes';
 import { rascunhoVazio } from '@/domain/etapas';
 import { migrar } from '../migracoes';
-import { concluirOk, enfileirar, listarEmFila, marcarNoRetrato, reservar } from '../outbox';
+import { cancelar, concluirOk, enfileirar, listarEmFila, marcarAtencao, marcarNoRetrato, reservar } from '../outbox';
 import { lerDados, limparDadosLocais, salvarBootstrap } from '../repositorio';
 import { apagarFoto, inserirFoto, lerDetalhes, lerRascunho, listarFotos, podarDetalhes, salvarDetalhe, salvarRascunho } from '../trabalho';
 
+const T = Date.parse('2026-10-11T14:00:00Z');
 const foto = (osId: number, n: number) => ({ client_uuid: uuid(n), usuario_id: 7, os_id: osId, arquivo: `file:///f${n}.jpg`, mime: 'image/jpeg', tamanho: 1234, tirada_em: '2026-10-11T14:00:00.000Z', lat: -23.5, lng: -46.3, legenda: null, criado_em: '2026-10-11T14:00:00.000Z' });
 
 describe('novo retrato do servidor NÃO sobrescreve trabalho pendente', () => {
@@ -99,13 +100,40 @@ describe('rascunho, fotos e detalhe em cache', () => {
   });
 });
 
+describe('migração 3', () => {
+  it('recria a fila aceitando devoluções, sem perder nenhuma operação e sem reaproveitar números de operações já apagadas', async () => {
+    const { banco, db } = await criarBancoDeTeste(false);
+    await migrar(banco, 2);
+    expect(db.pragma('user_version', { simple: true })).toBe(2);
+    await expect(enfileirar(banco, novaDevolucao())).rejects.toThrow(/CHECK/); // antes da migração a fila não aceita devolução
+    const a = await enfileirar(banco, novaIniciar(101));
+    const b = await enfileirar(banco, novoLancamento(101));
+    const c = await enfileirar(banco, novaFoto(101));
+    await marcarAtencao(banco, b.id, { status: 400, mensagem: 'Posse insuficiente', detalhes: [{ campo: 'x', mensagem: 'y' }] }, T);
+    await concluirOk(banco, a.id, { status: 'em_andamento' }, T);
+    await cancelar(banco, c.id); // o maior id já foi usado e apagado
+    const antes = await banco.all('SELECT * FROM outbox ORDER BY id');
+
+    await migrar(banco);
+    expect(db.pragma('user_version', { simple: true })).toBe(3);
+    expect(await banco.all('SELECT * FROM outbox ORDER BY id')).toEqual(antes);
+    const d = await enfileirar(banco, novaDevolucao(11, 5, 'novo'));
+    expect(d.id).toBeGreaterThan(c.id); // o id apagado não volta
+    expect(d).toMatchObject({ tipo: 'devolucao', os_id: 0, estado: 'pendente' });
+    await expect(enfileirar(banco, { ...novaIniciar(101), tipo: 'coisa' } as never)).rejects.toThrow(/CHECK/); // o CHECK continua valendo
+    const indices = (await banco.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'outbox'")).map((i) => i.name);
+    expect(indices).toEqual(expect.arrayContaining(['idx_outbox_usuario_estado', 'idx_outbox_os']));
+    expect(await banco.all("SELECT name FROM sqlite_master WHERE name = 'outbox_nova'")).toEqual([]);
+  });
+});
+
 describe('migração 2', () => {
   it('atualiza um banco da versão 1 sem perder o espelho do servidor', async () => {
     const { banco, db } = await criarBancoDeTeste(false);
     await migrar(banco, 1);
     expect(db.pragma('user_version', { simple: true })).toBe(1);
     await salvarBootstrap(banco, criarBootstrap());
-    await migrar(banco);
+    await migrar(banco, 2);
     expect(db.pragma('user_version', { simple: true })).toBe(2);
     expect((await lerDados(banco))?.os).toHaveLength(3);
     expect(await banco.all('SELECT * FROM outbox')).toEqual([]);

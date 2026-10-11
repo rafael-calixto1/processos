@@ -1,7 +1,7 @@
 import { emFila, contaComoPendencia, type ErroOp, type EstadoOp, type Operacao } from './operacoes';
 import { r2 } from './quantidade';
 import { montarRota, rotaValida, type RotaTrecho } from './trecho';
-import type { Dados, DetalheOS, OS, Unidade } from './tipos';
+import type { CondicaoMaterial, Dados, DetalheOS, Devolucao, OS, Unidade } from './tipos';
 
 /**
  * Visão local = último retrato do servidor + o que o técnico fez e o servidor ainda não confirmou.
@@ -62,17 +62,81 @@ export const reservaPorLote = (ops: readonly Operacao[]): Map<number, number> =>
   return m;
 };
 
+/**
+ * Quanto de cada lote está separado para devolução: o que o técnico pediu e ainda está na fila, mais o que já está no servidor
+ * aguardando o estoque aprovar. O saldo não muda até a aprovação, mas esse material não pode ser usado em outro lugar nem devolvido duas vezes.
+ */
+export const devolucaoPorLote = (ops: readonly Operacao[], devolucoes: readonly Devolucao[] = []): Map<number, number> => {
+  const m = new Map<number, number>();
+  const somar = (lote: number, q: number) => m.set(lote, r2((m.get(lote) ?? 0) + q));
+  const noServidor = new Set(devolucoes.map((d) => d.id));
+  for (const o of ops) {
+    if (o.tipo !== 'devolucao' || !emFila(o)) continue;
+    if (o.estado === 'ok' && noServidor.has(o.resposta?.solicitacao_id)) continue; // o retrato já a traz: não conta duas vezes
+    somar(o.payload.corpo.lote_id, o.payload.corpo.quantidade);
+  }
+  for (const d of devolucoes) if (d.status === 'pendente') somar(d.lote_id, d.quantidade);
+  return m;
+};
+
 export const aplicarPendencias = (dados: Dados, ops: readonly Operacao[]): DadosVisao => {
   const reservas = reservaPorLote(ops);
-  const porOS = agrupar(ops);
+  const emDevolucao = devolucaoPorLote(ops, dados.devolucoes);
+  const porOS = agrupar(ops.filter((o) => o.tipo !== 'devolucao'));
   return {
     ...dados,
     os: dados.os.map((o) => visaoDaOS(o, porOS.get(o.id) ?? [])),
     posse: dados.posse.map((p) => {
       const reservado = Math.min(reservas.get(p.lote_id) ?? 0, p.quantidade);
-      return reservado > 0 ? { ...p, quantidade: r2(p.quantidade - reservado), reservado } : p;
+      const separado = Math.min(emDevolucao.get(p.lote_id) ?? 0, r2(p.quantidade - reservado));
+      if (reservado <= 0 && separado <= 0) return p;
+      return { ...p, quantidade: r2(p.quantidade - reservado - separado), ...(reservado > 0 && { reservado }), ...(separado > 0 && { emDevolucao: separado }) };
     }),
   };
+};
+
+/** Uma devolução como o técnico a vê: as do servidor (com a decisão do estoque) e as que ainda estão no aparelho. */
+export type EstadoDevolucao = 'na_fila' | 'enviando' | 'atencao' | 'aguardando' | 'aprovada' | 'negada';
+export interface DevolucaoVisao {
+  chave: string; // estável: "s<id>" (servidor) ou "o<id da operação>" (fila)
+  origem: 'servidor' | 'local';
+  item_nome: string;
+  unidade: Unidade;
+  lote_codigo: string;
+  quantidade: number;
+  condicao: CondicaoMaterial;
+  observacao: string | null;
+  estado: EstadoDevolucao;
+  quando: string; // ISO: quando foi pedida
+  motivoNegacao?: string | null;
+  operacaoId?: number;
+  erro?: ErroOp | null;
+}
+
+const PESO: Record<EstadoDevolucao, number> = { atencao: 0, enviando: 1, na_fila: 2, aguardando: 3, aprovada: 4, negada: 4 };
+
+/**
+ * Lista única de devoluções: o que está no servidor mais o que só está na fila. Uma operação já confirmada cujo id aparece
+ * no retrato não é contada duas vezes; confirmada mas ainda fora do retrato aparece como "aguardando" (o servidor já tem).
+ */
+export const devolucoesDoTecnico = (devolucoes: readonly Devolucao[], ops: readonly Operacao[]): DevolucaoVisao[] => {
+  const ids = new Set(devolucoes.map((d) => d.id));
+  const doServidor: DevolucaoVisao[] = devolucoes.map((d) => ({
+    chave: `s${d.id}`, origem: 'servidor', item_nome: d.item_nome, unidade: d.unidade, lote_codigo: d.lote_codigo, quantidade: d.quantidade, condicao: d.condicao,
+    observacao: d.observacao, estado: d.status === 'pendente' ? 'aguardando' : d.status, quando: d.solicitado_em, motivoNegacao: d.motivo_negacao,
+  }));
+  const locais: DevolucaoVisao[] = [];
+  for (const o of ops) {
+    if (o.tipo !== 'devolucao') continue;
+    if (o.estado === 'ok' && typeof o.resposta?.solicitacao_id === 'number' && ids.has(o.resposta.solicitacao_id)) continue;
+    if (o.estado === 'ok' && o.no_retrato) continue; // já decidida e fora da janela do retrato: nada a somar por cima
+    locais.push({
+      chave: `o${o.id}`, origem: 'local', item_nome: o.payload.exibicao.item_nome, unidade: o.payload.exibicao.unidade, lote_codigo: o.payload.exibicao.lote_codigo,
+      quantidade: o.payload.corpo.quantidade, condicao: o.payload.corpo.condicao, observacao: o.payload.corpo.observacao ?? null,
+      estado: o.estado === 'ok' ? 'aguardando' : o.estado === 'pendente' ? 'na_fila' : o.estado, quando: o.criado_em, operacaoId: o.id, erro: o.erro,
+    });
+  }
+  return [...locais, ...doServidor].sort((a, b) => PESO[a.estado] - PESO[b.estado] || b.quando.localeCompare(a.quando));
 };
 
 export interface LinhaLancamentoVisao { item_nome: string; unidade: Unidade; lote_codigo: string; quantidade: number }

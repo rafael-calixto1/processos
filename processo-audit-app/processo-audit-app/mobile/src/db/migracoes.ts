@@ -65,6 +65,40 @@ const MIGRACOES: ReadonlyArray<string> = [
    );
    CREATE INDEX idx_fotos_os ON fotos_locais(os_id);
    CREATE TABLE os_detalhe (os_id INTEGER PRIMARY KEY, dados TEXT NOT NULL, baixado_em TEXT NOT NULL);`,
+
+  // 3: a fila passa a aceitar devoluções de material. O SQLite não altera um CHECK: a tabela é recriada e as linhas
+  // (inclusive a numeração, para um id apagado nunca ser reaproveitado) seguem para a nova.
+  `CREATE TABLE outbox_nova (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     usuario_id INTEGER NOT NULL,
+     os_id INTEGER NOT NULL,
+     tipo TEXT NOT NULL CHECK (tipo IN ('iniciar','lancamento','foto','remover_foto','finalizar','rascunho','devolucao')),
+     client_uuid TEXT NOT NULL UNIQUE,
+     chave TEXT NOT NULL,
+     payload TEXT NOT NULL,
+     depende_de TEXT NOT NULL DEFAULT '[]',
+     estado TEXT NOT NULL DEFAULT 'pendente' CHECK (estado IN ('pendente','enviando','ok','atencao')),
+     tentativas INTEGER NOT NULL DEFAULT 0,
+     proxima_tentativa INTEGER NOT NULL DEFAULT 0,
+     criado_em TEXT NOT NULL,
+     atualizado_em TEXT NOT NULL,
+     ok_em INTEGER,
+     no_retrato INTEGER NOT NULL DEFAULT 0,
+     forcada INTEGER NOT NULL DEFAULT 0,
+     resposta TEXT,
+     erro_status INTEGER,
+     erro_mensagem TEXT,
+     erro_detalhes TEXT,
+     os_numero INTEGER,
+     os_cliente TEXT
+   );
+   INSERT INTO outbox_nova SELECT id, usuario_id, os_id, tipo, client_uuid, chave, payload, depende_de, estado, tentativas, proxima_tentativa,
+     criado_em, atualizado_em, ok_em, no_retrato, forcada, resposta, erro_status, erro_mensagem, erro_detalhes, os_numero, os_cliente FROM outbox;
+   UPDATE sqlite_sequence SET seq = COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'outbox'), 0) WHERE name = 'outbox_nova';
+   DROP TABLE outbox;
+   ALTER TABLE outbox_nova RENAME TO outbox;
+   CREATE INDEX idx_outbox_usuario_estado ON outbox(usuario_id, estado, proxima_tentativa);
+   CREATE INDEX idx_outbox_os ON outbox(os_id, id);`,
 ];
 
 export const VERSAO_ATUAL = MIGRACOES.length;

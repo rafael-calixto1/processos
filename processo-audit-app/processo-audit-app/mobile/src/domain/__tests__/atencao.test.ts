@@ -8,6 +8,21 @@ const op = (tipo: Operacao['tipo'], erro: Operacao['erro'], extra: Record<string
 } as unknown as Operacao);
 
 describe('descreverAtencao', () => {
+  it('devolução recusada por quantidade (400): tentar de novo ou descartar — nunca "corrigir"', () => {
+    const d = descreverAtencao(op('devolucao', { status: 400, mensagem: 'Você possui apenas 10 deste lote' }), AGORA);
+    expect(d).toMatchObject({ titulo: 'Devolução de material', acoes: ['tentar_de_novo', 'descartar'] });
+    expect(d.oQueFazer).not.toMatch(/OS/);
+  });
+  it('devolução de lote que não é mais do técnico (403/404): só descartar, sem falar de OS', () => {
+    for (const status of [403, 404]) {
+      const d = descreverAtencao(op('devolucao', { status, mensagem: 'x' }), AGORA);
+      expect(d.acoes).toEqual(['descartar']);
+      expect(d.oQueFazer).toMatch(/lote/);
+    }
+  });
+  it('devolução sem OS aparece como "Sem OS" na lista', () => {
+    expect(rotuloDaOS({ os_id: 0, os_numero: null, os_cliente: null })).toBe('Sem OS');
+  });
   it('lançamento recusado por quantidade/posse (400): corrigir, tentar de novo ou descartar', () => {
     const d = descreverAtencao(op('lancamento', { status: 400, mensagem: 'Quantidade maior que a posse do técnico neste lote (50)' }), AGORA);
     expect(d).toMatchObject({ titulo: 'Lançamento de material', acoes: ['corrigir', 'tentar_de_novo', 'descartar'] });

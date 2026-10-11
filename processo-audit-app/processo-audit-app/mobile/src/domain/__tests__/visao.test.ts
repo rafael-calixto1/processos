@@ -2,10 +2,11 @@ import { criarBootstrap, criarOS } from '@/testing/fixtures';
 import type { Dados, DetalheOS } from '../tipos';
 import type { Operacao } from '../operacoes';
 import { agrupar, distribuirEntreLotes } from '../posse';
-import { aplicarPendencias, lancamentosComMaterial, lancamentosDaOS, reservaPorLote } from '../visao';
+import { aplicarPendencias, devolucaoPorLote, devolucoesDoTecnico, lancamentosComMaterial, lancamentosDaOS, reservaPorLote } from '../visao';
+import type { Devolucao } from '../tipos';
 
 const dadosDe = (b = criarBootstrap()): Dados => ({
-  geradoEm: b.gerado_em, tecnico: b.tecnico, os: b.os, posse: b.posse, motivos: b.motivos, checklist: b.checklist,
+  geradoEm: b.gerado_em, tecnico: b.tecnico, os: b.os, posse: b.posse, devolucoes: b.devolucoes ?? [], motivos: b.motivos, checklist: b.checklist,
   sugestoesServicos: b.sugestoes_servicos, tiposServico: b.tipos_servico, tecnicos: b.tecnicos, itens: b.itens, regras: b.regras,
 });
 
@@ -19,9 +20,10 @@ const op = <T extends Operacao['tipo']>(tipo: T, osId: number, extra: Record<str
     remover_foto: { foto_client_uuid: 'x' },
     finalizar: { corpo: { finalizado_em: '2026-10-11T18:00:00.000Z' } },
     rascunho: { corpo: { rascunho: {} } },
+    devolucao: { corpo: { lote_id: 11, quantidade: 100, condicao: 'usado' }, exibicao: { item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', lote_codigo: 'LOTE-BOB-0001' } },
   };
   return {
-    id, usuario_id: 7, os_id: osId, tipo, client_uuid: `u${id}`, chave: `k${id}`, payload: payloads[tipo], depende_de: [], estado: 'pendente', tentativas: 0,
+    id, usuario_id: 7, os_id: tipo === 'devolucao' ? 0 : osId, tipo, client_uuid: `u${id}`, chave: `k${id}`, payload: payloads[tipo], depende_de: [], estado: 'pendente', tentativas: 0,
     proxima_tentativa: 0, criado_em: '2026-10-11T14:00:00.000Z', atualizado_em: '2026-10-11T14:00:00.000Z', ok_em: null, no_retrato: false, forcada: false, resposta: null,
     erro: null, os_numero: osId - 100, os_cliente: 'c', ...extra,
   } as Operacao;
@@ -172,5 +174,75 @@ describe('lançamentos da OS (servidor + fila)', () => {
     const erro = { status: 400, mensagem: 'Quantidade maior que a posse do técnico neste lote (50)' };
     const l = lancamentosDaOS(101, null, [op('lancamento', 101, { estado: 'atencao', erro })]);
     expect(l[0]).toMatchObject({ estado: 'atencao', erro });
+  });
+});
+
+const dev = (id: number, extra: Partial<Devolucao> = {}): Devolucao => ({
+  id, lote_id: 11, lote_codigo: 'LOTE-BOB-0001', item_id: 1, item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', quantidade: 50, condicao: 'usado', observacao: null,
+  status: 'pendente', solicitado_em: '2026-10-11T10:00:00.000Z', revisado_em: null, motivo_negacao: null, ...extra,
+});
+
+describe('posse separada para devolução', () => {
+  it('devolução na fila separa o material na hora, sem mexer no retrato', () => {
+    const d = dadosDe();
+    const v = aplicarPendencias(d, [op('devolucao', 0)]);
+    expect(v.posse.find((p) => p.lote_id === 11)).toMatchObject({ quantidade: 349.5, emDevolucao: 100 });
+    expect(d.posse.find((p) => p.lote_id === 11)?.quantidade).toBe(449.5);
+    expect(v.os.every((o) => o.sync === 'sincronizado')).toBe(true); // devolução não pertence a nenhuma OS
+  });
+  it('devolução já no servidor aguardando aprovação também separa; aprovada ou negada não', () => {
+    const base = dadosDe();
+    const com = (devolucoes: Devolucao[]) => aplicarPendencias({ ...base, devolucoes }, []).posse.find((p) => p.lote_id === 11)!;
+    expect(com([dev(1, { quantidade: 50 })])).toMatchObject({ quantidade: 399.5, emDevolucao: 50 });
+    expect(com([dev(1, { status: 'aprovada' }), dev(2, { status: 'negada' })]).emDevolucao).toBeUndefined();
+  });
+  it('soma a fila com o que já está no servidor e convive com a reserva de lançamentos, sem passar do saldo', () => {
+    const base = dadosDe();
+    const p = aplicarPendencias({ ...base, devolucoes: [dev(1, { quantidade: 49.5 })] }, [op('lancamento', 101), op('devolucao', 0, { payload: { corpo: { lote_id: 11, quantidade: 300, condicao: 'novo' }, exibicao: { item_nome: 'x', unidade: 'metros', lote_codigo: 'x' } } })])
+      .posse.find((x) => x.lote_id === 11)!;
+    expect(p.reservado).toBe(100);
+    expect(p.emDevolucao).toBe(349.5); // limitado ao que sobra depois do lançamento: 449,5 - 100
+    expect(p.quantidade).toBe(0);
+  });
+  it('operação confirmada cuja solicitação o retrato já traz não é contada duas vezes', () => {
+    const confirmada = op('devolucao', 0, { estado: 'ok', ok_em: 1, no_retrato: false, resposta: { solicitacao_id: 9 } });
+    const m = devolucaoPorLote([confirmada], [dev(9, { quantidade: 100 })]);
+    expect(m.get(11)).toBe(100);
+  });
+  it('confirmada e já refletida no retrato (aprovada e fora da lista, por exemplo) NÃO separa o material de novo', () => {
+    const refletida = op('devolucao', 0, { estado: 'ok', ok_em: 1, no_retrato: true, resposta: { solicitacao_id: 9 } });
+    expect(devolucaoPorLote([refletida], []).get(11)).toBeUndefined();
+    expect(aplicarPendencias(dadosDe(), [refletida]).posse.find((p) => p.lote_id === 11)?.quantidade).toBe(449.5);
+  });
+  it('confirmada e ainda fora do retrato continua separada (o servidor já a tem, o app ainda não soube)', () => {
+    const confirmada = op('devolucao', 0, { estado: 'ok', ok_em: 1, no_retrato: false, resposta: { solicitacao_id: 9 } });
+    expect(devolucaoPorLote([confirmada], []).get(11)).toBe(100);
+  });
+  it('agrupar mostra o que está separado e mantém visível o lote todo separado', () => {
+    const v = aplicarPendencias(dadosDe(), [op('devolucao', 0, { payload: { corpo: { lote_id: 11, quantidade: 449.5, condicao: 'novo' }, exibicao: { item_nome: 'x', unidade: 'metros', lote_codigo: 'x' } } })]);
+    const g = agrupar(v.posse).find((x) => x.key === 'l11')!;
+    expect(g).toMatchObject({ quantidade: 0, emDevolucao: 449.5 });
+  });
+});
+
+describe('devoluções do técnico (servidor + fila)', () => {
+  it('mostra o que está no aparelho primeiro e a decisão do estoque nas já enviadas', () => {
+    const lista = devolucoesDoTecnico(
+      [dev(1, { status: 'negada', motivo_negacao: 'Peça danificada', solicitado_em: '2026-10-10T10:00:00.000Z' }), dev(2, { status: 'pendente' }), dev(3, { status: 'aprovada', solicitado_em: '2026-10-09T10:00:00.000Z' })],
+      [op('devolucao', 0, { estado: 'atencao', erro: { status: 400, mensagem: 'Você possui apenas 10 deste lote' } }), op('devolucao', 0)],
+    );
+    expect(lista.map((d) => d.estado)).toEqual(['atencao', 'na_fila', 'aguardando', 'negada', 'aprovada']);
+    expect(lista[0].erro?.mensagem).toMatch(/apenas 10/);
+    expect(lista.find((d) => d.estado === 'negada')?.motivoNegacao).toBe('Peça danificada');
+  });
+  it('operação confirmada cujo id o servidor já lista aparece uma vez só', () => {
+    const confirmada = op('devolucao', 0, { estado: 'ok', ok_em: 1, resposta: { solicitacao_id: 7 } });
+    expect(devolucoesDoTecnico([dev(7)], [confirmada])).toHaveLength(1);
+    const so = devolucoesDoTecnico([], [confirmada]);
+    expect(so).toHaveLength(1);
+    expect(so[0].estado).toBe('aguardando'); // enviada: o estoque ainda vai decidir
+  });
+  it('operação confirmada e já no retrato (que a traz) não é repetida', () => {
+    expect(devolucoesDoTecnico([], [op('devolucao', 0, { estado: 'ok', ok_em: 1, no_retrato: true })])).toEqual([]);
   });
 });

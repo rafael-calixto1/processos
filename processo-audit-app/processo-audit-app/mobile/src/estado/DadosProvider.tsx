@@ -27,6 +27,7 @@ export interface Comandos {
   salvarRascunho: (osId: number, r: Parameters<typeof cmd.salvarRascunhoLocal>[2]) => Promise<void>;
   finalizar: (osId: number) => Promise<void>;
   voltarAEditar: (osId: number) => Promise<void>;
+  solicitarDevolucao: (e: cmd.EntradaDevolucao) => Promise<void>;
   reenviar: (operacaoId: number, opcoes?: { forcar?: boolean }) => Promise<void>;
   descartar: (operacaoId: number) => Promise<void>;
 }
@@ -210,6 +211,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     },
     finalizar: async (osId) => { await comando((c) => cmd.finalizarOS(c, osId)); },
     voltarAEditar: (osId) => comando((c) => cmd.voltarAEditar(c, osId)),
+    solicitarDevolucao: async (e) => { await comando((c) => cmd.solicitarDevolucao(c, e)); },
     reenviar: (id, opcoes) => comando((c) => cmd.reenviarOperacao(c, id, opcoes)),
     descartar: (id) => comando((c) => cmd.descartarOperacao(c, id)),
   }), [comando, ctx, online, enviar]);

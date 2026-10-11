@@ -11,6 +11,7 @@ const PADRAO: Record<Metodo, Comportamento> = {
   removerFoto: () => ({ ok: true }),
   finalizar: () => ({ status: 'concluida', fechamento_id: 1, finalizado_em: '2026-10-11T18:00:00.000Z' }),
   salvarRascunho: () => ({ ok: true }),
+  solicitarDevolucao: (_a, n) => ({ solicitacao_id: 500 + n, lote_codigo: 'LOTE-X', quantidade: 1, status: 'pendente' }),
 };
 
 /** API falsa para os testes do motor: registra cada chamada (na ordem) e responde com o comportamento de cada método. */
@@ -28,6 +29,7 @@ export const criarApiFalsa = (comportamentos: Partial<Record<Metodo, Comportamen
   const api = {
     iniciarOS: chamar('iniciarOS'), lancar: chamar('lancar'), enviarFoto: chamar('enviarFoto'),
     removerFoto: chamar('removerFoto'), finalizar: chamar('finalizar'), salvarRascunho: chamar('salvarRascunho'),
+    solicitarDevolucao: chamar('solicitarDevolucao'),
   } as unknown as ApiMotor;
   return { api, chamadas, definir: (m: Metodo, c: Comportamento) => { mudar[m] = c; }, ordem: () => chamadas.map((c) => c.metodo) };
 };

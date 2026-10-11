@@ -10,7 +10,7 @@ import { criarBootstrap } from '@/testing/fixtures';
 export const dadosDe = (sobrescrever: Partial<ReturnType<typeof criarBootstrap>> = {}, ops: Operacao[] = []): DadosVisao => {
   const b = criarBootstrap(sobrescrever);
   return aplicarPendencias({
-    geradoEm: b.gerado_em, tecnico: b.tecnico, os: b.os, posse: b.posse, motivos: b.motivos, checklist: b.checklist,
+    geradoEm: b.gerado_em, tecnico: b.tecnico, os: b.os, posse: b.posse, devolucoes: b.devolucoes ?? [], motivos: b.motivos, checklist: b.checklist,
     sugestoesServicos: b.sugestoes_servicos, tiposServico: b.tipos_servico, tecnicos: b.tecnicos, itens: b.itens, regras: b.regras,
   }, ops);
 };
@@ -21,7 +21,7 @@ export interface EstadoDados {
   dados: DadosVisao | null; detalhes: Record<number, DetalheOS>; ops: Operacao[]; carregado: boolean; sincronizando: boolean; semConexao: boolean;
   erro: string | null; sincronizadoEm: string | null; contagens: Contagens; pausadoPorSessao: boolean; bloqueio: { pendencias: number; donoNome: string | null } | null;
   atualizar: jest.Mock; descartarTudo: jest.Mock;
-  comandos: Record<'iniciarOS' | 'registrarLancamento' | 'substituirLancamento' | 'removerLancamento' | 'removerFoto' | 'salvarRascunho' | 'finalizar' | 'voltarAEditar' | 'reenviar' | 'descartar', jest.Mock> & { adicionarFoto: jest.Mock };
+  comandos: Record<'iniciarOS' | 'registrarLancamento' | 'substituirLancamento' | 'removerLancamento' | 'removerFoto' | 'salvarRascunho' | 'finalizar' | 'voltarAEditar' | 'solicitarDevolucao' | 'reenviar' | 'descartar', jest.Mock> & { adicionarFoto: jest.Mock };
 }
 export const estadoDados = (sobrescrever: Partial<EstadoDados> = {}): EstadoDados => ({
   dados: dadosDe(), detalhes: {}, ops: [], carregado: true, sincronizando: false, semConexao: false, erro: null, sincronizadoEm: '2026-10-11T13:31:00.000Z',
@@ -29,7 +29,7 @@ export const estadoDados = (sobrescrever: Partial<EstadoDados> = {}): EstadoDado
   atualizar: jest.fn(async () => undefined), descartarTudo: comando(),
   comandos: {
     iniciarOS: comando(), registrarLancamento: comando(), substituirLancamento: comando(), removerLancamento: comando(), removerFoto: comando(), salvarRascunho: comando(),
-    finalizar: comando(), voltarAEditar: comando(), reenviar: comando(), descartar: comando(), adicionarFoto: jest.fn(async () => ({ clientUuid: 'u' })),
+    finalizar: comando(), voltarAEditar: comando(), solicitarDevolucao: comando(), reenviar: comando(), descartar: comando(), adicionarFoto: jest.fn(async () => ({ clientUuid: 'u' })),
   },
   ...sobrescrever,
 });
@@ -42,6 +42,7 @@ const PAYLOADS: Record<Operacao['tipo'], unknown> = {
   remover_foto: { foto_client_uuid: 'u1' },
   finalizar: { corpo: { finalizado_em: '2026-10-11T18:00:00.000Z' } },
   rascunho: { corpo: { rascunho: {} } },
+  devolucao: { corpo: { lote_id: 11, quantidade: 20, condicao: 'usado' }, exibicao: { item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', lote_codigo: 'LOTE-BOB-0001' } },
 };
 export const opDe = (tipo: Operacao['tipo'], extra: Record<string, unknown> = {}): Operacao => ({
   id: 1, usuario_id: 7, os_id: 102, tipo, client_uuid: 'u1', chave: 'k1', payload: PAYLOADS[tipo], depende_de: [], estado: 'pendente', tentativas: 0, proxima_tentativa: 0,

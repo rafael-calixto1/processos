@@ -1,15 +1,18 @@
 import type { RotaTrecho } from './trecho';
-import type { Unidade } from './tipos';
+import type { CondicaoMaterial, Unidade } from './tipos';
 
 /**
  * Operações da fila de envio (outbox). Cada ação do técnico em campo vira uma operação congelada: o corpo, a chave de
  * idempotência e os identificadores nascem no momento da ação e NUNCA são refeitos num reenvio (o servidor confere
  * a chave contra o corpo; mudar o corpo com a mesma chave dá 422).
  */
-export type TipoOp = 'iniciar' | 'lancamento' | 'foto' | 'remover_foto' | 'finalizar' | 'rascunho';
+export type TipoOp = 'iniciar' | 'lancamento' | 'foto' | 'remover_foto' | 'finalizar' | 'rascunho' | 'devolucao';
 export type EstadoOp = 'pendente' | 'enviando' | 'ok' | 'atencao';
 
-export const TIPOS_OP: readonly TipoOp[] = ['iniciar', 'lancamento', 'foto', 'remover_foto', 'finalizar', 'rascunho'];
+export const TIPOS_OP: readonly TipoOp[] = ['iniciar', 'lancamento', 'foto', 'remover_foto', 'finalizar', 'rascunho', 'devolucao'];
+
+/** Operações que não pertencem a uma OS (devolução de material) usam este `os_id`. */
+export const SEM_OS = 0;
 
 export interface ErroOp {
   status: number | null; // código HTTP da recusa do servidor
@@ -51,6 +54,12 @@ export interface CorpoFinalizar {
 }
 export interface PayloadFinalizar { corpo: CorpoFinalizar }
 
+/** Devolução de UM lote (o servidor recebe um lote por solicitação). O técnico só solicita; o estoque aprova ou nega. */
+export interface PayloadDevolucao {
+  corpo: { lote_id: number; quantidade: number; condicao: CondicaoMaterial; observacao?: string };
+  exibicao: { item_nome: string; unidade: Unidade; lote_codigo: string }; // só para mostrar na tela; não vai ao servidor
+}
+
 /** Cópia de segurança do rascunho no servidor (melhor esforço; nunca exige atenção do técnico). */
 export interface PayloadRascunho { corpo: { rascunho: Record<string, unknown> } }
 
@@ -81,7 +90,8 @@ export type Operacao =
   | (Base & { tipo: 'foto'; payload: PayloadFoto })
   | (Base & { tipo: 'remover_foto'; payload: PayloadRemoverFoto })
   | (Base & { tipo: 'finalizar'; payload: PayloadFinalizar })
-  | (Base & { tipo: 'rascunho'; payload: PayloadRascunho });
+  | (Base & { tipo: 'rascunho'; payload: PayloadRascunho })
+  | (Base & { tipo: 'devolucao'; payload: PayloadDevolucao });
 
 type SemCamposDoBanco<T> = T extends unknown
   ? Omit<T, 'id' | 'estado' | 'tentativas' | 'proxima_tentativa' | 'criado_em' | 'atualizado_em' | 'ok_em' | 'no_retrato' | 'forcada' | 'resposta' | 'erro'>

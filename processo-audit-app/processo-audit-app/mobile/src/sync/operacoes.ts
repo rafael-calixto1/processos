@@ -2,12 +2,12 @@ import type { Banco } from '@/db/banco';
 import { cancelar, cancelarRascunhosPendentes, coalescerRascunho, enfileirar, listarDaOS, obter, reenviar } from '@/db/outbox';
 import { apagarFoto, inserirFoto, lerRascunho, listarFotos, marcarFotoRemovida, obterFoto, salvarRascunho } from '@/db/trabalho';
 import { etapasConcluidas, ETAPAS, podeFinalizar, type LocalIntervencao, type Rascunho } from '@/domain/etapas';
-import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
+import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, SEM_OS, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
 import { isPendente } from '@/domain/os';
 import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '@/domain/posse';
 import { parseQuantidade } from '@/domain/quantidade';
 import { MAX_PONTOS, reduzirCaminho, rotaValida, type RotaTrecho } from '@/domain/trecho';
-import type { StatusOS } from '@/domain/tipos';
+import type { CondicaoMaterial, StatusOS } from '@/domain/tipos';
 import { fotosDaOS, lancamentosComMaterial } from '@/domain/visao';
 import { carregarEstadoLocal, type EstadoLocal } from './estadoLocal';
 import type { PortaArquivos } from './outbox';
@@ -122,6 +122,50 @@ export const removerLancamento = (c: ContextoComandos, operacaoId: number): Prom
   const doOS = (await listarDaOS(tx, c.usuarioId, op.os_id));
   if (finalizacaoNaFila(doOS)) throw new ErroOperacao('A finalização desta OS já está na fila. Toque em "Voltar a editar" antes de remover um lançamento.');
   if (!(await cancelar(tx, operacaoId))) throw new ErroOperacao('Este lançamento já foi enviado (ou está sendo enviado agora). Para corrigir, fale com o estoque.');
+});
+
+/* ── Devolução de material (não pertence a uma OS; o estoque aprova ou nega) ── */
+export interface EntradaDevolucao {
+  itens: Array<{ chaveGrupo: string; quantidade: string; condicao: CondicaoMaterial | null }>; // quantidade como digitada; condição escolhida pelo técnico
+  observacao?: string;
+}
+
+/**
+ * Cada item vira uma ou mais solicitações (uma por lote: o servidor recebe um lote por vez), todas gravadas juntas.
+ * O material fica separado na hora: some do que o técnico pode usar em lançamentos até o estoque decidir.
+ */
+export const solicitarDevolucao = (c: ContextoComandos, e: EntradaDevolucao): Promise<Operacao[]> => c.banco.transacao(async (tx) => {
+  const estado = await carregarEstadoLocal(tx, c.usuarioId);
+  if (!estado) throw new ErroOperacao('Baixe os seus dados (com internet) antes de devolver material.');
+  if (!e.itens.length) throw new ErroOperacao('Escolha ao menos um material para devolver.');
+  const observacao = (e.observacao ?? '').trim();
+  if (observacao.length > 500) throw new ErroOperacao('A observação pode ter no máximo 500 caracteres.');
+
+  const grupos = agrupar(estado.visao.posse);
+  const vistos = new Set<string>();
+  const novas: Array<Extract<NovaOperacao, { tipo: 'devolucao' }>> = [];
+  for (const item of e.itens) {
+    const g = grupos.find((x) => x.key === item.chaveGrupo);
+    if (!g) throw new ErroOperacao('Um dos materiais não está mais com você. Atualize e tente de novo.');
+    if (vistos.has(g.key)) throw new ErroOperacao(`${g.item_nome} aparece duas vezes. Junte as quantidades em uma linha só.`);
+    vistos.add(g.key);
+    if (item.condicao !== 'novo' && item.condicao !== 'usado') throw new ErroOperacao(`${g.item_nome}: informe se o material está novo ou usado.`);
+    const q = validarQuantidadeGrupo(g, item.quantidade);
+    if (!q.ok) throw new ErroOperacao(`${g.item_nome}: ${q.erro}`);
+    for (const baixa of distribuirEntreLotes(g, q.valor)) {
+      const lote = g.lotes.find((l) => l.lote_id === baixa.lote_id)!;
+      novas.push({
+        usuario_id: c.usuarioId, os_id: SEM_OS, os_numero: null, os_cliente: null, client_uuid: c.uuid(), chave: c.uuid(), depende_de: [], tipo: 'devolucao',
+        payload: {
+          corpo: { lote_id: baixa.lote_id, quantidade: baixa.quantidade, condicao: item.condicao, ...(observacao && { observacao }) },
+          exibicao: { item_nome: g.item_nome, unidade: g.unidade, lote_codigo: lote.lote_codigo },
+        },
+      });
+    }
+  }
+  const gravadas: Operacao[] = [];
+  for (const n of novas) gravadas.push(await enfileirar(tx, n, agoraDe(c)));
+  return gravadas;
 });
 
 /* ── Fotos ── */

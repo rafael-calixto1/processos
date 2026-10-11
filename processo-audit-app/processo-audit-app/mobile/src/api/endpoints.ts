@@ -11,6 +11,7 @@ export interface RespostaLancamento {
   id: number; descricao: string; trecho: string | null; quantidade: number; repetida?: boolean;
   materiais: Array<{ movimentacao_id: number; lote_codigo: string; quantidade: number; saldo_lote: number }>;
 }
+export interface RespostaDevolucao { solicitacao_id: number; lote_codigo: string; quantidade: number; status: 'pendente'; repetida?: boolean }
 export interface RespostaFoto { id: number; client_uuid: string; mime: string; tamanho: number; repetida?: boolean }
 export interface RespostaFinalizar { status: 'concluida'; fechamento_id: number; finalizado_em: string; repetida?: boolean }
 
@@ -53,6 +54,9 @@ export const criarApi = (c: ApiClient, deps: { criarFormulario?: CriarFormulario
     c.request<Required<RotaDoServidor>>('GET', `/geo/rota?pontos=${encodeURIComponent(pontos.map((p) => `${p.lat},${p.lng}`).join(';'))}`, { timeoutMs: 30_000 }),
   /** Consulta online de um lote lido pelo QR (o técnico só enxerga lotes da própria posse: 403 caso contrário). */
   lotePorCodigo: (codigo: string) => c.request<{ id: number; codigo: string; item_nome: string; unidade: string; minha_posse?: number }>('GET', `/estoque/lotes/${encodeURIComponent(codigo)}`, { timeoutMs: 10_000 }),
+  /** O técnico só SOLICITA; o estoque aprova ou nega. Um lote por chamada. */
+  solicitarDevolucao: (corpo: { lote_id: number; quantidade: number; condicao: 'novo' | 'usado'; observacao?: string }, chave: string) =>
+    c.request<RespostaDevolucao>('POST', '/estoque/devolucoes', { body: corpo, idempotencyKey: chave }),
   salvarRascunho: (id: number, rascunho: Record<string, unknown>) =>
     c.request<{ ok: boolean }>('PUT', `/os/${id}/rascunho`, { body: { rascunho } }),
 });

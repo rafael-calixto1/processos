@@ -5,7 +5,7 @@ import { rascunhoVazio } from '@/domain/etapas';
 import { DIAS_MAX_OPERACAO } from '@/domain/operacoes';
 import { criarApiFalsa } from '@/testing/apiFalsa';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
-import { novaFinalizar, novaFoto, novaIniciar, novoLancamento, novoRascunhoOp, uuid } from '@/testing/operacoes';
+import { novaDevolucao, novaFinalizar, novaFoto, novaIniciar, novoLancamento, novoRascunhoOp, uuid } from '@/testing/operacoes';
 import { classificarErro, MotorOutbox, type PortaArquivos } from '../outbox';
 
 const T0 = Date.parse('2026-10-11T14:00:00Z');
@@ -417,5 +417,62 @@ describe('uma rodada de cada vez', () => {
     await enfileirar(banco, novoLancamento(102));
     await m.motor.executar();
     expect(await estados(banco)).toEqual(['lancamento:ok', 'lancamento:ok']);
+  });
+});
+
+describe('devolução de material', () => {
+  it('envia o corpo congelado com a chave de idempotência; confirmada guarda o número da solicitação', async () => {
+    const { banco, motor, chamadas } = await montar({ solicitarDevolucao: () => ({ solicitacao_id: 42, lote_codigo: 'LOTE-11', quantidade: 20, status: 'pendente' }) });
+    const op = await enfileirar(banco, novaDevolucao(11, 20, 'usado', { chave: 'chave-dev-0001' }));
+    const r = await motor.executar();
+    expect(r.enviadas).toBe(1);
+    expect(chamadas).toEqual([{ metodo: 'solicitarDevolucao', args: [{ lote_id: 11, quantidade: 20, condicao: 'usado' }, 'chave-dev-0001'] }]);
+    expect(await obter(banco, op.id)).toMatchObject({ estado: 'ok', resposta: { solicitacao_id: 42 } });
+  });
+
+  it('resposta perdida + reenvio com a MESMA chave não abre duas solicitações (servidor idempotente)', async () => {
+    const abertas: number[] = []; const guardadas = new Map<string, unknown>(); let perder = true;
+    const solicitar = async (a: unknown[]) => {
+      const chave = a[1] as string;
+      if (guardadas.has(chave)) return { ...(guardadas.get(chave) as object), repetida: true };
+      abertas.push(1);
+      const resp = { solicitacao_id: 77, lote_codigo: 'x', quantidade: 20, status: 'pendente' };
+      guardadas.set(chave, resp);
+      if (perder) { perder = false; throw new NetworkError(); }
+      return resp;
+    };
+    const { banco, motor, relogio } = await montar({ solicitarDevolucao: solicitar });
+    await enfileirar(banco, novaDevolucao());
+    await motor.executar();
+    relogio.v += 60_000;
+    await motor.executar();
+    expect(abertas).toHaveLength(1);
+    expect(await estados(banco)).toEqual(['devolucao:ok']);
+  });
+
+  it('o servidor recusa por posse (400): vira "requer atenção" com a mensagem dele e não é reenviada sozinha', async () => {
+    const { banco, motor, chamadas } = await montar({ solicitarDevolucao: () => new ApiError(400, 'Você possui apenas 10 deste lote') });
+    const op = await enfileirar(banco, novaDevolucao(11, 50));
+    expect((await motor.executar()).atencao).toBe(1);
+    expect(await obter(banco, op.id)).toMatchObject({ estado: 'atencao', erro: { status: 400, mensagem: 'Você possui apenas 10 deste lote' } });
+    await motor.executar();
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('não depende de OS: uma OS travada em atenção não segura a devolução, e vice-versa', async () => {
+    const { banco, motor, ordem } = await montar({ lancar: () => new ApiError(400, 'recusado') });
+    await enfileirar(banco, novoLancamento(102));
+    await enfileirar(banco, novaDevolucao());
+    await motor.executar();
+    expect(ordem().sort()).toEqual(['lancar', 'solicitarDevolucao']);
+    expect(await estados(banco)).toEqual(['lancamento:atencao', 'devolucao:ok']);
+  });
+
+  it('pedido parado há mais de 14 dias não vai às cegas (as chaves do servidor expiram)', async () => {
+    const { banco, motor, chamadas, relogio } = await montar();
+    await enfileirar(banco, novaDevolucao());
+    relogio.v = T0 + 15 * DIA;
+    expect((await motor.executar()).atencao).toBe(1);
+    expect(chamadas).toHaveLength(0);
   });
 });

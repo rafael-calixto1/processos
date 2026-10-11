@@ -8,7 +8,7 @@ import { apagarFoto, apagarRascunho, definirServidorId, limparArquivoDaFoto, lis
 import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type ErroOp, type Operacao } from '@/domain/operacoes';
 
 /** O que o motor usa da API (as funções do `criarApi`). */
-export type ApiMotor = Pick<Api, 'iniciarOS' | 'lancar' | 'enviarFoto' | 'removerFoto' | 'finalizar' | 'salvarRascunho'>;
+export type ApiMotor = Pick<Api, 'iniciarOS' | 'lancar' | 'enviarFoto' | 'removerFoto' | 'finalizar' | 'salvarRascunho' | 'solicitarDevolucao'>;
 
 export interface PortaArquivos {
   existe(uri: string): Promise<boolean>;
@@ -183,6 +183,8 @@ export class MotorOutbox {
           throw e;
         }
       }
+      case 'devolucao':
+        return api.solicitarDevolucao(op.payload.corpo, op.chave);
       case 'rascunho':
         return api.salvarRascunho(op.os_id, { versao: 2, origem: 'mobile', ...op.payload.corpo.rascunho });
     }

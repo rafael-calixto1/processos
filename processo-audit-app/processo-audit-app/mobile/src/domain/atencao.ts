@@ -1,4 +1,4 @@
-import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type Operacao } from './operacoes';
+import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, SEM_OS, idadeEmDias, type Operacao } from './operacoes';
 
 /**
  * Texto e ações da tela "Requer atenção" para cada operação que o servidor recusou. A mensagem do servidor sempre
@@ -19,6 +19,7 @@ const TITULOS: Record<Operacao['tipo'], string> = {
   remover_foto: 'Remoção de foto',
   finalizar: 'Finalização da OS',
   rascunho: 'Rascunho',
+  devolucao: 'Devolução de material',
 };
 
 export const descreverAtencao = (op: Operacao, agora: number): DescricaoAtencao => {
@@ -39,6 +40,11 @@ export const descreverAtencao = (op: Operacao, agora: number): DescricaoAtencao 
     if (status === 400) return { titulo, oQueFazer: 'Volte, corrija o que o servidor apontou e finalize de novo.', acoes: ['voltar_a_editar', 'tentar_de_novo'] };
     return { titulo, oQueFazer: 'A OS não aceita mais esta finalização. Fale com o escritório e descarte este item.', acoes: ['descartar'] };
   }
+  if (op.tipo === 'devolucao') {
+    if (status === 400) return { titulo, oQueFazer: 'O material que você tem mudou desde o último download. Descarte este pedido e faça outro com a quantidade certa, ou tente de novo se o estoque já ajustou.', acoes: ['tentar_de_novo', 'descartar'] };
+    if (status === 403 || status === 404) return { titulo, oQueFazer: 'Este lote não está mais com você. Fale com o estoque e descarte este pedido.', acoes: ['descartar'] };
+    return { titulo, oQueFazer: 'Tente de novo. Se continuar, fale com o estoque.', acoes: ['tentar_de_novo', 'descartar'] };
+  }
   if (status === 403) return { titulo, oQueFazer: 'Esta OS não está mais com você. Fale com o escritório antes de continuar e descarte este item.', acoes: ['descartar'] };
   if (status === 404) return { titulo, oQueFazer: 'O servidor não encontrou esta OS. Fale com o escritório e descarte este item.', acoes: ['descartar'] };
   if (status === 409) return { titulo, oQueFazer: 'A OS já foi encerrada. Fale com o escritório e descarte este item.', acoes: ['descartar'] };
@@ -50,4 +56,4 @@ export const descreverAtencao = (op: Operacao, agora: number): DescricaoAtencao 
 
 /** Linha curta para a lista: "OS #12 · Rota PL-900 → CEO-01". */
 export const rotuloDaOS = (op: Pick<Operacao, 'os_id' | 'os_numero' | 'os_cliente'>): string =>
-  op.os_numero ? `OS #${op.os_numero}${op.os_cliente ? ` · ${op.os_cliente}` : ''}` : `OS ${op.os_id}`;
+  op.os_id === SEM_OS ? 'Sem OS' : op.os_numero ? `OS #${op.os_numero}${op.os_cliente ? ` · ${op.os_cliente}` : ''}` : `OS ${op.os_id}`;

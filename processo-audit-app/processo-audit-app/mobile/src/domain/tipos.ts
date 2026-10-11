@@ -43,6 +43,28 @@ export interface PosseItem {
   quantidade: number;
   /** Só na visão local: quanto desta posse está reservado em lançamentos na fila. */
   reservado?: number;
+  /** Só na visão local: quanto está separado para devolução (na fila ou aguardando o estoque aprovar). Já descontado de `quantidade`. */
+  emDevolucao?: number;
+}
+
+export type StatusDevolucao = 'pendente' | 'aprovada' | 'negada';
+export type CondicaoMaterial = 'novo' | 'usado';
+
+/** Solicitação de devolução do técnico, como o servidor a guarda (o estoque aprova ou nega). */
+export interface Devolucao {
+  id: number;
+  lote_id: number;
+  lote_codigo: string;
+  item_id: number;
+  item_nome: string;
+  unidade: Unidade;
+  quantidade: number;
+  condicao: CondicaoMaterial;
+  observacao: string | null;
+  status: StatusDevolucao;
+  solicitado_em: string;
+  revisado_em: string | null;
+  motivo_negacao: string | null;
 }
 
 export interface Motivo { id: number; codigo: string; rotulo: string; tipo_servico_id: number | null }
@@ -76,6 +98,8 @@ export interface Bootstrap {
   tecnico: TecnicoResumo;
   os: OS[];
   posse: PosseItem[];
+  /** Ausente em servidores anteriores à devolução pelo app. */
+  devolucoes?: Devolucao[];
   motivos: Motivo[];
   checklist: ChecklistItem[];
   sugestoes_servicos: string[];
@@ -91,6 +115,7 @@ export interface Dados {
   tecnico: TecnicoResumo;
   os: OS[];
   posse: PosseItem[];
+  devolucoes: Devolucao[];
   motivos: Motivo[];
   checklist: ChecklistItem[];
   sugestoesServicos: string[];
