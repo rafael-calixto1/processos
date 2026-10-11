@@ -4,15 +4,17 @@ App dos técnicos de campo para ver e executar as Ordens de Serviço e acompanha
 
 Feito com Expo (SDK 57), React Native, TypeScript e Expo Router. Tudo em português do Brasil.
 
-## Estado atual (Fase 2)
+## Estado atual (Fase 3)
 
 | Já funciona | Ainda não |
 |---|---|
-| Login só para perfil técnico, sessão que se renova sozinha e fica guardada no cofre do aparelho | Registrar material usado, fotos, GPS e finalizar a OS (Fase 3) |
-| **Minhas OS** (pendentes e encerradas, por prazo), detalhe da OS, "Abrir no mapa" | Trabalhar sem sinal **escrevendo** dados: hoje só dá para consultar (Fase 3) |
-| **Iniciar execução** (precisa de internet nesta fase) | Leitor de QR/código de barras do lote (Fase 3) |
-| **Meu estoque** com busca (itens por unidade somam entre lotes) | Devolução, rota no mapa, push, build instalável (Fase 4) |
-| Abrir sem sinal e ver tudo o que foi baixado da última vez, com aviso "Sem conexão. Mostrando os dados de HH:MM" | |
+| Login só para técnico, sessão que se renova sozinha, tokens no cofre do aparelho | Envio em **segundo plano** com o app fechado (Fase 4; hoje envia com o app aberto) |
+| **Executar uma OS inteira sem sinal**: iniciar, descrição, motivo, local (GPS, poste ou endereço), checklist, **lançamentos de material** (limite da posse sempre à vista, FIFO por lote, QR do lote), materiais retirados, **fotos** (câmera do app e galeria, comprimidas), participantes e **finalizar** | Rota desenhada no mapa, devolução de material, push, build instalável (Fase 4) |
+| **Fila de envio** (outbox): tudo vai para o servidor depois, na ordem certa, **sem duplicar baixa** (chave de idempotência congelada por operação) | Testado só em teste automático e no navegador: câmera, GPS, QR e modo avião **reais** (ver `docs/ROTEIRO_TESTE_MANUAL.md`) |
+| **Sincronização visível**: ícone por OS, contador, "Sincronizar agora", tela **Requer atenção** (recusas do servidor com a mensagem dele e a ação possível) | |
+| Logout e troca de técnico **sem perder trabalho não enviado** (descartar só com dupla confirmação) | |
+
+Como funciona por baixo (resumo): o banco local guarda o **retrato** do servidor e, **à parte**, a fila do que o técnico fez; a tela mostra retrato + fila (posse já descontada do reservado, OS "em andamento" antes de o servidor saber). Um novo retrato nunca apaga nem duplica trabalho pendente. O motor envia **uma operação por vez**: iniciar → lançamentos e fotos → finalizar (que espera todas as da OS). Falha de rede/5xx/429 tenta de novo com espera crescente; recusa por regra (400/403/404/409/422) vira "requer atenção"; login recusado pausa tudo sem perder nada; o que ficou "enviando" quando o app foi encerrado é reenviado com a **mesma** chave.
 
 ## Rodar no celular (Expo Go)
 
@@ -39,13 +41,24 @@ npx expo-doctor          # dependências e configuração do Expo
 npx expo export --platform android --output-dir /tmp/bundle   # gera o bundle: prova que todos os imports e rotas resolvem
 ```
 
-Integração com o **backend real** (use sempre o banco de teste, nunca o de produção): suba o backend com `DB_NAME=processo_audit_test`, e rode
+Integração com o **backend real** (sempre no banco de teste `processo_audit_test`; o script recusa qualquer outro):
 
 ```bash
-API_URL=http://localhost:5998/api API_EMAIL=joao@exemplo.com API_SENHA=senha123 npx jest tests/integracao
+npm run test:integracao      # recria o banco de teste, sobe o backend (porta 5998), roda tests/integracao e encerra o servidor
 ```
 
-Sem `API_URL` esses testes são ignorados.
+Prova em `estoque_movimentacoes` (SQL direto) que a baixa não duplica com rede caindo, resposta perdida ou app encerrado no meio do envio, e que posse mudada, peça fracionada, OS cancelada/reatribuída, finalização incompleta e sessão revogada viram "requer atenção". Sem as variáveis do executor esses testes são ignorados no `npm test`.
+
+### Roteiro no navegador (Playwright)
+
+```bash
+# backend de teste na 5998 e o build web (apontando para ele) servido na 3998:
+EXPO_PUBLIC_API_URL=http://localhost:5998/api npx expo export --platform web --clear --output-dir dist
+node scripts/preview-web.mjs dist 3998 &
+DB_NAME=processo_audit_test OS_ID=<id da OS do técnico> node scripts/verificar-web.mjs capturas
+```
+
+Percorre uma OS inteira **offline** (celular 390×844) e confere no banco de teste que tudo chegou ao religar. **Câmera, GPS e leitor de QR são SIMULAÇÕES marcadas na tela**; capturas de exemplo em `docs/capturas/`.
 
 ### Ver as telas no computador (opcional)
 
@@ -67,8 +80,8 @@ src/
   api/        cliente HTTP (renova o token e repete a chamada), contrato dos endpoints, erros
   auth/       sessão: tokens no cofre, renovação única por vez, nunca derruba o login por falta de rede
   db/         SQLite local: fila serial, migrações versionadas, espelho dos dados do servidor
-  sync/       baixar o retrato do servidor e iniciar a execução
-  estado/     provedores do React (serviços, dados, rede)
+  sync/       fila de envio (motor `outbox.ts`), comandos de campo (`operacoes.ts`), baixar o retrato (`sincronizar.ts`), estado local
+  estado/     provedores do React (serviços, dados + fila, finalização), GPS, fotos, arquivos (nativo e web)
   components/ botões, cartões, avisos... (alvos de 48 dp, texto grande, contraste alto)
   theme/      cores da marca e medidas
   testing/    apoio aos testes (servidor falso, SQLite em memória, massa de dados)

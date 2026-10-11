@@ -297,4 +297,13 @@ quando('execução de campo × backend real', () => {
     expect(await estados(app)).toEqual(['iniciar:ok', 'lancamento:ok']);
     expect(soma(await movimentacoes(c.osId))).toBe(30);
   });
+
+  it('QR do lote consultado online: o dono vê o lote (mesmo em minúsculas); lote de outro ou do almoxarifado dá 403; inexistente dá 404', async () => {
+    const c = await criarCenario({ metros: 50 });
+    const app = await criarApp();
+    expect(await app.api.lotePorCodigo(c.cabo.codigo.toLowerCase())).toMatchObject({ codigo: c.cabo.codigo, minha_posse: 50 });
+    const compra = await escritorio('estoque', 'POST', '/estoque/compras', { item_id: SEMENTE.ids.cabo, tipo_volume: 'bobina', qtd_volumes: 1, medida_por_volume: 100 });
+    await expect(app.api.lotePorCodigo(compra.corpo.lotes[0].codigo)).rejects.toMatchObject({ status: 403, message: 'Este lote não está em sua posse' });
+    await expect(app.api.lotePorCodigo('LOTE-NAO-EXISTE-9')).rejects.toMatchObject({ status: 404, message: 'Lote não encontrado' });
+  });
 });
