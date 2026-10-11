@@ -5,6 +5,21 @@ const DIAS_HISTORICO = 30;
 const num = (v) => (v === null || v === undefined ? null : Number(v));
 
 /**
+ * Catálogos que a finalização da OS usa (os mesmos no app e no web): motivos e checklist ativos, técnicos/equipes ativos que podem
+ * ser marcados como participantes (sem o próprio técnico, quando há um) e itens de estoque ativos para "materiais retirados".
+ */
+export const catalogosFechamento = async (tecnicoId = null) => {
+  const [motivos] = await pool.query('SELECT id, codigo, rotulo, tipo_servico_id FROM os_motivos_fechamento WHERE ativo = 1 ORDER BY ordem, id');
+  const [checklist] = await pool.query(
+    'SELECT id, codigo, rotulo, tipo, unidade, obrigatorio, tipo_servico_id FROM os_checklist_itens WHERE ativo = 1 ORDER BY ordem, id');
+  const [tecnicos] = tecnicoId === null
+    ? await pool.query('SELECT id, nome, tipo, empresa FROM tecnicos WHERE ativo = 1 ORDER BY nome')
+    : await pool.query('SELECT id, nome, tipo, empresa FROM tecnicos WHERE ativo = 1 AND id <> ? ORDER BY nome', [tecnicoId]);
+  const [itens] = await pool.query('SELECT id, nome, categoria, unidade FROM estoque_itens WHERE ativo = 1 ORDER BY nome');
+  return { motivos, checklist: checklist.map((c) => ({ ...c, obrigatorio: Boolean(c.obrigatorio) })), tecnicos, itens, regras: REGRAS_FECHAMENTO };
+};
+
+/**
  * Tudo o que o app precisa numa chamada só: as OS do técnico (pendentes + encerradas recentes), a posse, os catálogos
  * e as regras. É um retrato completo das pendentes (não incremental), assim OS reatribuídas ou canceladas somem sozinhas.
  */
@@ -31,13 +46,9 @@ export const montarBootstrap = async (tecnicoId) => {
      FROM estoque_devolucoes d JOIN estoque_lotes l ON l.id = d.lote_id JOIN estoque_itens i ON i.id = d.item_id
      WHERE d.tecnico_id = ? AND (d.status = 'pendente' OR d.revisado_em >= NOW() - INTERVAL ? DAY)
      ORDER BY (d.status = 'pendente') DESC, d.id DESC LIMIT 100`, [tecnicoId, DIAS_HISTORICO]);
-  const [motivos] = await pool.query('SELECT id, codigo, rotulo, tipo_servico_id FROM os_motivos_fechamento WHERE ativo = 1 ORDER BY ordem, id');
-  const [checklist] = await pool.query(
-    'SELECT id, codigo, rotulo, tipo, unidade, obrigatorio, tipo_servico_id FROM os_checklist_itens WHERE ativo = 1 ORDER BY ordem, id');
+  const { motivos, checklist, tecnicos, itens } = await catalogosFechamento(tecnicoId);
   const [sugestoes] = await pool.query('SELECT descricao FROM os_servicos GROUP BY descricao ORDER BY COUNT(*) DESC, descricao LIMIT 40');
   const [tipos] = await pool.query('SELECT id, nome FROM os_tipos_servico ORDER BY nome');
-  const [tecnicos] = await pool.query('SELECT id, nome, tipo, empresa FROM tecnicos WHERE ativo = 1 AND id <> ? ORDER BY nome', [tecnicoId]);
-  const [itens] = await pool.query('SELECT id, nome, categoria, unidade FROM estoque_itens WHERE ativo = 1 ORDER BY nome');
 
   return {
     gerado_em: new Date().toISOString(),
@@ -46,7 +57,7 @@ export const montarBootstrap = async (tecnicoId) => {
     posse: posse.map((p) => ({ ...p, quantidade: Number(p.quantidade) })),
     devolucoes: devolucoes.map((d) => ({ ...d, quantidade: Number(d.quantidade) })),
     motivos,
-    checklist: checklist.map((c) => ({ ...c, obrigatorio: Boolean(c.obrigatorio) })),
+    checklist,
     sugestoes_servicos: sugestoes.map((s) => s.descricao),
     tipos_servico: tipos,
     tecnicos,

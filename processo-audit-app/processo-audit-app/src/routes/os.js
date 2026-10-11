@@ -8,6 +8,7 @@ import * as fotos from '../services/fotosService.js';
 import { finalizarNaTx, carregarFechamento } from '../services/fechamentoService.js';
 import { executarIdempotente, hashDe } from '../services/idempotencia.js';
 import { REGRAS_FECHAMENTO } from '../config/regrasFechamento.js';
+import { catalogosFechamento } from '../services/mobileService.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque', 'tecnico']));
@@ -52,6 +53,11 @@ router.get('/', handle(async (req, res) => {
 
 router.post('/', staff, handle(async (req, res) => {
   res.status(201).json(await svc.criarOS(req.body, req.userId));
+}));
+
+// catálogos da finalização (motivos, checklist, participantes, itens e regras): os mesmos do app, para o fluxo de campo do web
+router.get('/catalogos-fechamento', handle(async (req, res) => {
+  res.json(await catalogosFechamento(req.userRole === 'tecnico' ? req.tecnicoId : null));
 }));
 
 // tipos de serviço (lista editável pelo staff)
