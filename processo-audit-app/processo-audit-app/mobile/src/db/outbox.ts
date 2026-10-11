@@ -62,6 +62,10 @@ export const proximaPronta = async (b: Banco, usuarioId: number, agora: number):
   return null;
 };
 
+/** Uma ação explícita (reconexão, "Sincronizar agora", voltar ao app) cancela a espera do backoff: tenta tudo o que está pendente agora. */
+export const liberarEspera = async (b: Banco, usuarioId: number): Promise<number> =>
+  (await b.run("UPDATE outbox SET proxima_tentativa = 0 WHERE usuario_id = ? AND estado = 'pendente' AND proxima_tentativa > 0", [usuarioId])).alteradas;
+
 /** Quando uma operação em espera (backoff) poderá ser tentada de novo, para o motor acordar na hora certa. Só conta horas futuras. */
 export const proximaHora = async (b: Banco, usuarioId: number, agora: number): Promise<number | null> =>
   (await b.first<{ t: number | null }>("SELECT MIN(proxima_tentativa) AS t FROM outbox WHERE usuario_id = ? AND estado = 'pendente' AND proxima_tentativa > ?", [usuarioId, agora]))?.t ?? null;

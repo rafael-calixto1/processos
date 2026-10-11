@@ -102,32 +102,32 @@ describe('Detalhe da OS', () => {
   it('iniciar chama o servidor uma vez e não mostra erro', async () => {
     render(<DetalheOS />);
     fireEvent.press(screen.getByTestId('botao-iniciar'));
-    await waitFor(() => expect(mockDados.iniciarOS).toHaveBeenCalledWith(102));
-    expect(mockDados.iniciarOS).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockDados.comandos.iniciarOS).toHaveBeenCalledWith(102));
+    expect(mockDados.comandos.iniciarOS).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('sem internet não tenta e explica o motivo', () => {
+  it('sem internet INICIA do mesmo jeito: vai para a fila e a tela não pede conexão', async () => {
     mockOnline = false;
     render(<DetalheOS />);
     fireEvent.press(screen.getByTestId('botao-iniciar'));
-    expect(screen.getByText(/Sem conexão\. Por enquanto é preciso estar online/)).toBeTruthy();
-    expect(mockDados.iniciarOS).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockDados.comandos.iniciarOS).toHaveBeenCalledWith(102));
+    expect(screen.queryByText(/precisa|Sem conexão/)).toBeNull();
   });
 
   it('mostra a recusa do servidor (OS encerrada, de outro técnico)', async () => {
-    mockDados.iniciarOS.mockRejectedValue(new ApiError(409, 'OS encerrada: não pode ser iniciada'));
+    mockDados.comandos.iniciarOS.mockRejectedValue(new ApiError(409, 'OS encerrada: não pode ser iniciada'));
     render(<DetalheOS />);
     fireEvent.press(screen.getByTestId('botao-iniciar'));
     expect(await screen.findByText('OS encerrada: não pode ser iniciada')).toBeTruthy();
   });
 
-  it('em andamento: sem botão de iniciar e com o aviso do que vem na próxima versão', () => {
+  it('em andamento: sem botão de iniciar e com a hora em que a execução começou', () => {
     mockParams = { id: '101' };
     mockDados = estadoDados({ dados: dadosDe({ os: [criarOS(1, { status: 'em_andamento', iniciado_em: '2026-10-11T12:00:00.000Z' })] }) });
     render(<DetalheOS />);
     expect(screen.queryByTestId('botao-iniciar')).toBeNull();
-    expect(screen.getByText(/Execução iniciada às \d\d:\d\d\. Registro de materiais, fotos e finalização chegam/)).toBeTruthy();
+    expect(screen.getByText(/Execução iniciada às \d\d:\d\d\./)).toBeTruthy();
   });
 
   it('encerrada é somente leitura', () => {

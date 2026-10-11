@@ -156,6 +156,21 @@ describe('falhas passageiras e backoff', () => {
   });
 });
 
+describe('ação explícita ignora a espera do backoff', () => {
+  it('reconexão / "Sincronizar agora" tentam na hora; o reenvio automático continua respeitando a espera', async () => {
+    const { banco, motor, chamadas, definir } = await montar({ lancar: () => new NetworkError() });
+    await enfileirar(banco, novoLancamento(102));
+    await motor.executar();
+    expect(chamadas).toHaveLength(1);
+    definir('lancar', () => ({ id: 1, descricao: 'x', trecho: null, quantidade: 1, materiais: [] }));
+    await motor.executar();                          // automático, ainda dentro da espera: não tenta
+    expect(chamadas).toHaveLength(1);
+    const r = await motor.executar({ ignorarEspera: true });
+    expect(chamadas).toHaveLength(2);
+    expect(r.enviadas).toBe(1);
+  });
+});
+
 describe('erro de regra → requer atenção, com a mensagem do servidor', () => {
   it('guarda a mensagem e a lista de problemas da finalização, e não reenvia sozinha', async () => {
     const detalhes = [{ campo: 'descricao', mensagem: 'Descrição muito curta' }, { campo: 'checklist', mensagem: 'Responda o item do checklist: Metros de fibra lançados?' }];

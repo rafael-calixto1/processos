@@ -8,11 +8,11 @@ import { Cabecalho } from '@/components/Cabecalho';
 import { Cartao, Dado } from '@/components/Cartao';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { Faixa } from '@/components/Faixa';
+import { IndicadorSync } from '@/components/IndicadorSync';
 import { Selo } from '@/components/Selo';
 import { enderecoLinha, isPendente, PRIORIDADE_LABEL, redeLinha, slaInfo, STATUS_LABEL, urlMapa } from '@/domain/os';
 import { fmtData, fmtDataHora, fmtHora } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
-import { useOnline } from '@/estado/rede';
 import { cores, espaco, fonte, type Tom } from '@/theme';
 
 const TOM_SLA = { estourado: 'erro', em_risco: 'aviso', no_prazo: 'sucesso', sem_prazo: 'neutro' } as const satisfies Record<string, Tom>;
@@ -20,8 +20,7 @@ const TOM_SLA = { estourado: 'erro', em_risco: 'aviso', no_prazo: 'sucesso', sem
 export default function DetalheOS() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { dados, carregado, iniciarOS } = useDados();
-  const online = useOnline();
+  const { dados, carregado, comandos } = useDados();
   const [iniciando, setIniciando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const os = dados?.os.find((o) => String(o.id) === id);
@@ -45,9 +44,8 @@ export default function DetalheOS() {
   };
   const iniciar = async () => {
     setErro(null);
-    if (!online) { setErro('Sem conexão. Por enquanto é preciso estar online para iniciar a execução; o modo sem sinal chega na próxima versão.'); return; }
     setIniciando(true);
-    try { await iniciarOS(os.id); } catch (e) { setErro(mensagemDeErro(e)); } finally { setIniciando(false); }
+    try { await comandos.iniciarOS(os.id); } catch (e) { setErro(mensagemDeErro(e)); } finally { setIniciando(false); }
   };
 
   return (
@@ -79,12 +77,16 @@ export default function DetalheOS() {
         <Cartao titulo="Andamento">
           <Dado rotulo="Aberta em" valor={`${fmtDataHora(os.criado_em)}${os.criado_por_nome ? ` por ${os.criado_por_nome}` : ''}`} />
           <Dado rotulo="Execução iniciada em" valor={os.iniciado_em ? fmtDataHora(os.iniciado_em) : 'Ainda não iniciada'} />
+          <IndicadorSync estado={os.sync} pendencias={os.pendencias} />
           {os.concluida_em ? <Dado rotulo="Encerrada em" valor={fmtDataHora(os.concluida_em)} /> : null}
         </Cartao>
 
-        {os.status === 'em_andamento' ? (
-          <Faixa tom="info" icone="construct-outline" texto={`Execução iniciada às ${fmtHora(os.iniciado_em)}. Registro de materiais, fotos e finalização chegam na próxima versão do app.`} />
+        {os.sync === 'erro' ? (
+          <Faixa tom="erro" icone="alert-circle" texto="O servidor não aceitou algo desta OS. Veja o que precisa ser resolvido." acao={{ rotulo: 'Ver', onPress: () => router.push('/atencao') }} />
+        ) : os.sync === 'pendente' ? (
+          <Faixa tom="aviso" icone="cloud-upload-outline" texto={`${os.pendencias === 1 ? '1 envio desta OS aguarda' : `${os.pendencias} envios desta OS aguardam`} conexão. Está tudo salvo no aparelho.`} />
         ) : null}
+        {os.status === 'em_andamento' ? <Faixa tom="info" icone="construct-outline" texto={`Execução iniciada às ${fmtHora(os.iniciado_em)}.`} /> : null}
         {!pendente ? <Faixa tom="neutro" icone="document-text-outline" texto={`Esta OS está ${STATUS_LABEL[os.status].toLowerCase()} e é somente leitura.`} /> : null}
         <Text style={s.rodape}>Dados de {fmtDataHora(dados?.geradoEm)}</Text>
       </ScrollView>

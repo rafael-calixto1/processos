@@ -96,7 +96,7 @@ export const criarApp = async (email = API_EMAIL) => {
   ref.g = g;
   const { banco } = await criarBancoDeTeste();
   const usuario = await g.entrar(email, API_SENHA);
-  await garantirDono(banco, usuario.id);
+  await garantirDono(banco, { id: usuario.id, nome: usuario.name });
 
   const ctx: ContextoComandos = { banco, usuarioId: usuario.id, uuid: randomUUID, agora: relogio.agora, dispositivo: 'jest', versaoApp: '1.0.0', arquivos: { apagar: async (u) => { apagados.push(u); fotosPorUri.delete(u); } } };
   const novoMotor = () => new MotorOutbox({

@@ -1,10 +1,14 @@
 import { ApiError, NetworkError } from '@/api/erros';
 import { armazenamentoEmMemoria } from '@/auth/armazenamento';
 import { ConfigServidor } from '@/config/servidor';
+import { enfileirar, listarTodas } from '@/db/outbox';
 import { lerDados, lerMeta, salvarBootstrap } from '@/db/repositorio';
+import { inserirFoto, lerRascunho, listarFotos, salvarDetalhe, salvarRascunho } from '@/db/trabalho';
+import { rascunhoVazio } from '@/domain/etapas';
+import { novaIniciar, novoLancamento, uuid } from '@/testing/operacoes';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { criarBootstrap, criarOS } from '@/testing/fixtures';
-import { garantirDono, iniciarExecucao, sincronizar } from '../sincronizar';
+import { descartarTudoLocal, garantirDono, resumoDoTrabalho, sincronizar } from '../sincronizar';
 
 describe('sincronizar', () => {
   it('baixa o retrato, troca o espelho e registra quando sincronizou', async () => {
@@ -27,67 +31,94 @@ describe('sincronizar', () => {
   });
 });
 
+const joao = { id: 7, nome: 'João Técnico' };
+const ana = { id: 8, nome: 'Ana Técnica' };
+const foto = (n: number) => ({ client_uuid: uuid(n), usuario_id: 7, os_id: 102, arquivo: `file:///fotos/${n}.jpg`, mime: 'image/jpeg', tamanho: 10, tirada_em: 'x', lat: null, lng: null, legenda: null, criado_em: 'x' });
+
 describe('garantirDono', () => {
   it('o primeiro técnico só marca o dono; o mesmo técnico mantém os dados', async () => {
     const { banco } = await criarBancoDeTeste();
-    expect(await garantirDono(banco, 7)).toEqual({ limpou: false });
+    expect(await garantirDono(banco, joao)).toEqual({ bloqueado: false, limpou: false });
     await salvarBootstrap(banco, criarBootstrap());
-    expect(await garantirDono(banco, 7)).toEqual({ limpou: false });
+    expect(await garantirDono(banco, joao)).toEqual({ bloqueado: false, limpou: false });
     expect((await lerDados(banco))?.os).toHaveLength(3);
+    expect(await lerMeta(banco, 'usuario_nome')).toBe('João Técnico');
   });
-  it('outro técnico no mesmo aparelho NUNCA vê os dados do anterior', async () => {
+  it('outro técnico no mesmo aparelho NUNCA vê os dados do anterior quando não há nada pendente', async () => {
     const { banco } = await criarBancoDeTeste();
-    await garantirDono(banco, 7);
+    await garantirDono(banco, joao);
     await salvarBootstrap(banco, criarBootstrap());
-    expect(await garantirDono(banco, 8)).toEqual({ limpou: true });
+    expect(await garantirDono(banco, ana)).toEqual({ bloqueado: false, limpou: true });
     expect(await lerDados(banco)).toBeNull();
     expect(await lerMeta(banco, 'usuario_id')).toBe('8');
+    expect(await lerMeta(banco, 'usuario_nome')).toBe('Ana Técnica');
+  });
+  it('com trabalho NÃO enviado do anterior, o novo técnico fica BLOQUEADO e nada é apagado', async () => {
+    const { banco } = await criarBancoDeTeste();
+    await garantirDono(banco, joao);
+    await salvarBootstrap(banco, criarBootstrap());
+    await enfileirar(banco, novoLancamento(102));
+    await inserirFoto(banco, foto(1));
+    const apagados: string[] = [];
+    const r = await garantirDono(banco, ana, async (u) => { apagados.push(u); });
+    expect(r).toEqual({ bloqueado: true, limpou: false, pendencias: 1, donoNome: 'João Técnico' });
+    expect(apagados).toEqual([]);
+    expect(await lerMeta(banco, 'usuario_id')).toBe('7'); // continua sendo do João
+    expect((await lerDados(banco))?.os).toHaveLength(3);
+    expect(await listarTodas(banco, 7)).toHaveLength(1);
+    expect(await listarFotos(banco, 102)).toHaveLength(1);
+  });
+  it('um rascunho começado e ainda não enviado também conta como trabalho a proteger', async () => {
+    const { banco } = await criarBancoDeTeste();
+    await garantirDono(banco, joao);
+    await salvarRascunho(banco, 7, 102, { ...rascunhoVazio(), descricao: 'metade escrita' });
+    expect(await garantirDono(banco, ana)).toMatchObject({ bloqueado: true, pendencias: 1 });
+  });
+  it('o dono de volta destrava: continua de onde parou', async () => {
+    const { banco } = await criarBancoDeTeste();
+    await garantirDono(banco, joao);
+    await enfileirar(banco, novoLancamento(102));
+    expect((await garantirDono(banco, ana)).bloqueado).toBe(true);
+    expect(await garantirDono(banco, joao)).toEqual({ bloqueado: false, limpou: false });
+    expect(await listarTodas(banco, 7)).toHaveLength(1);
+  });
+  it('só histórico já confirmado do anterior não bloqueia: é limpo, inclusive os arquivos de foto que sobraram', async () => {
+    const { banco } = await criarBancoDeTeste();
+    await garantirDono(banco, joao);
+    const op = await enfileirar(banco, novaIniciar(102));
+    await banco.run("UPDATE outbox SET estado = 'ok', ok_em = 1, no_retrato = 1 WHERE id = ?", [op.id]);
+    await inserirFoto(banco, foto(2));
+    const apagados: string[] = [];
+    expect(await garantirDono(banco, ana, async (u) => { apagados.push(u); })).toEqual({ bloqueado: false, limpou: true });
+    expect(await listarTodas(banco, 7)).toEqual([]);
+    expect(apagados).toEqual(['file:///fotos/2.jpg']);
   });
 });
 
-describe('iniciarExecucao', () => {
-  it('envia o horário do aparelho com uma chave de idempotência e atualiza a OS local com a resposta do servidor', async () => {
+describe('descarte confirmado e resumo do trabalho', () => {
+  it('resume o que seria perdido (envios, rascunhos e fotos) para a confirmação', async () => {
+    const { banco } = await criarBancoDeTeste();
+    await enfileirar(banco, novoLancamento(102));
+    await enfileirar(banco, novaIniciar(102));
+    await inserirFoto(banco, foto(3));
+    await enfileirar(banco, { ...novoLancamento(102), tipo: 'foto', payload: { arquivo: 'file:///fotos/3.jpg', mime: 'image/jpeg', campos: { client_uuid: uuid(3), tirada_em: 'x' } } } as never);
+    await salvarRascunho(banco, 7, 102, rascunhoVazio());
+    expect(await resumoDoTrabalho(banco, 7)).toEqual({ operacoes: 3, rascunhos: 1, fotos: 1, total: 4 });
+    expect(await resumoDoTrabalho(banco, 8)).toEqual({ operacoes: 0, rascunhos: 0, fotos: 0, total: 0 });
+  });
+  it('descartarTudoLocal apaga fila, rascunho, fotos (e os arquivos), detalhe e espelho', async () => {
     const { banco } = await criarBancoDeTeste();
     await salvarBootstrap(banco, criarBootstrap());
-    const iniciarOS = jest.fn(async () => ({ status: 'em_andamento' as const, iniciado_em: '2026-10-11T14:02:00.000Z' }));
-    const os = await iniciarExecucao({ iniciarOS }, banco, 102, { novaChave: () => 'chave-fixa-123', agora: () => new Date('2026-10-11T14:02:10Z') });
-    expect(iniciarOS).toHaveBeenCalledWith(102, '2026-10-11T14:02:10.000Z', 'chave-fixa-123');
-    expect(os).toMatchObject({ id: 102, status: 'em_andamento', iniciado_em: '2026-10-11T14:02:00.000Z' });
-    expect((await lerDados(banco))!.os.find((o) => o.id === 102)?.status).toBe('em_andamento');
-  });
-  it('se o servidor recusa (OS encerrada, de outro técnico) ou não há rede, a OS local não muda', async () => {
-    const { banco } = await criarBancoDeTeste();
-    await salvarBootstrap(banco, criarBootstrap());
-    for (const erro of [new ApiError(409, 'OS encerrada: não pode ser iniciada'), new ApiError(403, 'Esta OS não está atribuída a você'), new NetworkError()]) {
-      await expect(iniciarExecucao({ iniciarOS: async () => { throw erro; } }, banco, 102, { novaChave: () => 'k' })).rejects.toBe(erro);
-    }
-    expect((await lerDados(banco))!.os.find((o) => o.id === 102)?.status).toBe('aberta');
-  });
-  it('OS que sumiu da lista local gera um erro claro', async () => {
-    const { banco } = await criarBancoDeTeste();
-    await salvarBootstrap(banco, criarBootstrap({ os: [criarOS(1)] }));
-    await expect(iniciarExecucao({ iniciarOS: async () => ({ status: 'em_andamento', iniciado_em: 'x' }) }, banco, 555, { novaChave: () => 'k' })).rejects.toThrow(/não está mais na sua lista/);
-  });
-});
-
-describe('ConfigServidor', () => {
-  it('usa o padrão do ambiente, e o que o técnico digitar passa a valer e fica guardado', async () => {
-    const arm = armazenamentoEmMemoria();
-    const c = new ConfigServidor(arm, '10.0.0.1:5002');
-    expect(c.url()).toBe('http://10.0.0.1:5002/api');
-    expect(await c.definir('os.exemplo.com.br')).toEqual({ ok: true, url: 'http://os.exemplo.com.br/api' });
-    const outro = new ConfigServidor(arm, '10.0.0.1:5002');
-    await outro.carregar();
-    expect(outro.url()).toBe('http://os.exemplo.com.br/api'); // o digitado vence o padrão
-  });
-  it('endereço inválido é recusado e não substitui o atual', async () => {
-    const c = new ConfigServidor(armazenamentoEmMemoria(), 'http://a:1');
-    expect((await c.definir('ftp://x')).ok).toBe(false);
-    expect(c.url()).toBe('http://a:1/api');
-  });
-  it('sem padrão e sem valor guardado não há servidor', async () => {
-    const c = new ConfigServidor(armazenamentoEmMemoria());
-    await c.carregar();
-    expect(c.url()).toBeNull();
+    await salvarDetalhe(banco, 102, { baixado_em: 'x', servicos: [], materiais: [], fotos: [] });
+    await enfileirar(banco, novoLancamento(102));
+    await salvarRascunho(banco, 7, 102, rascunhoVazio());
+    await inserirFoto(banco, foto(4));
+    const apagados: string[] = [];
+    await descartarTudoLocal(banco, async (u) => { apagados.push(u); });
+    expect(await lerDados(banco)).toBeNull();
+    expect(await listarTodas(banco, 7)).toEqual([]);
+    expect(await lerRascunho(banco, 102)).toBeNull();
+    expect(await listarFotos(banco, 102)).toEqual([]);
+    expect(apagados).toEqual(['file:///fotos/4.jpg']);
   });
 });

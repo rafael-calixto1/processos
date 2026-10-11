@@ -73,3 +73,10 @@ export const podarDetalhes = async (b: Banco, manter: readonly number[]): Promis
   const todos = await b.all<{ os_id: number }>('SELECT os_id FROM os_detalhe');
   for (const { os_id } of todos) if (!guardar.has(os_id)) await b.run('DELETE FROM os_detalhe WHERE os_id = ?', [os_id]);
 };
+
+/** Apaga TODO o trabalho local (fila, rascunhos, fotos, cache). Devolve os arquivos de foto que sobraram no disco, para o chamador apagar. Só para descarte confirmado. */
+export const descartarTrabalhoLocal = (b: Banco): Promise<string[]> => b.transacao(async (tx) => {
+  const arquivos = (await tx.all<{ arquivo: string }>('SELECT arquivo FROM fotos_locais WHERE arquivo IS NOT NULL')).map((r) => r.arquivo);
+  for (const t of ['outbox', 'rascunhos', 'fotos_locais', 'os_detalhe']) await tx.run(`DELETE FROM ${t}`);
+  return arquivos;
+});

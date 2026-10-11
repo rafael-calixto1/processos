@@ -4,9 +4,10 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 import { CartaoOS } from '@/components/CartaoOS';
 import { Cabecalho } from '@/components/Cabecalho';
 import { EstadoVazio } from '@/components/EstadoVazio';
+import { BarraSincronia } from '@/components/BarraSincronia';
 import { Faixa } from '@/components/Faixa';
 import { isPendente, ordenarPorPrazo } from '@/domain/os';
-import { fmtHora, rotuloAtualizacao } from '@/domain/tempo';
+import { rotuloAtualizacao } from '@/domain/tempo';
 import { useDados } from '@/estado/DadosProvider';
 import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
 
@@ -14,7 +15,7 @@ type Filtro = 'pendentes' | 'encerradas';
 
 export default function MinhasOS() {
   const router = useRouter();
-  const { dados, carregado, sincronizando, semConexao, erro, atualizar } = useDados();
+  const { dados, carregado, sincronizando, semConexao, erro, atualizar, contagens, pausadoPorSessao, sincronizadoEm } = useDados();
   const [filtro, setFiltro] = useState<Filtro>('pendentes');
 
   const { pendentes, encerradas } = useMemo(() => {
@@ -37,7 +38,9 @@ export default function MinhasOS() {
         <Aba rotulo={`Encerradas (${encerradas.length})`} ativa={filtro === 'encerradas'} onPress={() => setFiltro('encerradas')} />
       </View>
       <View style={s.avisos}>
-        {semConexao && dados ? <Faixa texto={`Sem conexão. Mostrando os dados de ${fmtHora(dados.geradoEm)}.`} icone="cloud-offline-outline" acao={{ rotulo: 'Tentar', onPress: () => void atualizar() }} /> : null}
+        {dados || contagens.pendentes + contagens.enviando + contagens.atencao > 0 ? (
+          <BarraSincronia contagens={contagens} sincronizando={sincronizando} semConexao={semConexao} pausadoPorSessao={pausadoPorSessao} sincronizadoEm={dados?.geradoEm ?? sincronizadoEm} atualizar={() => void atualizar()} />
+        ) : null}
         {erro ? <Faixa texto={erro} tom="erro" acao={{ rotulo: 'Tentar', onPress: () => void atualizar() }} /> : null}
       </View>
       <FlatList

@@ -9,7 +9,7 @@ import { criarBootstrap } from '@/testing/fixtures';
 import { uuid } from '@/testing/operacoes';
 import { carregarEstadoLocal } from '../estadoLocal';
 import {
-  adicionarFoto, ErroOperacao, finalizarOS, iniciarOS, registrarLancamento, removerFotoDaOS, removerLancamento, salvarRascunhoLocal, substituirLancamento, voltarAEditar,
+  adicionarFoto, descartarOperacao, ErroOperacao, finalizarOS, iniciarOS, registrarLancamento, reenviarOperacao, removerFotoDaOS, removerLancamento, salvarRascunhoLocal, substituirLancamento, voltarAEditar,
   type ContextoComandos,
 } from '../operacoes';
 
@@ -314,6 +314,73 @@ describe('finalizarOS', () => {
     const erro = await pedir(finalizarOS(ctx, 101));
     expect(erro).toBeInstanceOf(ErroOperacao);
     expect(erro?.message).toMatch(/Materiais Retirados/);
+  });
+});
+
+describe('tela "Requer atenção": reenviar e descartar', () => {
+  const emAtencao = async (m: Awaited<ReturnType<typeof montar>>, op: { id: number }) => {
+    await reservar(m.banco, op.id, T0);
+    await marcarAtencao(m.banco, op.id, { status: 400, mensagem: 'x' }, T0);
+  };
+  it('tentar de novo devolve o item à fila; só vale para o que está em atenção', async () => {
+    const m = await montar();
+    const op = await registrarLancamento(m.ctx, lanc(101));
+    expect((await pedir(reenviarOperacao(m.ctx, op.id)))?.message).toMatch(/não está mais aguardando atenção/);
+    await emAtencao(m, op);
+    await reenviarOperacao(m.ctx, op.id);
+    expect((await obter(m.banco, op.id))?.estado).toBe('pendente');
+  });
+  it('"enviar mesmo assim" libera uma operação velha; depois de 50 dias não há como forçar', async () => {
+    const m = await montar();
+    const op = await registrarLancamento(m.ctx, lanc(101));
+    await emAtencao(m, op);
+    const dias = (n: number) => ({ ...m.ctx, agora: () => T0 + n * 86_400_000 });
+    await reenviarOperacao(dias(20), op.id, { forcar: true });
+    expect(await obter(m.banco, op.id)).toMatchObject({ estado: 'pendente', forcada: true });
+    await emAtencao(m, op);
+    expect((await pedir(reenviarOperacao(dias(51), op.id, { forcar: true })))?.message).toMatch(/mais de 50 dias/);
+  });
+  it('não mexe em operação de outro técnico', async () => {
+    const m = await montar();
+    const op = await registrarLancamento(m.ctx, lanc(101));
+    await emAtencao(m, op);
+    expect((await pedir(reenviarOperacao({ ...m.ctx, usuarioId: 8 }, op.id)))?.message).toMatch(/não está mais aguardando/);
+    expect((await pedir(descartarOperacao({ ...m.ctx, usuarioId: 8 }, op.id)))?.message).toMatch(/não foi encontrado/);
+  });
+  it('descartar lançamento libera a posse reservada', async () => {
+    const m = await montar();
+    const op = await registrarLancamento(m.ctx, lanc(101, [['l11', '100']]));
+    await emAtencao(m, op);
+    expect((await m.posse(11)).quantidade).toBe(349.5);
+    await descartarOperacao(m.ctx, op.id);
+    expect((await m.posse(11)).quantidade).toBe(449.5);
+  });
+  it('descartar foto apaga também o arquivo e a linha local', async () => {
+    const m = await montar();
+    const { clientUuid } = await adicionarFoto(m.ctx, { osId: 101, arquivo: 'file:///fotos/z.jpg', tamanho: 1 });
+    const op = (await listarTodas(m.banco, 7)).find((o) => o.tipo === 'foto')!;
+    await emAtencao(m, op);
+    await descartarOperacao(m.ctx, op.id);
+    expect(await obterFoto(m.banco, clientUuid)).toBeNull();
+    expect(m.apagados).toEqual(['file:///fotos/z.jpg']);
+  });
+  it('desistir de remover uma foto faz ela voltar para a lista', async () => {
+    const m = await montar();
+    const { clientUuid } = await adicionarFoto(m.ctx, { osId: 101, arquivo: 'file:///fotos/y.jpg', tamanho: 1 });
+    const opFoto = (await listarTodas(m.banco, 7))[0];
+    await reservar(m.banco, opFoto.id, T0);
+    await removerFotoDaOS(m.ctx, 101, clientUuid);
+    expect(await listarFotos(m.banco, 101)).toEqual([]);
+    const rem = (await listarTodas(m.banco, 7)).find((o) => o.tipo === 'remover_foto')!;
+    await emAtencao(m, rem);
+    await descartarOperacao(m.ctx, rem.id);
+    expect((await listarFotos(m.banco, 101)).map((f) => f.client_uuid)).toEqual([clientUuid]);
+  });
+  it('o que já foi enviado ou está em envio não pode ser descartado', async () => {
+    const m = await montar();
+    const op = await registrarLancamento(m.ctx, lanc(101));
+    await reservar(m.banco, op.id, T0);
+    expect((await pedir(descartarOperacao(m.ctx, op.id)))?.message).toMatch(/já foi enviado/);
   });
 });
 

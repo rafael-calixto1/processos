@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { criarApi, type Api } from '@/api/endpoints';
+import { criarFormularioFoto } from '@/api/formulario';
 import { ApiClient } from '@/api/client';
 import { NetworkError, mensagemDeErro } from '@/api/erros';
 import { armazenamentoSeguro } from '@/auth/armazenamentoNativo';
@@ -9,9 +10,11 @@ import { EstadoVazio } from '@/components/EstadoVazio';
 import { ConfigServidor } from '@/config/servidor';
 import type { Banco } from '@/db/banco';
 import { abrirBanco } from '@/db/expoBanco';
+import type { PortaArquivos } from '@/sync/outbox';
+import { portaArquivos } from './arquivos';
 import { descricaoDispositivo } from './dispositivo';
 
-export interface Servicos { sessao: GerenciadorSessao; api: Api; banco: Banco; servidor: ConfigServidor }
+export interface Servicos { sessao: GerenciadorSessao; api: Api; banco: Banco; servidor: ConfigServidor; arquivos: PortaArquivos }
 const Contexto = createContext<Servicos | null>(null);
 
 export const useApp = (): Servicos => {
@@ -32,11 +35,11 @@ const montar = async (): Promise<Servicos> => {
     },
     tokens: { tokenDeAcesso: () => ref.sessao!.tokenDeAcesso(), renovar: () => ref.sessao!.renovar(), sessaoPerdida: () => ref.sessao!.sessaoPerdida() },
   });
-  const api = criarApi(cliente);
+  const api = criarApi(cliente, { criarFormulario: criarFormularioFoto });
   const sessao = new GerenciadorSessao({ armazenamento: armazenamentoSeguro, api: () => api, dispositivo: descricaoDispositivo });
   ref.sessao = sessao;
   const [banco] = await Promise.all([abrirBanco(), sessao.restaurar()]);
-  return { sessao, api, banco, servidor };
+  return { sessao, api, banco, servidor, arquivos: portaArquivos };
 };
 
 /** Monta uma vez o servidor configurado, a sessão (restaurada do cofre) e o banco local; até lá mostra "Carregando". */

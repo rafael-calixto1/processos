@@ -26,7 +26,7 @@ export default function MeuEstoque() {
           <TextInput value={busca} onChangeText={setBusca} placeholder="Buscar item ou lote" placeholderTextColor={cores.desabilitado} style={s.input}
             accessibilityLabel="Buscar item ou lote" autoCorrect={false} autoCapitalize="none" returnKeyType="search" clearButtonMode="while-editing" />
         </View>
-        {dados ? <Faixa tom="info" icone="time-outline" texto="Saldo do último download. O servidor confere de novo ao registrar o uso." /> : null}
+        {dados ? <Faixa tom="info" icone="time-outline" texto="Saldo do último download, já descontado do que você lançou e ainda não foi enviado. O servidor confere de novo ao receber." /> : null}
         {semConexao && dados ? <Faixa texto="Sem conexão: mostrando o saldo guardado no aparelho." icone="cloud-offline-outline" acao={{ rotulo: 'Tentar', onPress: () => void atualizar() }} /> : null}
       </View>
       <FlatList
@@ -36,10 +36,11 @@ export default function MeuEstoque() {
         ItemSeparatorComponent={() => <View style={{ height: espaco.sm }} />}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item: g }) => (
-          <View style={s.linha} accessible accessibilityLabel={`${g.item_nome}, ${g.lote_codigo ?? `${g.lotes.length} lotes`}, ${fmtQtd(g.quantidade, g.unidade)} em posse`}>
+          <View style={s.linha} accessible accessibilityLabel={`${g.item_nome}, ${g.lote_codigo ?? `${g.lotes.length} lotes`}, ${fmtQtd(g.quantidade, g.unidade)} em posse${g.reservado > 0 ? `, mais ${fmtQtd(g.reservado, g.unidade)} reservados em lançamentos não enviados` : ''}`}>
             <View style={s.info}>
               <Text style={s.nome}>{g.item_nome}</Text>
               <Text style={s.lote}>{g.lote_codigo ?? (g.lotes.length === 1 ? g.lotes[0].lote_codigo : `${g.lotes.length} lotes`)}</Text>
+              {g.reservado > 0 ? <Text style={s.reservado}>Reservado em lançamentos não enviados: {fmtQtd(g.reservado, g.unidade)}</Text> : null}
             </View>
             <Text style={s.qtd}>{fmtQtd(g.quantidade, g.unidade)}</Text>
           </View>
@@ -65,5 +66,6 @@ const s = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   nome: { fontSize: fonte.corpo + 1, fontWeight: '700', color: cores.texto },
   lote: { fontSize: fonte.pequena + 1, color: cores.textoSuave },
+  reservado: { fontSize: fonte.pequena, color: cores.aviso, fontWeight: '700' },
   qtd: { fontSize: fonte.destaque + 2, fontWeight: '800', color: cores.primariaEscura },
 });

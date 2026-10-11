@@ -13,7 +13,7 @@ import { lerDados } from '@/db/repositorio';
 import { agrupar } from '@/domain/posse';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { fetchNode } from '@/testing/fetchNode';
-import { garantirDono, iniciarExecucao, sincronizar } from '@/sync/sincronizar';
+import { garantirDono, sincronizar } from '@/sync/sincronizar';
 import { criarCenario } from './apoio';
 
 const { API_URL, API_EMAIL = 'joao@exemplo.com', API_SENHA = 'senha123', API_ADMIN_EMAIL = 'admin@exemplo.com' } = process.env;
@@ -49,7 +49,7 @@ quando('app × backend real', () => {
 
     const usuario = await g.entrar(API_EMAIL, API_SENHA);
     expect(usuario.role).toBe('tecnico');
-    await garantirDono(banco, usuario.id);
+    await garantirDono(banco, { id: usuario.id, nome: usuario.name });
 
     // sincroniza e lê do SQLite: o que o app mostraria offline
     await sincronizar(api, banco, { usuarioId: usuario.id });
@@ -69,12 +69,11 @@ quando('app × backend real', () => {
     // token de acesso inválido (como se tivesse vencido): o cliente renova sozinho e a chamada funciona
     const refreshAntes = (g as unknown as { refresh: string }).refresh;
     (g as unknown as { access: string }).access = 'token.invalido.x';
-    const os = await iniciarExecucao(api, banco, aberta.id, { novaChave: () => `jest-${Date.now()}-a` });
+    const os = await api.iniciarOS(aberta.id, new Date().toISOString(), `jest-${Date.now()}-a`);
     expect(os.status).toBe('em_andamento');
     expect(g.tokenDeAcesso()).not.toBe('token.invalido.x');
     expect((g as unknown as { refresh: string }).refresh).not.toBe(refreshAntes); // o refresh token foi trocado (rotação)
     expect(g.getEstado().status).toBe('logado');
-    expect((await lerDados(banco))!.os.find((o) => o.id === aberta.id)?.status).toBe('em_andamento');
 
     // iniciar de novo é idempotente: mesmo horário de início, marcado como repetido
     const de_novo = await api.iniciarOS(aberta.id, new Date().toISOString(), `jest-${Date.now()}-b`);

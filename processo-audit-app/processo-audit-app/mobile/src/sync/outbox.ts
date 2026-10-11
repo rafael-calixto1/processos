@@ -2,7 +2,7 @@ import { ApiError, ArquivoAusenteError, NetworkError } from '@/api/erros';
 import type { Api } from '@/api/endpoints';
 import type { Banco } from '@/db/banco';
 import {
-  cancelarRascunhosPendentes, concluirOk, marcarAtencao, proximaHora, proximaPronta, reagendar, recuperarEnviando, reservar,
+  cancelarRascunhosPendentes, concluirOk, liberarEspera, marcarAtencao, proximaHora, proximaPronta, reagendar, recuperarEnviando, reservar,
 } from '@/db/outbox';
 import { apagarFoto, apagarRascunho, definirServidorId, limparArquivoDaFoto, listarFotos, obterFoto } from '@/db/trabalho';
 import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type ErroOp, type Operacao } from '@/domain/operacoes';
@@ -87,11 +87,13 @@ export class MotorOutbox {
 
   /**
    * Envia tudo o que está pronto, uma operação por vez. Chamadas durante uma rodada em andamento não abrem outra em paralelo:
-   * pedem mais uma volta no fim (algo pode ter entrado na fila no meio).
+   * pedem mais uma volta no fim (algo pode ter entrado na fila no meio). `ignorarEspera` é para ações explícitas do técnico
+   * ou da rede (a conexão voltou): o backoff existe para não martelar o servidor, não para atrasar quem acabou de reconectar.
    */
-  executar(): Promise<ResultadoRodada> {
+  executar(opcoes: { ignorarEspera?: boolean } = {}): Promise<ResultadoRodada> {
     if (this.emExecucao) { this.pedirOutraRodada = true; return this.emExecucao; }
     const rodada = (async () => {
+      if (opcoes.ignorarEspera) await liberarEspera(this.p.banco, this.p.usuarioId);
       const total: ResultadoRodada = { enviadas: 0, atencao: 0, semConexao: false, sessaoPerdida: false, proximaTentativaEm: null };
       try {
         do {

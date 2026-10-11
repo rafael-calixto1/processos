@@ -1,8 +1,8 @@
 import type { Banco } from '@/db/banco';
-import { cancelar, cancelarRascunhosPendentes, coalescerRascunho, enfileirar, listarDaOS } from '@/db/outbox';
+import { cancelar, cancelarRascunhosPendentes, coalescerRascunho, enfileirar, listarDaOS, obter, reenviar } from '@/db/outbox';
 import { apagarFoto, inserirFoto, lerRascunho, listarFotos, marcarFotoRemovida, obterFoto, salvarRascunho } from '@/db/trabalho';
 import { etapasConcluidas, ETAPAS, podeFinalizar, type LocalIntervencao, type Rascunho } from '@/domain/etapas';
-import { contaComoPendencia, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
+import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
 import { isPendente } from '@/domain/os';
 import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '@/domain/posse';
 import { parseQuantidade } from '@/domain/quantidade';
@@ -244,4 +244,31 @@ export const voltarAEditar = (c: ContextoComandos, osId: number): Promise<void> 
   const fin = finalizacaoNaFila(await listarDaOS(tx, c.usuarioId, osId));
   if (!fin) return;
   if (!(await cancelar(tx, fin.id))) throw new ErroOperacao('A finalização está sendo enviada agora. Aguarde alguns instantes.');
+});
+
+/* ── Tela "Requer atenção" ── */
+
+/** "Tentar de novo" (ou "Enviar mesmo assim", para a que passou de 14 dias) numa operação que o servidor recusou. */
+export const reenviarOperacao = (c: ContextoComandos, operacaoId: number, opcoes: { forcar?: boolean } = {}): Promise<void> => c.banco.transacao(async (tx) => {
+  const op = await obter(tx, operacaoId);
+  if (!op || op.usuario_id !== c.usuarioId || op.estado !== 'atencao') throw new ErroOperacao('Este item não está mais aguardando atenção.');
+  if (idadeEmDias(op.criado_em, agoraDe(c)) > DIAS_MAX_REENVIO_FORCADO) {
+    throw new ErroOperacao(`Esta operação tem mais de ${DIAS_MAX_REENVIO_FORCADO} dias e não pode mais ser enviada com segurança. Descarte-a e fale com o escritório.`);
+  }
+  await reenviar(tx, operacaoId, agoraDe(c), opcoes);
+});
+
+/** Descartar de vez o que o servidor recusou (ou que o técnico não quer mais enviar). Nunca apaga o que já foi enviado nem o que está em envio. */
+export const descartarOperacao = (c: ContextoComandos, operacaoId: number): Promise<void> => c.banco.transacao(async (tx) => {
+  const op = await obter(tx, operacaoId);
+  if (!op || op.usuario_id !== c.usuarioId) throw new ErroOperacao('Este item não foi encontrado.');
+  if (op.estado === 'ok' || op.estado === 'enviando') throw new ErroOperacao('Este item já foi enviado (ou está sendo enviado agora) e não pode ser descartado.');
+  if (!(await cancelar(tx, operacaoId))) throw new ErroOperacao('Não foi possível descartar este item. Tente de novo.');
+  if (op.tipo === 'foto') {
+    const local = await obterFoto(tx, op.payload.campos.client_uuid);
+    await apagarFoto(tx, op.payload.campos.client_uuid);
+    if (local?.arquivo) await c.arquivos?.apagar(local.arquivo).catch(() => undefined);
+  } else if (op.tipo === 'remover_foto') {
+    await tx.run('UPDATE fotos_locais SET removida = 0 WHERE client_uuid = ?', [op.payload.foto_client_uuid]); // desistiu de remover: a foto volta para a lista
+  }
 });
