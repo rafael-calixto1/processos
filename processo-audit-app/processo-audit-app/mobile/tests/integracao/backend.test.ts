@@ -14,6 +14,7 @@ import { agrupar } from '@/domain/posse';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { fetchNode } from '@/testing/fetchNode';
 import { garantirDono, iniciarExecucao, sincronizar } from '@/sync/sincronizar';
+import { criarCenario } from './apoio';
 
 const { API_URL, API_EMAIL = 'joao@exemplo.com', API_SENHA = 'senha123', API_ADMIN_EMAIL = 'admin@exemplo.com' } = process.env;
 const quando = API_URL ? describe : describe.skip;
@@ -42,6 +43,7 @@ quando('app × backend real', () => {
   });
 
   it('login → bootstrap → espelho SQLite → posse agrupada → iniciar → refresh automático → sair', async () => {
+    const cenario = await criarCenario({ metros: 800 }); // OS e estoque próprios: os outros testes mexem na mesma base ao mesmo tempo
     const { g, api, cliente } = montar();
     const { banco } = await criarBancoDeTeste();
 
@@ -54,15 +56,15 @@ quando('app × backend real', () => {
     const dados = (await lerDados(banco))!;
     expect(dados.tecnico.nome).toBe('João Técnico');
     expect(dados.os.length).toBeGreaterThan(0);
-    const aberta = dados.os.find((o) => o.status === 'aberta' || o.status === 'em_andamento')!; // pendente (serve em qualquer execução)
-    expect(aberta).toBeTruthy();
+    const aberta = dados.os.find((o) => o.id === cenario.osId)!;
+    expect(aberta).toMatchObject({ status: 'aberta', poste_id: 'PL-0932' });
     expect(typeof aberta.latitude).toBe('number');
     expect(aberta.prazo).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(dados.motivos.map((m) => m.codigo)).toContain('route_launched');
     expect(dados.checklist.filter((c) => c.obrigatorio).length).toBe(6);
     expect(dados.regras.fotos_min).toBe(1);
-    const grupos = agrupar(dados.posse);
-    expect(grupos[0]).toMatchObject({ item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', quantidade: 800 });
+    const grupo = agrupar(dados.posse).find((x) => x.key === `l${cenario.cabo.loteId}`);
+    expect(grupo).toMatchObject({ item_nome: 'Cabo óptico ASU 12F', unidade: 'metros', quantidade: 800, lote_codigo: cenario.cabo.codigo });
 
     // token de acesso inválido (como se tivesse vencido): o cliente renova sozinho e a chamada funciona
     const refreshAntes = (g as unknown as { refresh: string }).refresh;

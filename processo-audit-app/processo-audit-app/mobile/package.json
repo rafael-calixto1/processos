@@ -40,7 +40,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integracao": "node scripts/rodar-integracao.mjs"
   },
   "private": true,
   "jest": {
