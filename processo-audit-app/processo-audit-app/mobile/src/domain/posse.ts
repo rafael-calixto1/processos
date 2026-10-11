@@ -7,6 +7,7 @@ export interface GrupoPosse {
   unidade: Unidade;
   lote_codigo: string | null; // null quando o item soma vários lotes (itens por unidade)
   quantidade: number;
+  reservado: number; // reservado em lançamentos ainda não confirmados pelo servidor (a quantidade já vem descontada)
   lotes: PosseItem[]; // do mais antigo para o mais novo (lote_id crescente)
 }
 
@@ -14,11 +15,12 @@ export interface GrupoPosse {
 export const agrupar = (posse: readonly PosseItem[]): GrupoPosse[] => {
   const grupos = new Map<string, GrupoPosse>();
   for (const p of posse) {
-    if (!(p.quantidade > 0)) continue;
+    if (!(p.quantidade > 0) && !((p.reservado ?? 0) > 0)) continue; // lote todo reservado continua aparecendo, com saldo zero
     const porUnidade = String(p.lote_codigo).startsWith('LOTE-UNI');
     const key = porUnidade ? `i${p.item_id}` : `l${p.lote_id}`;
-    const g = grupos.get(key) ?? { key, item_nome: p.item_nome, unidade: p.unidade, lote_codigo: porUnidade ? null : p.lote_codigo, quantidade: 0, lotes: [] };
+    const g = grupos.get(key) ?? { key, item_nome: p.item_nome, unidade: p.unidade, lote_codigo: porUnidade ? null : p.lote_codigo, quantidade: 0, reservado: 0, lotes: [] };
     g.quantidade = r2(g.quantidade + p.quantidade);
+    g.reservado = r2(g.reservado + (p.reservado ?? 0));
     g.lotes.push(p);
     grupos.set(key, g);
   }
@@ -40,6 +42,7 @@ export const distribuirEntreLotes = (grupo: GrupoPosse, quantidade: number): Bai
   for (const lote of [...grupo.lotes].sort((a, b) => a.lote_id - b.lote_id)) {
     if (resta <= 0) break;
     const q = Math.min(resta, lote.quantidade);
+    if (!(q > 0)) continue; // lote todo reservado: não gera baixa de zero
     baixas.push({ lote_id: lote.lote_id, quantidade: r2(q) });
     resta = r2(resta - q);
   }

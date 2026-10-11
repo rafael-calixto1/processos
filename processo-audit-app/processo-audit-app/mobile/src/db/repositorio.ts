@@ -1,20 +1,7 @@
 import type { Banco } from './banco';
-import type { Bootstrap, ChecklistItem, ItemEstoque, Motivo, OS, PosseItem, RegrasFechamento, TecnicoResumo, TipoServico } from '@/domain/tipos';
+import type { Bootstrap, Dados, OS, PosseItem } from '@/domain/tipos';
 
-/** Tudo o que o app mostra offline: o último retrato recebido do servidor. */
-export interface Dados {
-  geradoEm: string; // quando o SERVIDOR montou o retrato (é o "atualizado às HH:MM" mostrado ao técnico)
-  tecnico: TecnicoResumo;
-  os: OS[];
-  posse: PosseItem[];
-  motivos: Motivo[];
-  checklist: ChecklistItem[];
-  sugestoesServicos: string[];
-  tiposServico: TipoServico[];
-  tecnicos: TecnicoResumo[];
-  itens: ItemEstoque[];
-  regras: RegrasFechamento;
-}
+export type { Dados } from '@/domain/tipos';
 
 const json = <T>(texto: string): T => JSON.parse(texto) as T;
 
@@ -66,5 +53,5 @@ export const atualizarOS = (b: Banco, id: number, mudancas: Partial<OS>): Promis
 
 /** Apaga tudo o que veio do servidor (troca de técnico ou saída voluntária). Não mexe em configurações. */
 export const limparDadosLocais = (b: Banco): Promise<void> => b.transacao(async (tx) => {
-  for (const t of ['os', 'posse', 'catalogo', 'meta']) await tx.run(`DELETE FROM ${t}`);
+  for (const t of ['os', 'posse', 'catalogo', 'meta', 'os_detalhe']) await tx.run(`DELETE FROM ${t}`);
 });

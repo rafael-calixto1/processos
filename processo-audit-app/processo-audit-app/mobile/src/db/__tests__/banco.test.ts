@@ -8,7 +8,7 @@ describe('migrações', () => {
     const { banco, db } = await criarBancoDeTeste(false);
     expect(await migrar(banco)).toBe(VERSAO_ATUAL);
     const tabelas = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map((t) => t.name);
-    expect(tabelas).toEqual(['catalogo', 'meta', 'os', 'posse']);
+    expect(tabelas).toEqual(['catalogo', 'fotos_locais', 'meta', 'os', 'os_detalhe', 'outbox', 'posse', 'rascunhos', 'sqlite_sequence']);
     expect(db.pragma('user_version', { simple: true })).toBe(VERSAO_ATUAL);
   });
   it('rodar de novo não faz nada (e não perde dados)', async () => {
