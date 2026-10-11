@@ -1,7 +1,7 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken } from '../middlewares/auth.js';
-import multer from 'multer';
+import multer from 'multer-v2';
 import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
@@ -216,6 +216,15 @@ async function ensureFolderPath(rootId, relativePath, userId) {
   return currentParentId;
 }
 
+/**
+ * O navegador envia o nome do arquivo em UTF-8, mas o multer o entrega lido como latin1 ("relatório.pdf" vira "relatÃ³rio.pdf").
+ * Refaz a leitura; se o resultado não for UTF-8 válido (o nome já veio certo), mantém o original.
+ */
+const nomeOriginal = (file) => {
+  const lido = Buffer.from(file.originalname, 'latin1').toString('utf8');
+  return lido.includes('\uFFFD') ? file.originalname : lido;
+};
+
 // Upload files
 router.post(['/files/upload', '/file/upload'], verifyToken, upload.array('files'), async (req, res) => {
   try {
@@ -240,9 +249,9 @@ router.post(['/files/upload', '/file/upload'], verifyToken, upload.array('files'
       const [result] = await pool.execute(
         `INSERT INTO files (name, folder_id, file_path, file_type, file_size, user_id) 
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [file.originalname, targetFolderId, `/uploads/archives/${file.filename}`, file.mimetype, file.size, req.userId]
+        [nomeOriginal(file), targetFolderId, `/uploads/archives/${file.filename}`, file.mimetype, file.size, req.userId]
       );
-      results.push({ id: result.insertId, name: file.originalname });
+      results.push({ id: result.insertId, name: nomeOriginal(file) });
     }
 
     res.status(201).json(results);

@@ -1,7 +1,7 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken } from '../middlewares/auth.js';
-import multer from 'multer';
+import multer from 'multer-v2';
 import path from 'path';
 
 const router = express.Router();

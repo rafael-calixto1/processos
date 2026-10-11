@@ -2,7 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { logAudit } from '../middlewares/audit.js';
-import multer from 'multer';
+import multer from 'multer-v2';
 import path from 'path';
 
 const router = express.Router();
