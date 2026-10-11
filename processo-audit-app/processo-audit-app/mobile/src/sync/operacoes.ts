@@ -7,7 +7,7 @@ import { isPendente } from '@/domain/os';
 import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '@/domain/posse';
 import { parseQuantidade } from '@/domain/quantidade';
 import type { StatusOS } from '@/domain/tipos';
-import { lancamentosComMaterial } from '@/domain/visao';
+import { fotosDaOS, lancamentosComMaterial } from '@/domain/visao';
 import { carregarEstadoLocal, type EstadoLocal } from './estadoLocal';
 import type { PortaArquivos } from './outbox';
 
@@ -217,8 +217,11 @@ export const finalizarOS = (c: ContextoComandos, osId: number): Promise<Operacao
   const jaNaFila = finalizacaoNaFila(doOS);
   if (jaNaFila) return jaNaFila;
   if (os.status === 'aberta') throw new ErroOperacao('Inicie a execução da OS antes de finalizar.');
-  const rascunho = await lerRascunho(tx, osId);
-  if (!rascunho) throw new ErroOperacao('Preencha as etapas da finalização antes de finalizar.');
+  const rascunhoSalvo = await lerRascunho(tx, osId);
+  if (!rascunhoSalvo) throw new ErroOperacao('Preencha as etapas da finalização antes de finalizar.');
+  const fotosLocais = await listarFotos(tx, osId);
+  const fotos = fotosDaOS(fotosLocais, estado.detalhes[osId] ?? null);
+  const rascunho = { ...rascunhoSalvo, fotos }; // as fotos valem pelo que realmente existe, não pelo que o rascunho lembra
 
   const emAtencao = doOS.filter((o) => o.estado === 'atencao' && contaComoPendencia(o));
   if (emAtencao.length) throw new ErroOperacao('Há envios desta OS que o servidor recusou. Resolva-os em "Requer atenção" antes de finalizar.');
@@ -231,8 +234,7 @@ export const finalizarOS = (c: ContextoComandos, osId: number): Promise<Operacao
   }
 
   const corpo = montarCorpoFinalizar(c, estado, osId, rascunho);
-  const fotosLocais = await listarFotos(tx, osId);
-  corpo.fotos_esperadas = [...new Set([...fotosLocais.map((f) => f.client_uuid), ...(estado.detalhes[osId]?.fotos ?? []).map((f) => f.client_uuid).filter((u): u is string => Boolean(u))])];
+  corpo.fotos_esperadas = fotos;
 
   await cancelarRascunhosPendentes(tx, c.usuarioId, osId);
   const pendentes = doOS.filter((o) => o.estado !== 'ok' && o.tipo !== 'rascunho').map((o) => o.id);

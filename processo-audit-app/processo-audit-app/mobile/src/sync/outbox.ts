@@ -224,6 +224,8 @@ export class MotorOutbox {
       const foto = await obterFoto(banco, op.payload.foto_client_uuid);
       if (foto?.arquivo) await arquivos?.apagar(foto.arquivo).catch(() => undefined);
       await apagarFoto(banco, op.payload.foto_client_uuid);
+    } else if (op.tipo === 'rascunho') {
+      await banco.run('DELETE FROM outbox WHERE id = ?', [op.id]); // cópia de segurança entregue: não precisa de histórico
     } else if (op.tipo === 'finalizar') {
       await apagarRascunho(banco, op.os_id);
       await cancelarRascunhosPendentes(banco, usuarioId, op.os_id);

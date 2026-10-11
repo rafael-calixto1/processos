@@ -18,7 +18,7 @@ jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
 
 import MinhasOS from '@/app/(app)/(tabs)/index';
 import MeuEstoque from '@/app/(app)/(tabs)/estoque';
-import DetalheOS from '@/app/(app)/os/[id]';
+import DetalheOS from '@/app/(app)/os/[id]/index';
 
 let mockOpenURL: jest.SpyInstance;
 beforeEach(() => {

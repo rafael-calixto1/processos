@@ -296,6 +296,12 @@ describe('backup do rascunho', () => {
     expect(chamadas).toHaveLength(1);
     expect(chamadas[0].args).toEqual([102, { versao: 2, origem: 'mobile', descricao: 'v2' }]);
   });
+  it('cópia entregue não deixa histórico na fila (senão cada tecla viraria uma linha)', async () => {
+    const { banco, motor } = await montar();
+    await coalescerRascunho(banco, novoRascunhoOp(102, { descricao: 'v1' }), T0);
+    await motor.executar();
+    expect(await estados(banco)).toEqual([]);
+  });
   it('se o servidor recusa (OS já encerrada...), NÃO vira atenção: é só uma cópia e o rascunho continua no aparelho', async () => {
     const { banco, motor } = await montar({ salvarRascunho: () => new ApiError(409, 'OS encerrada é somente leitura') });
     await salvarRascunho(banco, 7, 102, { ...rascunhoVazio(), descricao: 'texto importante' });

@@ -96,6 +96,12 @@ export default function DetalheOS() {
           <Botao titulo="Iniciar execução" onPress={iniciar} carregando={iniciando} testID="botao-iniciar" />
         </BarraAcao>
       ) : null}
+      {os.status === 'em_andamento' ? (
+        <BarraAcao>
+          <Botao titulo={os.finalizacao === 'nenhuma' ? 'Continuar execução' : 'Ver finalização'} testID="botao-continuar"
+            onPress={() => router.push({ pathname: '/os/[id]/finalizar', params: { id: String(os.id) } })} />
+        </BarraAcao>
+      ) : null}
     </View>
   );
 }

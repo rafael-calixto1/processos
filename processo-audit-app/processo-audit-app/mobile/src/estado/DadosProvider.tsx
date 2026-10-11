@@ -85,6 +85,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const motor = useRef<MotorOutbox | null>(null);
   const emAndamento = useRef<Promise<void> | null>(null);
   const ultimoDownload = useRef(0);
+  const ultimoBackup = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vivo = useRef(true);
   useEffect(() => { vivo.current = true; return () => { vivo.current = false; if (timer.current) clearTimeout(timer.current); }; }, []);
@@ -201,12 +202,17 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     removerLancamento: (id) => comando((c) => cmd.removerLancamento(c, id)),
     adicionarFoto: (e) => comando((c) => cmd.adicionarFoto(c, e)),
     removerFoto: (osId, uuid) => comando((c) => cmd.removerFotoDaOS(c, osId, uuid)),
-    salvarRascunho: (osId, r) => comando((c) => cmd.salvarRascunhoLocal(c, osId, r)),
+    // o rascunho não muda nada que as listas mostrem: não recarrega a tela a cada tecla, e a cópia no servidor sai no máximo a cada 20 s
+    salvarRascunho: async (osId, r) => {
+      if (!ctx) throw new cmd.ErroOperacao('Entre no aplicativo para continuar.');
+      await cmd.salvarRascunhoLocal(ctx, osId, r);
+      if (online && Date.now() - ultimoBackup.current > 20_000) { ultimoBackup.current = Date.now(); void enviar(); }
+    },
     finalizar: async (osId) => { await comando((c) => cmd.finalizarOS(c, osId)); },
     voltarAEditar: (osId) => comando((c) => cmd.voltarAEditar(c, osId)),
     reenviar: (id, opcoes) => comando((c) => cmd.reenviarOperacao(c, id, opcoes)),
     descartar: (id) => comando((c) => cmd.descartarOperacao(c, id)),
-  }), [comando]);
+  }), [comando, ctx, online, enviar]);
 
   const descartarTudo = useCallback(async () => {
     await descartarTudoLocal(banco, arquivos.apagar);

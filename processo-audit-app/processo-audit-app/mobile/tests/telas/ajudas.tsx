@@ -1,6 +1,8 @@
 import type { Contagens } from '@/db/outbox';
 import type { Operacao } from '@/domain/operacoes';
 import type { DetalheOS } from '@/domain/tipos';
+import { etapasConcluidas, podeFinalizar, progresso, rascunhoVazio, type Rascunho } from '@/domain/etapas';
+import type { ValorFinalizacao } from '@/estado/FinalizacaoProvider';
 import { aplicarPendencias, type DadosVisao } from '@/domain/visao';
 import { criarBootstrap } from '@/testing/fixtures';
 
@@ -46,3 +48,18 @@ export const opDe = (tipo: Operacao['tipo'], extra: Record<string, unknown> = {}
   criado_em: new Date().toISOString(), atualizado_em: '', ok_em: null, no_retrato: false, forcada: false, resposta: null, erro: null, os_numero: 2, os_cliente: 'Rota PL-902 → CEO-02',
   ...extra,
 } as unknown as Operacao);
+
+/** Valor do FinalizacaoProvider para testar as telas das etapas: `alterar` aplica a mudança no rascunho, como o provedor de verdade faz. */
+export const valorFinalizacao = (osId = 101, sobrescrever: { dados?: DadosVisao; rascunho?: Partial<Rascunho>; editavel?: boolean; totalFotos?: number } = {}): ValorFinalizacao & { alterar: jest.Mock; salvarAgora: jest.Mock } => {
+  const dados = sobrescrever.dados ?? dadosDe();
+  const v = {
+    osId, os: dados.os.find((o) => o.id === osId), dados, carregado: true, rascunho: { ...rascunhoVazio(), ...sobrescrever.rascunho },
+    alterar: jest.fn(), salvarAgora: jest.fn(async () => undefined), erroSalvar: null, fotos: [], totalFotos: sobrescrever.totalFotos ?? 0, lancamentos: [],
+    contexto: { checklist: dados.checklist, lancamentosComMaterial: 0, regras: { descricao_min_caracteres: dados.regras.descricao_min_caracteres, fotos_min: dados.regras.fotos_min } },
+    concluidas: {} as ValorFinalizacao['concluidas'], progresso: { feitas: 0, total: 7 }, pode: false, editavel: sobrescrever.editavel ?? true,
+  } as ValorFinalizacao & { alterar: jest.Mock; salvarAgora: jest.Mock };
+  const recalcular = () => { v.concluidas = etapasConcluidas(v.rascunho, v.contexto); v.progresso = progresso(v.rascunho, v.contexto); v.pode = podeFinalizar(v.rascunho, v.contexto); };
+  v.alterar.mockImplementation((fn: (r: Rascunho) => Rascunho) => { v.rascunho = fn(v.rascunho); recalcular(); });
+  recalcular();
+  return v;
+};

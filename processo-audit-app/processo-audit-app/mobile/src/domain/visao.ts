@@ -116,3 +116,10 @@ export const lancamentosDaOS = (osId: number, detalhe: DetalheOS | null, ops: re
 /** Entrada de `etapasConcluidas`: quantos lançamentos com material a OS tem (servidor + fila). */
 export const lancamentosComMaterial = (osId: number, detalhe: DetalheOS | null, ops: readonly Operacao[]): number =>
   lancamentosDaOS(osId, detalhe, ops).filter((l) => l.linhas.length > 0).length;
+
+/** Fotos que a OS tem: as do aparelho (menos as removidas) mais as que só o servidor conhece. É daqui que a etapa "Fotos" se conclui, nunca de uma lista guardada no rascunho. */
+export const fotosDaOS = (locais: ReadonlyArray<{ client_uuid: string }>, detalhe: DetalheOS | null): string[] => {
+  const uuids = locais.map((f) => f.client_uuid);
+  for (const f of detalhe?.fotos ?? []) if (f.client_uuid && !uuids.includes(f.client_uuid)) uuids.push(f.client_uuid);
+  return uuids;
+};

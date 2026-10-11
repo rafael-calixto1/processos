@@ -262,6 +262,21 @@ describe('finalizarOS', () => {
     await salvarRascunhoLocal(m.ctx, 101, completo(clientUuid, { materiais_usados: null }));
     expect((await finalizarOS(m.ctx, 101)).payload).toMatchObject({ corpo: { materiais_usados: true } });
   });
+  it('as fotos valem pelo que existe de verdade: rascunho sem a lista de fotos finaliza se há foto; sem foto nenhuma, não', async () => {
+    const m = await montar();
+    await registrarLancamento(m.ctx, lanc(101, [['l11', '10']]));
+    await salvarRascunhoLocal(m.ctx, 101, completo('qualquer', { fotos: [] }));
+    expect((await pedir(finalizarOS(m.ctx, 101)))?.message).toBe('Ainda falta concluir: Fotos do Serviço.');
+    const { clientUuid } = await adicionarFoto(m.ctx, { osId: 101, arquivo: 'file:///fotos/k.jpg', tamanho: 1 });
+    const op = await finalizarOS(m.ctx, 101);
+    expect((op.payload as { corpo: { fotos_esperadas: string[] } }).corpo.fotos_esperadas).toEqual([clientUuid]);
+  });
+  it('uma foto removida deixa de contar, mesmo que o rascunho ainda a lembre', async () => {
+    const p = await preparar();
+    await removerFotoDaOS(p.ctx, 101, p.fotoUuid);
+    await salvarRascunhoLocal(p.ctx, 101, completo(p.fotoUuid));
+    expect((await pedir(finalizarOS(p.ctx, 101)))?.message).toBe('Ainda falta concluir: Fotos do Serviço.');
+  });
   it('etapa faltando: recusa dizendo quais, e nada entra na fila', async () => {
     const { ctx, banco } = await preparar({ descricao: 'curta', motivo_codigo: null });
     const antes = (await listarTodas(banco, 7)).length;

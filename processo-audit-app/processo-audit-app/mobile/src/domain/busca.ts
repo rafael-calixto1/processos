@@ -12,3 +12,9 @@ export const filtrarGrupos = (grupos: readonly GrupoPosse[], termo: string): Gru
     return palavras.every((p) => alvo.includes(p));
   });
 };
+
+/** Itens do catálogo cujo nome contém todas as palavras digitadas (sem acento, sem diferença de maiúsculas). */
+export const filtrarItens = <T extends { nome: string }>(itens: readonly T[], termo: string): T[] => {
+  const palavras = normalizar(termo).split(/\s+/).filter(Boolean);
+  return palavras.length ? itens.filter((i) => palavras.every((p) => normalizar(i.nome).includes(p))) : [...itens];
+};
