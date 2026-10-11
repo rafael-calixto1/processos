@@ -23,7 +23,7 @@ As rotas que o **web** já usa não dependem da migração: se o backend reinici
 
 - **Sessão do app:** `POST /auth/login` com o campo extra `dispositivo` devolve token de acesso de **15 min** e `refresh_token` de **30 dias** (rotativo). Sem `dispositivo` o login é o do web (token de 24 h, sem refresh).
 - **Token expirado** responde **403** `{ "error": "Token inválido ou expirado", "code": "token_expirado" }`. O app renova em `/auth/refresh` e repete a chamada. (401 = sem token ou sessão revogada.)
-- **`Idempotency-Key`** (UUID, 8–80 caracteres `A-Za-z0-9._:-`) é aceito em `POST /os/:id/{materiais,lancamentos,servicos,iniciar,fotos,finalizar}`. Repetir a mesma chave devolve a **mesma resposta** com `"repetida": true` e o cabeçalho `Idempotent-Replayed: true`, sem executar de novo. A chave vale por usuário, rota e corpo: usá-la para outra coisa dá **422**. Erros **não** ficam guardados: depois de corrigir o problema, reenvie com a mesma chave. Os registros expiram em 60 dias; o app deve tratar como "requer atenção" qualquer operação offline mais velha que isso.
+- **`Idempotency-Key`** (UUID, 8–80 caracteres `A-Za-z0-9._:-`) é aceito em `POST /os/:id/{materiais,lancamentos,servicos,iniciar,fotos,finalizar}` e em `POST /estoque/devolucoes` (solicitação do técnico). Repetir a mesma chave devolve a **mesma resposta** com `"repetida": true` e o cabeçalho `Idempotent-Replayed: true`, sem executar de novo. A chave vale por usuário, rota e corpo: usá-la para outra coisa dá **422**. Erros **não** ficam guardados: depois de corrigir o problema, reenvie com a mesma chave. Os registros expiram em 60 dias; o app deve tratar como "requer atenção" qualquer operação offline mais velha que isso.
 - **Números:** `DECIMAL` do banco chega como número nas rotas novas (`bootstrap`, `fechamento`). Datas em ISO 8601 UTC; `prazo` é `YYYY-MM-DD`.
 - **Erros de validação da finalização** trazem `detalhes: [{ campo, mensagem }]` com todos os problemas de uma vez.
 
@@ -42,6 +42,8 @@ As rotas que o **web** já usa não dependem da migração: se o backend reinici
 | `GET /os/:id/fotos` · `GET /os/:id/fotos/:fotoId` | Lista / baixa. Exigem Bearer e dono da OS (ou estoque/admin). |
 | `DELETE /os/:id/fotos/:fotoId` | Remove enquanto a OS está aberta. |
 | `POST /os/:id/finalizar` | Finalização completa e atômica (abaixo). |
+| `POST /estoque/devolucoes` | Técnico **solicita** a devolução de um lote da própria posse: `{lote_id, quantidade, condicao: "novo"\|"usado", observacao?}`. Não mexe no saldo até admin/estoque aprovar. Recusa (400) acima do que a posse tem **menos o que já está pendente** daquele lote. Com `Idempotency-Key`, reenviar não abre outra solicitação. Um lote por chamada. |
+| `GET /estoque/devolucoes` | As solicitações do técnico (`status` pendente/aprovada/negada, `motivo_negacao`). O `bootstrap` já traz as pendentes e as decididas nos últimos 30 dias em `devolucoes`. |
 | `GET /os/:id` | Agora também traz `fechamento`, `fotos` e `materiais_retirados`. |
 
 ### Corpo de `POST /os/:id/finalizar`

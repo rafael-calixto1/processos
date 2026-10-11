@@ -3,6 +3,7 @@ import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import * as svc from '../services/estoqueService.js';
+import { executarIdempotente } from '../services/idempotencia.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico);
@@ -235,7 +236,10 @@ router.post('/devolucoes', handle(async (req, res) => {
     // técnico só solicita; a devolução só é efetivada quando admin/estoque aprovar
     if (!req.tecnicoId) throw new svc.ServiceError(403, 'Seu usuário não está vinculado a um técnico');
     body.tecnico_id = req.tecnicoId;
-    return res.status(201).json(await svc.solicitarDevolucao(body, req.userId));
+    // Idempotency-Key (app offline): reenviar a mesma solicitação devolve a mesma resposta em vez de abrir outra
+    const r = await executarIdempotente(req, { status: 201 }, (conn) => svc.solicitarDevolucaoNaTx(conn, body, req.userId));
+    if (r.repetida) res.set('Idempotent-Replayed', 'true');
+    return res.status(r.status).json(r.repetida ? { ...r.body, repetida: true } : r.body);
   }
   if (!['admin', 'estoque'].includes(req.userRole)) throw new svc.ServiceError(403, 'Acesso negado');
   res.status(201).json(await svc.devolver(body, req.userId));

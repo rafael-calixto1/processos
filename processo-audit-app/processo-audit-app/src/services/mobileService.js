@@ -24,6 +24,13 @@ export const montarBootstrap = async (tecnicoId) => {
     `SELECT p.lote_id, l.codigo AS lote_codigo, i.id AS item_id, i.nome AS item_nome, i.unidade, p.quantidade
      FROM estoque_posse p JOIN estoque_lotes l ON l.id = p.lote_id JOIN estoque_itens i ON i.id = l.item_id
      WHERE p.tecnico_id = ? AND p.quantidade > 0 ORDER BY i.nome, l.id`, [tecnicoId]);
+  // Devoluções do técnico: pendentes sempre (elas seguram parte da posse) e as decididas dos últimos 30 dias
+  const [devolucoes] = await pool.query(
+    `SELECT d.id, d.lote_id, l.codigo AS lote_codigo, d.item_id, i.nome AS item_nome, i.unidade, d.quantidade, d.condicao, d.observacao,
+       d.status, d.solicitado_em, d.revisado_em, d.motivo_negacao
+     FROM estoque_devolucoes d JOIN estoque_lotes l ON l.id = d.lote_id JOIN estoque_itens i ON i.id = d.item_id
+     WHERE d.tecnico_id = ? AND (d.status = 'pendente' OR d.revisado_em >= NOW() - INTERVAL ? DAY)
+     ORDER BY (d.status = 'pendente') DESC, d.id DESC LIMIT 100`, [tecnicoId, DIAS_HISTORICO]);
   const [motivos] = await pool.query('SELECT id, codigo, rotulo, tipo_servico_id FROM os_motivos_fechamento WHERE ativo = 1 ORDER BY ordem, id');
   const [checklist] = await pool.query(
     'SELECT id, codigo, rotulo, tipo, unidade, obrigatorio, tipo_servico_id FROM os_checklist_itens WHERE ativo = 1 ORDER BY ordem, id');
@@ -37,6 +44,7 @@ export const montarBootstrap = async (tecnicoId) => {
     tecnico,
     os: os.map((o) => ({ ...o, latitude: num(o.latitude), longitude: num(o.longitude), tem_rascunho: Boolean(o.tem_rascunho) })),
     posse: posse.map((p) => ({ ...p, quantidade: Number(p.quantidade) })),
+    devolucoes: devolucoes.map((d) => ({ ...d, quantidade: Number(d.quantidade) })),
     motivos,
     checklist: checklist.map((c) => ({ ...c, obrigatorio: Boolean(c.obrigatorio) })),
     sugestoes_servicos: sugestoes.map((s) => s.descricao),

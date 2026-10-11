@@ -301,27 +301,28 @@ const pendenteDe = async (conn, lote_id, tecnico_id) => {
   return r2(total);
 };
 
-export const solicitarDevolucao = ({ lote_id, codigo, tecnico_id, quantidade, condicao, observacao }, userId, db) =>
-  withTx(async (conn) => {
-    const q = parseQtd(quantidade);
-    if (!['novo', 'usado'].includes(condicao)) throw new ServiceError(400, 'Informe a condição: novo ou usado');
-    const lote = await lockLote(conn, { lote_id, codigo });
-    await exigirInteiro(conn, lote.item_id, q);
-    const posse = await getPosse(conn, lote.id, tecnico_id);
-    const pendente = await pendenteDe(conn, lote.id, tecnico_id);
-    const livre = r2(posse - pendente);
-    if (q > livre) {
-      throw new ServiceError(400, pendente > 0
-        ? `Você já tem ${pendente} deste lote aguardando aprovação; disponível para devolver: ${Math.max(livre, 0)}`
-        : `Você possui apenas ${posse} deste lote`);
-    }
-    const [res] = await conn.query(
-      `INSERT INTO estoque_devolucoes (lote_id, item_id, tecnico_id, quantidade, condicao, observacao, solicitado_por)
-       VALUES (?,?,?,?,?,?,?)`,
-      [lote.id, lote.item_id, tecnico_id, q, condicao, observacao || null, userId]
-    );
-    return { solicitacao_id: res.insertId, lote_codigo: lote.codigo, quantidade: q, status: 'pendente' };
-  }, db);
+export const solicitarDevolucaoNaTx = async (conn, { lote_id, codigo, tecnico_id, quantidade, condicao, observacao }, userId) => {
+  const q = parseQtd(quantidade);
+  if (!['novo', 'usado'].includes(condicao)) throw new ServiceError(400, 'Informe a condição: novo ou usado');
+  const lote = await lockLote(conn, { lote_id, codigo });
+  await exigirInteiro(conn, lote.item_id, q);
+  const posse = await getPosse(conn, lote.id, tecnico_id);
+  const pendente = await pendenteDe(conn, lote.id, tecnico_id);
+  const livre = r2(posse - pendente);
+  if (q > livre) {
+    throw new ServiceError(400, pendente > 0
+      ? `Você já tem ${pendente} deste lote aguardando aprovação; disponível para devolver: ${Math.max(livre, 0)}`
+      : `Você possui apenas ${posse} deste lote`);
+  }
+  const [res] = await conn.query(
+    `INSERT INTO estoque_devolucoes (lote_id, item_id, tecnico_id, quantidade, condicao, observacao, solicitado_por)
+     VALUES (?,?,?,?,?,?,?)`,
+    [lote.id, lote.item_id, tecnico_id, q, condicao, observacao || null, userId]
+  );
+  return { solicitacao_id: res.insertId, lote_codigo: lote.codigo, quantidade: q, status: 'pendente' };
+};
+
+export const solicitarDevolucao = (dados, userId, db) => withTx((conn) => solicitarDevolucaoNaTx(conn, dados, userId), db);
 
 const lockDevolucaoPendente = async (conn, id) => {
   const [rows] = await conn.query('SELECT * FROM estoque_devolucoes WHERE id = ? FOR UPDATE', [id]);
