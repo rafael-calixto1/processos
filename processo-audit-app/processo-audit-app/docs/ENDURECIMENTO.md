@@ -25,6 +25,9 @@ Rotas só para **admin**, em `/api/os-catalogos` (tela no web: *Catálogos da fi
 
 Regras: nada é apagado (os fechamentos já feitos guardam uma cópia do rótulo e referenciam o motivo): o que não serve mais é **desativado** e some do app na próxima sincronização. **Sempre fica ao menos um motivo ativo** (sem motivo o técnico não finaliza). Uma finalização que já estava na fila com um motivo depois desativado volta como "Requer atenção" (400).
 
+### O web passou a finalizar pelo mesmo caminho do app
+A tela de campo do web (`/os`) agora usa `POST /os/:id/finalizar` com os catálogos reais (`GET /os/catalogos-fechamento`) em vez de `adicionarServico` + `/fechar`, que **descartavam** motivo, local, checklist, retirados, fotos e participantes. Fotos são enviadas na hora; o rascunho do web leva `origem: "web"` (o do app do celular é ignorado pelo web e vice-versa; rascunhos antigos do web são limpos de fotos e itens de mentira). Participantes e materiais retirados são os do servidor, não mais listas fixas. `POST /os/:id/fechar` **continua existindo**.
+
 ## 4. Backup das fotos de OS
 `scripts/backup_os_fotos.sh [destino] [cópias]` compacta `storage/os_fotos` (ou `FOTOS_DIR`) em `os_fotos_AAAA-MM-DD_HHMMSS.tar.gz`, confere que o arquivo abre, e guarda só as N mais recentes (padrão 14, em `/root/backups/os_fotos`). Não altera a origem. Sugestão de agendamento (**instalar só com autorização**): `0 3 * * * /caminho/processo-audit-app/scripts/backup_os_fotos.sh >> /var/log/backup_os_fotos.log 2>&1`.
 Restaurar: `tar -xzf os_fotos_....tar.gz -C storage/os_fotos`.

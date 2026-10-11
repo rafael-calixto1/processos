@@ -45,6 +45,10 @@ As rotas que o **web** já usa não dependem da migração: se o backend reinici
 | `POST /estoque/devolucoes` | Técnico **solicita** a devolução de um lote da própria posse: `{lote_id, quantidade, condicao: "novo"\|"usado", observacao?}`. Não mexe no saldo até admin/estoque aprovar. Recusa (400) acima do que a posse tem **menos o que já está pendente** daquele lote. Com `Idempotency-Key`, reenviar não abre outra solicitação. Um lote por chamada. |
 | `GET /estoque/devolucoes` | As solicitações do técnico (`status` pendente/aprovada/negada, `motivo_negacao`). O `bootstrap` já traz as pendentes e as decididas nos últimos 30 dias em `devolucoes`. |
 | `GET /os/:id` | Agora também traz `fechamento`, `fotos` e `materiais_retirados`. |
+| `GET /os/catalogos-fechamento` | Os mesmos catálogos do `bootstrap` (`motivos`, `checklist`, `tecnicos`, `itens`, `regras`) para quem não é o app: o **web** usa para montar a finalização. Técnico recebe a lista de técnicos sem ele mesmo; estoque/admin recebem todos os ativos. |
+| `GET/POST/PUT /os-catalogos/motivos` · `/checklist` | **Só admin.** Administra os catálogos acima (nada é apagado, só desativado; código e tipo não mudam). Ver `docs/ENDURECIMENTO.md`. |
+
+> **O web também finaliza por `POST /os/:id/finalizar`** (Fase 4b): fotos sobem na hora por `POST /os/:id/fotos`, retirados levam a condição novo/usado e o `client_uuid` fica guardado no rascunho. O `POST /os/:id/fechar` antigo continua funcionando, mas o web não o usa mais.
 
 ### Corpo de `POST /os/:id/finalizar`
 
