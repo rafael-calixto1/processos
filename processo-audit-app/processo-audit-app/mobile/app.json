@@ -70,6 +70,15 @@
     "scheme": "cwcampo",
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "558f378f-03f1-4075-bbe7-64493cbe25e3"
+      }
+    },
+    "owner": "conexao-web",
+    "updates": {
+      "url": "https://u.expo.dev/558f378f-03f1-4075-bbe7-64493cbe25e3"
     }
   }
 }
