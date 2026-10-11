@@ -50,12 +50,12 @@ export const opDe = (tipo: Operacao['tipo'], extra: Record<string, unknown> = {}
 } as unknown as Operacao);
 
 /** Valor do FinalizacaoProvider para testar as telas das etapas: `alterar` aplica a mudança no rascunho, como o provedor de verdade faz. */
-export const valorFinalizacao = (osId = 101, sobrescrever: { dados?: DadosVisao; rascunho?: Partial<Rascunho>; editavel?: boolean; totalFotos?: number } = {}): ValorFinalizacao & { alterar: jest.Mock; salvarAgora: jest.Mock } => {
+export const valorFinalizacao = (osId = 101, sobrescrever: { dados?: DadosVisao; rascunho?: Partial<Rascunho>; editavel?: boolean; totalFotos?: number; lancamentos?: ValorFinalizacao['lancamentos']; fotos?: ValorFinalizacao['fotos'] } = {}): ValorFinalizacao & { alterar: jest.Mock; salvarAgora: jest.Mock } => {
   const dados = sobrescrever.dados ?? dadosDe();
   const v = {
     osId, os: dados.os.find((o) => o.id === osId), dados, carregado: true, rascunho: { ...rascunhoVazio(), ...sobrescrever.rascunho },
-    alterar: jest.fn(), salvarAgora: jest.fn(async () => undefined), erroSalvar: null, fotos: [], totalFotos: sobrescrever.totalFotos ?? 0, lancamentos: [],
-    contexto: { checklist: dados.checklist, lancamentosComMaterial: 0, regras: { descricao_min_caracteres: dados.regras.descricao_min_caracteres, fotos_min: dados.regras.fotos_min } },
+    alterar: jest.fn(), salvarAgora: jest.fn(async () => undefined), erroSalvar: null, fotos: sobrescrever.fotos ?? [], totalFotos: sobrescrever.totalFotos ?? sobrescrever.fotos?.length ?? 0, lancamentos: sobrescrever.lancamentos ?? [],
+    contexto: { checklist: dados.checklist, lancamentosComMaterial: (sobrescrever.lancamentos ?? []).filter((l) => l.linhas.length > 0).length, regras: { descricao_min_caracteres: dados.regras.descricao_min_caracteres, fotos_min: dados.regras.fotos_min } },
     concluidas: {} as ValorFinalizacao['concluidas'], progresso: { feitas: 0, total: 7 }, pode: false, editavel: sobrescrever.editavel ?? true,
   } as ValorFinalizacao & { alterar: jest.Mock; salvarAgora: jest.Mock };
   const recalcular = () => { v.concluidas = etapasConcluidas(v.rascunho, v.contexto); v.progresso = progresso(v.rascunho, v.contexto); v.pode = podeFinalizar(v.rascunho, v.contexto); };
