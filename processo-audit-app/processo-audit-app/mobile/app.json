@@ -8,7 +8,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.conexaoweb.ostecnicos"
+      "bundleIdentifier": "br.com.conexaoweb.ostecnicos",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "br.com.conexaoweb.ostecnicos"
+      "package": "br.com.conexaoweb.ostecnicos",
+      "versionCode": 1,
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -61,6 +67,9 @@
         }
       ]
     ],
-    "scheme": "ostecnicos"
+    "scheme": "ostecnicos",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

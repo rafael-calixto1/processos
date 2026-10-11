@@ -65,3 +65,47 @@ describe('identidade visual', () => {
     expect(fs.existsSync(path.join(raiz, 'assets/android-icon-background.png'))).toBe(false);
   });
 });
+
+describe('build e distribuição (EAS)', () => {
+  const eas = JSON.parse(fs.readFileSync(path.join(raiz, 'eas.json'), 'utf8'));
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const gerarConfig = require('../app.config.js') as ((a: { config: Record<string, any> }) => Record<string, any>) & { PERMISSOES_QUE_O_APP_NAO_USA: string[] };
+  const comPerfil = (perfil: string | undefined) => {
+    const antes = process.env.EAS_BUILD_PROFILE;
+    if (perfil === undefined) delete process.env.EAS_BUILD_PROFILE; else process.env.EAS_BUILD_PROFILE = perfil;
+    try { return gerarConfig({ config: app }); } finally { if (antes === undefined) delete process.env.EAS_BUILD_PROFILE; else process.env.EAS_BUILD_PROFILE = antes; }
+  };
+
+  it('perfis: development (cliente de desenvolvimento), preview (APK interno) e production (pacote da loja, versão automática)', () => {
+    expect(eas.build.development).toMatchObject({ developmentClient: true, distribution: 'internal' });
+    expect(eas.build.preview).toMatchObject({ distribution: 'internal', channel: 'preview', android: { buildType: 'apk' } });
+    expect(eas.build.production).toMatchObject({ distribution: 'store', channel: 'production', autoIncrement: true, android: { buildType: 'app-bundle' } });
+    expect(eas.cli.appVersionSource).toBe('remote'); // o número da versão do Android é controlado pelo EAS, não por arquivo editado à mão
+    for (const perfil of ['development', 'preview', 'production']) expect(typeof eas.build[perfil].env.EXPO_PUBLIC_API_URL).toBe('string');
+  });
+
+  it('identificação: versionCode e buildNumber iniciais, atualização por versão do app e sem pergunta de criptografia na Apple', () => {
+    expect(Number.isInteger(app.android.versionCode) && app.android.versionCode >= 1).toBe(true);
+    expect(app.ios.buildNumber).toMatch(/^\d+$/);
+    expect(app.runtimeVersion).toEqual({ policy: 'appVersion' });
+    expect(app.ios.config.usesNonExemptEncryption).toBe(false);
+    expect(app.android.package).toMatch(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
+    expect(app.ios.bundleIdentifier).toBe(app.android.package);
+    expect(JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).dependencies['expo-updates']).toBeDefined(); // sem ele um build nunca receberia atualização pelo ar
+  });
+
+  it('dados do aparelho não vão para a nuvem do Google (restaurar a fila de envio em outro celular repetiria operações)', () => {
+    expect(app.android.allowBackup).toBe(false);
+  });
+
+  it('permissões: build normal bloqueia o que o app não usa; o de desenvolvimento não bloqueia nada; câmera, localização e internet nunca são bloqueadas', () => {
+    expect(gerarConfig.PERMISSOES_QUE_O_APP_NAO_USA).toEqual(expect.arrayContaining(['android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.VIBRATE']));
+    for (const perfil of ['preview', 'production', undefined]) {
+      const bloqueadas = comPerfil(perfil).android.blockedPermissions as string[];
+      expect(bloqueadas).toEqual(expect.arrayContaining(['android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.VIBRATE']));
+      for (const usada of ['android.permission.CAMERA', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION', 'android.permission.INTERNET']) expect(bloqueadas).not.toContain(usada);
+    }
+    expect(comPerfil('development').android.blockedPermissions).toEqual([]);
+    expect(comPerfil('preview').android.adaptiveIcon).toEqual(app.android.adaptiveIcon); // o resto da configuração passa intacto
+  });
+});
