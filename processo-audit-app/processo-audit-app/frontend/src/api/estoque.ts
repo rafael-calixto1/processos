@@ -3,19 +3,24 @@ const API_URL = '/api';
 
 type Body = Record<string, unknown> | undefined;
 
+export interface DetalheErro { campo: string; mensagem: string }
+
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** Lista de problemas que o servidor aponta (ex.: tudo o que falta para finalizar uma OS). */
+  detalhes?: DetalheErro[];
+  constructor(status: number, message: string, detalhes?: DetalheErro[]) {
     super(message);
     this.status = status;
+    this.detalhes = detalhes;
   }
 }
 
-const request = async (method: string, path: string, body?: Body) => {
+const request = async (method: string, path: string, body?: Body, extraHeaders?: Record<string, string>) => {
   const token = localStorage.getItem('token');
   const res = await fetch(`${API_URL}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }), ...extraHeaders },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -24,7 +29,7 @@ const request = async (method: string, path: string, body?: Body) => {
     localStorage.removeItem('token');
     window.location.assign('/');
   }
-  if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error || 'Erro inesperado. Tente novamente.');
+  if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error || 'Erro inesperado. Tente novamente.', (data as { detalhes?: DetalheErro[] }).detalhes);
   return data;
 };
 
@@ -83,7 +88,24 @@ export const osAPI = {
     if (!res.ok) throw new ApiError(res.status, 'Não foi possível carregar a foto');
     return URL.createObjectURL(await res.blob());
   },
-  fechar: (id: number) => request('POST', `/os/${id}/fechar`),
+  // Finalização completa e atômica (a mesma do app): grava motivo, local, checklist, retirados, participantes e fotos e encerra a OS.
+  // Um reenvio (rede caiu depois de o servidor gravar) devolve o mesmo resultado em vez de duplicar: o servidor reconhece o `client_uuid` do corpo,
+  // que fica guardado no rascunho e vale mesmo se a página for recarregada. (Sem Idempotency-Key: o corpo leva a hora do envio e muda a cada tentativa.)
+  finalizar: (id: number | string, corpo: Body) => request('POST', `/os/${id}/finalizar`, corpo),
+  iniciar: (id: number | string, iniciadoEm: string, chave: string) => request('POST', `/os/${id}/iniciar`, { iniciado_em: iniciadoEm }, { 'Idempotency-Key': chave }),
+  catalogosFechamento: () => request('GET', '/os/catalogos-fechamento'),
+  enviarFoto: async (id: number | string, arquivo: Blob, campos: Record<string, string>, chave: string) => {
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    Object.entries(campos).forEach(([k, v]) => fd.append(k, v));
+    fd.append('foto', arquivo, 'foto.jpg');
+    const res = await fetch(`${API_URL}/os/${id}/fotos`, { method: 'POST', headers: { ...(token && { Authorization: `Bearer ${token}` }), 'Idempotency-Key': chave }, body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error || 'Não foi possível enviar a foto. Tente de novo.');
+    return data as { id: number; client_uuid: string };
+  },
+  removerFoto: (id: number | string, fotoId: number | string) => request('DELETE', `/os/${id}/fotos/${fotoId}`),
+  fechar: (id: number) => request('POST', `/os/${id}/fechar`), // fluxo antigo (só descarta o resto); continua existindo, mas o web usa `finalizar`
   cancelar: (id: number) => request('POST', `/os/${id}/cancelar`),
   estornar: (id: number, b: Body) => request('POST', `/os/${id}/estornos`, b),
 };

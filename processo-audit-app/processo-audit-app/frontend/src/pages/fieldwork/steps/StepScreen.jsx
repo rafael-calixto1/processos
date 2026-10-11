@@ -1,9 +1,20 @@
 import React from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { useServiceOrder, FINALIZATION_STEPS } from '../state';
+import { useServiceOrder, useCatalogs, FINALIZATION_STEPS } from '../state';
 import { fw, ScreenHeader, StickyActionBar, StickyButton } from '../ui';
 
 /* Moldura comum das etapas: cabeçalho + conteúdo + botão fixo "Ok" que volta ao checklist */
+/* Etapas que dependem dos catálogos do servidor mostram "carregando" ou o erro (com "Tentar de novo") até eles chegarem */
+export const CatalogGate = ({ children }) => {
+  const { catalogs, error, reload } = useCatalogs();
+  if (catalogs) return children(catalogs);
+  return (
+    <div className={`${fw.card} ${fw.emptyState}`}>
+      {error ? (<><b>Não foi possível carregar as opções</b><span>{error}</span><button className={fw.btnOutline} onClick={reload}>Tentar de novo</button></>) : <span>Carregando as opções…</span>}
+    </div>
+  );
+};
+
 const StepScreen = ({ stepKey, children, action, okDisabled }) => {
   const { orderId } = useParams();
   const nav = useNavigate();

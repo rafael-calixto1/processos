@@ -25,7 +25,12 @@ const FieldOrderDetail = () => {
 
   const sla = slaInfo(order.slaDeadline, now);
   const started = draft.status === 'in_execution';
-  const start = () => { act('EXECUTION_STARTED'); nav(`/os/${orderId}/finalizar`); };
+  const start = () => {
+    act('EXECUTION_STARTED');
+    // registra o início no servidor (a hora fica certa mesmo se esta página for fechada); falha aqui não impede de trabalhar
+    osAPI.iniciar(orderId, new Date().toISOString(), crypto.randomUUID()).catch(() => {});
+    nav(`/os/${orderId}/finalizar`);
+  };
   const points = {
     pole: order.pole?.lat != null && { lat: order.pole.lat, lng: order.pole.lng, label: 'poste' },
     pop: order.pop?.lat != null && { lat: order.pop.lat, lng: order.pop.lng, label: 'POP' },

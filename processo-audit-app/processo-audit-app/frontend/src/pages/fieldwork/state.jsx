@@ -1,63 +1,44 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { osAPI } from '../../api/estoque';
-import { OUTSIDE_PLANT_CHECKLIST } from './mockData';
+import { FINALIZATION_STEPS, canFinalize, getStepCompletion, lerRascunho, rascunhoParaSalvar, toFieldOrder } from './finalizacao';
 
-/* ── Rascunho de execução de uma OS de infraestrutura ── */
+export { FINALIZATION_STEPS, canFinalize, getStepCompletion, toFieldOrder };
+
+/* ── Rascunho de execução de uma OS ── */
 const emptyDraft = () => ({
   status: 'pending', // pending | in_execution | closed
   startedAt: null,
   closedAt: null,
   description: '',
-  closingReasonId: null,
-  interventionLocation: null, // { lat, lng, accuracyMeters, source: 'gps' | 'pole_reference', capturedAt }
-  checklistAnswers: {},
+  closingReasonId: null, // código do motivo (catálogo do servidor)
+  interventionLocation: null, // { lat, lng, accuracyMeters, source: 'gps' | 'address' | 'pole_reference', address, approximate, capturedAt }
+  checklistAnswers: {}, // por código do item do catálogo
   usedMaterials: { wereUsed: null, lines: [] }, // wereUsed: null (não respondeu) | true | false
-  removedMaterials: { wereRemoved: null, lines: [] },
-  servicePhotos: [], // { id, url, caption, takenAt }
-  crewMemberIds: [],
+  removedMaterials: { wereRemoved: null, lines: [] }, // linhas: { inventoryId (id do item ou "livre-…"), name, unit, quantity, condition }
+  crewMemberIds: [], // ids de técnicos/equipes do servidor
+  finalizeUuid: null, // identifica a finalização: um reenvio depois de falha de rede usa o mesmo
 });
 
 const EMPTY_DRAFT = emptyDraft();
-const initialState = { orders: [], loading: true, error: null, drafts: {} };
+const initialState = { orders: [], loading: true, error: null, drafts: {}, catalogs: null, catalogsError: null };
 
 const upd = (state, orderId, patch) => {
   const cur = state.drafts[orderId] || EMPTY_DRAFT;
   return { ...state, drafts: { ...state.drafts, [orderId]: { ...cur, ...patch(cur) } } };
 };
 
-/* OS do backend -> modelo do fluxo de campo. POP, rota e poste só existem quando o backend os informar. */
-export const toFieldOrder = (os) => ({
-  id: String(os.id),
-  code: `OS-${os.numero}`,
-  kind: os.cliente,
-  priority: os.prioridade === 'alta' ? 'high' : 'normal',
-  serviceType: os.tipo_servico || '',
-  pop: os.pop_nome ? { id: os.pop_nome, name: os.pop_nome } : null,
-  route: os.rota_id ? { id: os.rota_id, label: '' } : null,
-  // Ponto no mapa: o poste informado, ou o local da OS quando só há coordenadas
-  pole: os.latitude != null ? { id: os.poste_id || 'Local da OS', lat: Number(os.latitude), lng: Number(os.longitude) } : (os.poste_id ? { id: os.poste_id, lat: null, lng: null } : null),
-  address: os.endereco || '',
-  slaDeadline: os.prazo ? `${String(os.prazo).slice(0, 10)}T23:59:59` : null,
-  openedBy: { name: os.criado_por_nome || '—', role: '' },
-  openedAt: os.criado_em,
-  summary: os.descricao || '',
-  backendStatus: os.status,
-  hasDraft: Boolean(os.tem_rascunho),
-  // Lançamentos: linhas de serviço por trecho com os materiais baixados nelas (só vêm no detalhe da OS)
-  launches: Array.isArray(os.servicos)
-    ? os.servicos.map((sv) => ({
-      id: sv.id, description: sv.descricao, segment: sv.trecho || '', route: sv.rota_trecho || null,
-      materials: (os.materiais || []).filter((m) => m.servico_id === sv.id && !m.estorno_id).map((m) => ({ id: m.id, name: m.item_nome, lot: m.lote_codigo, quantity: Number(m.quantidade), unit: m.unidade })),
-    })).filter((l) => l.materials.length > 0)
-    : [],
-});
-
 const reducer = (state, a) => {
   switch (a.type) {
     case 'ORDERS_LOADING': return { ...state, loading: true, error: null };
-    case 'ORDERS_LOADED': return { ...state, loading: false, orders: a.orders, drafts: { ...a.drafts, ...state.drafts } };
+    case 'ORDERS_LOADED': return {
+      ...state, loading: false, drafts: { ...a.drafts, ...state.drafts },
+      // a lista não traz lançamentos nem fotos: quem já foi detalhado não os perde numa recarga
+      orders: a.orders.map((n) => { const old = state.orders.find((o) => o.id === n.id); return old?.detailLoaded && !n.detailLoaded ? { ...n, launches: old.launches, photos: old.photos, detailLoaded: true } : n; }),
+    };
     case 'ORDERS_FAILED': return { ...state, loading: false, error: a.error };
     case 'ORDER_DETAIL_LOADED': return { ...state, orders: state.orders.map((o) => (o.id === a.order.id ? { ...o, ...a.order } : o)) };
+    case 'CATALOGS_LOADED': return { ...state, catalogs: a.catalogs, catalogsError: null };
+    case 'CATALOGS_FAILED': return { ...state, catalogsError: a.error };
     case 'EXECUTION_STARTED': return upd(state, a.orderId, (d) => (d.status === 'pending' ? { status: 'in_execution', startedAt: new Date().toISOString() } : {}));
     case 'DESCRIPTION_CHANGED': return upd(state, a.orderId, () => ({ description: a.value }));
     case 'CLOSING_REASON_SELECTED': return upd(state, a.orderId, () => ({ closingReasonId: a.reasonId }));
@@ -73,54 +54,18 @@ const reducer = (state, a) => {
       return { [a.bucket]: { ...b, lines: [...b.lines, a.line] } };
     });
     case 'MATERIAL_LINE_CHANGED': return upd(state, a.orderId, (d) => ({
-      [a.bucket]: { ...d[a.bucket], lines: d[a.bucket].lines.map((l) => (l.inventoryId === a.inventoryId ? { ...l, quantity: a.quantity } : l)) },
+      [a.bucket]: { ...d[a.bucket], lines: d[a.bucket].lines.map((l) => (l.inventoryId === a.inventoryId ? { ...l, ...a.patch } : l)) },
     }));
     case 'MATERIAL_LINE_REMOVED': return upd(state, a.orderId, (d) => ({
       [a.bucket]: { ...d[a.bucket], lines: d[a.bucket].lines.filter((l) => l.inventoryId !== a.inventoryId) },
     }));
-    case 'PHOTO_ADDED': return upd(state, a.orderId, (d) => ({ servicePhotos: [...d.servicePhotos, a.photo] }));
-    case 'PHOTO_REMOVED': return upd(state, a.orderId, (d) => ({ servicePhotos: d.servicePhotos.filter((p) => p.id !== a.photoId) }));
     case 'CREW_MEMBER_TOGGLED': return upd(state, a.orderId, (d) => ({
       crewMemberIds: d.crewMemberIds.includes(a.memberId) ? d.crewMemberIds.filter((m) => m !== a.memberId) : [...d.crewMemberIds, a.memberId],
     }));
+    case 'FINALIZE_UUID_SET': return upd(state, a.orderId, (d) => (d.finalizeUuid ? {} : { finalizeUuid: a.uuid }));
     case 'ORDER_CLOSED': return upd(state, a.orderId, () => ({ status: 'closed', closedAt: new Date().toISOString() }));
     default: return state;
   }
-};
-
-/* ── Etapas obrigatórias da finalização (ordem exibida na tela) ── */
-export const FINALIZATION_STEPS = [
-  { key: 'description', label: 'Descrição', required: true },
-  { key: 'closing-reason', label: 'Motivo de Fechamento', required: true },
-  { key: 'intervention-location', label: 'Local do Endereço', required: true },
-  { key: 'checklists', label: 'Checklists', required: true },
-  { key: 'used-materials', label: 'Materiais Utilizados', required: true },
-  { key: 'removed-materials', label: 'Materiais Retirados', required: true },
-  { key: 'service-photos', label: 'Fotos do Serviço', required: true },
-  { key: 'crew', label: 'Participantes', required: false },
-];
-
-const materialsDone = (b, flag) => b[flag] === false || (b[flag] === true && b.lines.length > 0 && b.lines.every((l) => Number(l.quantity) > 0));
-
-/* Seletor puro: quais etapas estão concluídas */
-export const getStepCompletion = (d, order) => ({
-  'description': d.description.trim().length > 10,
-  'closing-reason': Boolean(d.closingReasonId),
-  'intervention-location': Boolean(d.interventionLocation),
-  'checklists': OUTSIDE_PLANT_CHECKLIST.filter((i) => i.required).every((i) => {
-    const v = d.checklistAnswers[i.id];
-    return i.type === 'boolean' ? typeof v === 'boolean' : v !== undefined && v !== '' && Number(v) >= 0;
-  }),
-  // Materiais usados vêm dos lançamentos (servidor). "Não usou" só vale se nenhum lançamento foi feito.
-  'used-materials': (order?.launches?.length || 0) > 0 || d.usedMaterials.wereUsed === false,
-  'removed-materials': materialsDone(d.removedMaterials, 'wereRemoved'),
-  'service-photos': d.servicePhotos.length > 0,
-  'crew': d.crewMemberIds.length > 0,
-});
-
-export const canFinalize = (d, order) => {
-  const done = getStepCompletion(d, order);
-  return FINALIZATION_STEPS.filter((s) => s.required).every((s) => done[s.key]);
 };
 
 /* ── Context ── */
@@ -139,7 +84,8 @@ export const FieldWorkProvider = ({ children }) => {
       await Promise.all(orders.filter((o) => o.hasDraft).map(async (o) => {
         try {
           const { rascunho } = await osAPI.rascunho(o.id);
-          if (rascunho) { drafts[o.id] = { ...emptyDraft(), ...rascunho }; saved.current[o.id] = JSON.stringify(drafts[o.id]); }
+          const lido = lerRascunho(rascunho, emptyDraft()); // ignora o do app do celular e limpa sobras de versões antigas
+          if (lido) { drafts[o.id] = lido; saved.current[o.id] = JSON.stringify(rascunhoParaSalvar(lido)); }
         } catch { /* sem rascunho: segue vazio */ }
       }));
       dispatch({ type: 'ORDERS_LOADED', orders, drafts });
@@ -150,6 +96,11 @@ export const FieldWorkProvider = ({ children }) => {
     }
   }, []);
   useEffect(() => { reload(); }, [reload]);
+  // Catálogos da finalização (motivos, checklist, participantes, itens, regras): os mesmos do app do celular
+  const reloadCatalogs = useCallback(() => osAPI.catalogosFechamento()
+    .then((catalogs) => dispatch({ type: 'CATALOGS_LOADED', catalogs }))
+    .catch((e) => dispatch({ type: 'CATALOGS_FAILED', error: e.message })), []);
+  useEffect(() => { reloadCatalogs(); }, [reloadCatalogs]);
 
   // Salva o rascunho no banco (com pequeno atraso) sempre que a OS em execução muda
   const draftsRef = useRef(state.drafts);
@@ -157,10 +108,11 @@ export const FieldWorkProvider = ({ children }) => {
   const flush = useCallback(() => {
     Object.entries(draftsRef.current).forEach(([id, d]) => {
       if (d.status !== 'in_execution') return;
-      const json = JSON.stringify(d);
+      const copia = rascunhoParaSalvar(d);
+      const json = JSON.stringify(copia);
       if (saved.current[id] === json) return;
       saved.current[id] = json;
-      osAPI.salvarRascunho(id, d).catch(() => { delete saved.current[id]; });
+      osAPI.salvarRascunho(id, copia).catch(() => { delete saved.current[id]; });
     });
   }, []);
   useEffect(() => {
@@ -173,7 +125,7 @@ export const FieldWorkProvider = ({ children }) => {
     window.addEventListener('pagehide', flush);
     return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', flush); flush(); };
   }, [flush]);
-  const value = useMemo(() => ({ state, dispatch, reload }), [state, reload]);
+  const value = useMemo(() => ({ state, dispatch, reload, reloadCatalogs }), [state, reload, reloadCatalogs]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
@@ -183,11 +135,11 @@ export const useServiceOrder = (orderId) => {
   const order = state.orders.find((o) => o.id === orderId) || null;
   const draft = order ? state.drafts[orderId] || EMPTY_DRAFT : null;
   return useMemo(() => ({
-    order, draft, loading: state.loading,
-    completion: draft ? getStepCompletion(draft, order) : {},
-    canFinalize: draft ? canFinalize(draft, order) : false,
+    order, draft, loading: state.loading, catalogs: state.catalogs, catalogsError: state.catalogsError,
+    completion: draft ? getStepCompletion(draft, order, state.catalogs) : {},
+    canFinalize: draft ? canFinalize(draft, order, state.catalogs) : false,
     act: (type, payload = {}) => dispatch({ type, orderId, ...payload }),
-  }), [order, draft, orderId, dispatch, state.loading]);
+  }), [order, draft, orderId, dispatch, state.loading, state.catalogs, state.catalogsError]);
 };
 
 /* Pendentes = abertas ou em andamento no backend */
@@ -198,6 +150,12 @@ export const usePendingOrders = () => {
 };
 
 export const useFieldWork = () => useContext(Ctx);
+
+/* Catálogos da finalização + como tentar de novo se não vieram */
+export const useCatalogs = () => {
+  const { state, reloadCatalogs } = useContext(Ctx);
+  return { catalogs: state.catalogs, error: state.catalogsError, reload: reloadCatalogs };
+};
 
 /* Carrega o detalhe da OS (descrição, lançamentos e materiais) e devolve um reload */
 export const useOrderDetail = (orderId) => {

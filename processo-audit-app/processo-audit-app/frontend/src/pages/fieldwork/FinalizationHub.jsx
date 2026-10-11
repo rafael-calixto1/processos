@@ -3,37 +3,41 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ChevronRight, CheckCircle2, Flag } from 'lucide-react';
 import { osAPI } from '../../api/estoque';
 import { useServiceOrder, useFieldWork, useOrderDetail, FINALIZATION_STEPS } from './state';
+import { montarCorpoFinalizacao } from './finalizacao';
 import { fw, ScreenHeader, StepStatusIcon, StickyActionBar, StickyButton } from './ui';
 
-const hintFor = (key, d, order) => ({
-  'description': d.description.trim() && (d.description.trim().length > 10 ? `${d.description.trim().slice(0, 40)}…` : 'Muito curta: mínimo de 11 caracteres'),
+const hintFor = (key, d, order, minimo = 11) => ({
+  'description': d.description.trim() && (d.description.trim().length >= minimo ? `${d.description.trim().slice(0, 40)}…` : `Muito curta: mínimo de ${minimo} caracteres`),
   'closing-reason': d.closingReasonId && 'Selecionado',
   'intervention-location': d.interventionLocation && `${d.interventionLocation.lat.toFixed(5)}, ${d.interventionLocation.lng.toFixed(5)}`,
   'checklists': `${Object.keys(d.checklistAnswers).length} respostas`,
   'used-materials': order.launches.length > 0 ? `${order.launches.length} lançamento(s)` : d.usedMaterials.wereUsed === false ? 'Nenhum material usado' : null,
   'removed-materials': d.removedMaterials.wereRemoved === null ? null : d.removedMaterials.wereRemoved ? `${d.removedMaterials.lines.length} item(ns)` : 'Nenhum material retirado',
-  'service-photos': d.servicePhotos.length && `${d.servicePhotos.length} foto(s)`,
+  'service-photos': order.photos.length > 0 && `${order.photos.length} foto(s)`,
   'crew': d.crewMemberIds.length && `${d.crewMemberIds.length} participante(s)`,
 }[key] || null);
 
 const FinalizationHub = () => {
   const { orderId } = useParams();
   const nav = useNavigate();
-  const { order, draft, completion, canFinalize, act, loading } = useServiceOrder(orderId);
+  const { order, draft, completion, canFinalize, act, loading, catalogs } = useServiceOrder(orderId);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [details, setDetails] = useState([]);
   const { reload } = useFieldWork();
   useOrderDetail(orderId);
 
-  // Registra a descrição como serviço realizado e encerra a OS no backend
+  // Finalização completa e atômica no servidor (a mesma do app): descrição, motivo, local, checklist, retirados, fotos e participantes
   const finalize = async () => {
-    setBusy(true); setError('');
+    setBusy(true); setError(''); setDetails([]);
     try {
-      await osAPI.adicionarServico(order.id, { descricao: draft.description.trim() });
-      await osAPI.fechar(order.id);
+      let uuid = draft.finalizeUuid;
+      if (!uuid) { uuid = crypto.randomUUID(); act('FINALIZE_UUID_SET', { uuid }); } // fica no rascunho: um reenvio depois de falha de rede não duplica
+      const corpo = montarCorpoFinalizacao({ order, draft: { ...draft, finalizeUuid: uuid }, catalogs, dispositivo: navigator.userAgent });
+      await osAPI.finalizar(order.id, corpo);
       act('ORDER_CLOSED'); setConfirming(false); reload();
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { setError(e.message); setDetails(Array.isArray(e.detalhes) ? e.detalhes : []); } finally { setBusy(false); }
   };
   if (loading && !order) return null;
   if (!order) return <Navigate to="/os" replace />;
@@ -63,7 +67,7 @@ const FinalizationHub = () => {
         </div>
         <ul className={fw.stepList}>
           {FINALIZATION_STEPS.map((s) => {
-            const hint = hintFor(s.key, draft, order);
+            const hint = hintFor(s.key, draft, order, catalogs?.regras?.descricao_min_caracteres);
             return (
               <li key={s.key}>
                 <button className={`${fw.stepRow} ${completion[s.key] ? fw.stepRowDone : ''}`} onClick={() => nav(`/os/${orderId}/finalizar/${s.key}`)}>
@@ -85,7 +89,12 @@ const FinalizationHub = () => {
           <div className={fw.sheet} role="dialog" aria-modal="true" aria-label="Confirmar finalização" onClick={(e) => e.stopPropagation()}>
             <div className={fw.sheetHead}><h2>Finalizar {order.code}?</h2></div>
             <p style={{ margin: 0 }}>Após finalizar, a OS fica somente leitura.</p>
-            {error && <p className={fw.callout} role="alert" style={{ margin: 0 }}>{error}</p>}
+            {error && (
+              <div className={fw.callout} role="alert" style={{ margin: 0 }}>
+                <p style={{ margin: 0 }}>{error}</p>
+                {details.length > 1 && <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>{details.map((d, i) => <li key={i}>{d.mensagem}</li>)}</ul>}
+              </div>
+            )}
             <StickyButton tone="confirm" disabled={busy} onClick={finalize}>{busy ? 'Finalizando…' : 'Sim, finalizar'}</StickyButton>
             <button className={fw.btnOutline} style={{ borderStyle: 'solid' }} onClick={() => setConfirming(false)}>Voltar</button>
           </div>
