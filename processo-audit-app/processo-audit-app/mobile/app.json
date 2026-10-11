@@ -12,9 +12,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F9EC",
+        "backgroundColor": "#274518",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -27,6 +26,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#274518",
+          "imageWidth": 240
+        }
+      ],
       "expo-sqlite",
       "expo-secure-store",
       "expo-font",
@@ -49,7 +56,7 @@
         "expo-image-picker",
         {
           "photosPermission": "O aplicativo acessa as suas fotos para você escolher as imagens do serviço.",
-          "cameraPermission": false,
+          "cameraPermission": "O aplicativo usa a câmera para ler o QR code dos lotes e para fotografar o serviço.",
           "microphonePermission": false
         }
       ]
