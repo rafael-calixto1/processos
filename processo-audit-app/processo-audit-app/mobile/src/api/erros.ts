@@ -24,4 +24,12 @@ export class NetworkError extends Error {
   }
 }
 
+/** O arquivo da foto não está mais no aparelho (apagado pelo sistema ou pelo usuário). Reenviar não adianta. */
+export class ArquivoAusenteError extends Error {
+  constructor(message = 'A foto não está mais guardada no aparelho.') {
+    super(message);
+    this.name = 'ArquivoAusenteError';
+  }
+}
+
 export const mensagemDeErro = (e: unknown): string => (e instanceof Error ? e.message : 'Erro inesperado. Tente novamente.');

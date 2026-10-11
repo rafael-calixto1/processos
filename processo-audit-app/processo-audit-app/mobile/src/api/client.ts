@@ -18,6 +18,8 @@ export interface OpcoesCliente {
 
 export interface OpcoesRequisicao {
   body?: unknown;
+  /** Corpo multipart. É uma função porque cada tentativa (inclusive a repetida depois de renovar o token) monta o seu. */
+  formulario?: () => Promise<FormData>;
   auth?: boolean; // padrão true
   idempotencyKey?: string;
   timeoutMs?: number;
@@ -54,7 +56,9 @@ export class ApiClient {
 
   private async enviar(method: string, caminho: string, o: OpcoesRequisicao, auth: boolean): Promise<Resposta> {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (o.body !== undefined) headers['Content-Type'] = 'application/json';
+    let corpo: string | FormData | undefined;
+    if (o.formulario) corpo = await o.formulario(); // sem Content-Type: o fetch acrescenta o boundary
+    else if (o.body !== undefined) { headers['Content-Type'] = 'application/json'; corpo = JSON.stringify(o.body); }
     if (o.idempotencyKey) headers['Idempotency-Key'] = o.idempotencyKey;
     const token = auth ? this.opts.tokens.tokenDeAcesso() : null;
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -64,7 +68,7 @@ export class ApiClient {
     let res: Response;
     try {
       res = await (this.opts.fetchImpl ?? fetch)(`${this.opts.baseUrl()}${caminho}`, {
-        method, headers, body: o.body === undefined ? undefined : JSON.stringify(o.body), signal: controle.signal,
+        method, headers, body: corpo, signal: controle.signal,
       });
     } catch (e) {
       throw new NetworkError(controle.signal.aborted ? 'O servidor demorou demais para responder. Tente de novo.' : undefined);

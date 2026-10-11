@@ -45,7 +45,8 @@ describe('proximaPronta', () => {
     await reagendar(banco, a.id, T0 + 5000, T0);
     expect(await proximaPronta(banco, 7, T0 + 4999)).toBeNull();
     expect((await proximaPronta(banco, 7, T0 + 5000))?.id).toBe(a.id);
-    expect(await proximaHora(banco, 7)).toBe(T0 + 5000);
+    expect(await proximaHora(banco, 7, T0)).toBe(T0 + 5000);
+    expect(await proximaHora(banco, 7, T0 + 5000)).toBeNull(); // já chegou a hora: não há mais espera pela frente
   });
   it('só entrega operações do técnico logado: o token de um não envia o trabalho de outro', async () => {
     const { banco } = await criarBancoDeTeste();

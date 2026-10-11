@@ -67,6 +67,7 @@ interface Base {
   atualizado_em: string;
   ok_em: number | null; // epoch ms em que o servidor confirmou
   no_retrato: boolean; // um retrato do servidor feito DEPOIS da confirmação já inclui o efeito desta operação
+  forcada: boolean; // o técnico confirmou "enviar mesmo assim" para uma operação com mais de 14 dias
   resposta: any | null;
   erro: ErroOp | null;
   os_numero: number | null; // para mostrar na tela de atenção mesmo se a OS sumir da lista
@@ -82,7 +83,7 @@ export type Operacao =
   | (Base & { tipo: 'rascunho'; payload: PayloadRascunho });
 
 type SemCamposDoBanco<T> = T extends unknown
-  ? Omit<T, 'id' | 'estado' | 'tentativas' | 'proxima_tentativa' | 'criado_em' | 'atualizado_em' | 'ok_em' | 'no_retrato' | 'resposta' | 'erro'>
+  ? Omit<T, 'id' | 'estado' | 'tentativas' | 'proxima_tentativa' | 'criado_em' | 'atualizado_em' | 'ok_em' | 'no_retrato' | 'forcada' | 'resposta' | 'erro'>
   : never;
 export type NovaOperacao = SemCamposDoBanco<Operacao>;
 

@@ -32,6 +32,7 @@ const MIGRACOES: ReadonlyArray<string> = [
      atualizado_em TEXT NOT NULL,
      ok_em INTEGER,
      no_retrato INTEGER NOT NULL DEFAULT 0,
+     forcada INTEGER NOT NULL DEFAULT 0,
      resposta TEXT,
      erro_status INTEGER,
      erro_mensagem TEXT,

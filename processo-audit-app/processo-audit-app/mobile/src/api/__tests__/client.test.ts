@@ -1,5 +1,5 @@
 import { ApiClient, type FonteDeToken } from '../client';
-import { ApiError, NetworkError } from '../erros';
+import { ApiError, ArquivoAusenteError, NetworkError } from '../erros';
 import { criarFetchFalso } from '@/testing/servidorFalso';
 
 const tokens = (sobrescrever: Partial<FonteDeToken> = {}) => {
@@ -104,5 +104,25 @@ describe('ApiClient', () => {
     const c = criarFetchFalso([{ status: 502, texto: '<html>Bad Gateway</html>' }]);
     await expect(cliente(c.fetchImpl, tokens()).request('GET', '/x')).rejects.toMatchObject({ status: 502, message: expect.stringMatching(/502/) });
     expect(new ApiError(500, 'x')).toBeInstanceOf(Error);
+  });
+
+  describe('corpo multipart (fotos)', () => {
+    it('monta o corpo a cada tentativa — inclusive a repetida depois de renovar o token — e não define Content-Type (o fetch põe o boundary)', async () => {
+      const { fetchImpl, chamadas } = criarFetchFalso([{ status: 403, body: { error: 'Token inválido ou expirado', code: 'token_expirado' } }, { status: 201, body: { id: 5 } }]);
+      const formulario = jest.fn(async () => ({ marca: 'corpo-multipart' }) as unknown as FormData);
+      const r = await cliente(fetchImpl, tokens()).request('POST', '/os/1/fotos', { formulario, idempotencyKey: 'chave-foto-1' });
+      expect(r).toEqual({ id: 5 });
+      expect(formulario).toHaveBeenCalledTimes(2);
+      expect(chamadas[0].headers['Content-Type']).toBeUndefined();
+      expect(chamadas[0].headers['Idempotency-Key']).toBe('chave-foto-1');
+      expect((chamadas[1].body as unknown as { marca: string }).marca).toBe('corpo-multipart');
+      expect(chamadas[1].headers.Authorization).toBe('Bearer novo');
+    });
+    it('se o arquivo não existe mais, o erro da montagem sobe sem chamar o servidor', async () => {
+      const { fetchImpl, chamadas } = criarFetchFalso([{ status: 201 }]);
+      const formulario = async () => { throw new ArquivoAusenteError(); };
+      await expect(cliente(fetchImpl, tokens()).request('POST', '/os/1/fotos', { formulario })).rejects.toBeInstanceOf(ArquivoAusenteError);
+      expect(chamadas).toHaveLength(0);
+    });
   });
 });

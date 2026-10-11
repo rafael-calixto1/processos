@@ -4,14 +4,14 @@ import { contaComoPendencia, type ErroOp, type NovaOperacao, type Operacao } fro
 interface Linha {
   id: number; usuario_id: number; os_id: number; tipo: string; client_uuid: string; chave: string; payload: string; depende_de: string;
   estado: string; tentativas: number; proxima_tentativa: number; criado_em: string; atualizado_em: string; ok_em: number | null;
-  no_retrato: number; resposta: string | null; erro_status: number | null; erro_mensagem: string | null; erro_detalhes: string | null;
+  no_retrato: number; forcada: number; resposta: string | null; erro_status: number | null; erro_mensagem: string | null; erro_detalhes: string | null;
   os_numero: number | null; os_cliente: string | null;
 }
 
 const paraOperacao = (r: Linha): Operacao => ({
   id: r.id, usuario_id: r.usuario_id, os_id: r.os_id, tipo: r.tipo, client_uuid: r.client_uuid, chave: r.chave,
   payload: JSON.parse(r.payload), depende_de: JSON.parse(r.depende_de), estado: r.estado, tentativas: r.tentativas,
-  proxima_tentativa: r.proxima_tentativa, criado_em: r.criado_em, atualizado_em: r.atualizado_em, ok_em: r.ok_em, no_retrato: r.no_retrato === 1,
+  proxima_tentativa: r.proxima_tentativa, criado_em: r.criado_em, atualizado_em: r.atualizado_em, ok_em: r.ok_em, no_retrato: r.no_retrato === 1, forcada: r.forcada === 1,
   resposta: r.resposta === null ? null : JSON.parse(r.resposta),
   erro: r.erro_mensagem === null ? null : { status: r.erro_status, mensagem: r.erro_mensagem, ...(r.erro_detalhes && { detalhes: JSON.parse(r.erro_detalhes) }) },
   os_numero: r.os_numero, os_cliente: r.os_cliente,
@@ -58,9 +58,9 @@ export const proximaPronta = async (b: Banco, usuarioId: number, agora: number):
   return null;
 };
 
-/** Quando a próxima operação pendente (ainda que bloqueada por tempo) deve ser tentada, para o motor acordar na hora certa. */
-export const proximaHora = async (b: Banco, usuarioId: number): Promise<number | null> =>
-  (await b.first<{ t: number | null }>("SELECT MIN(proxima_tentativa) AS t FROM outbox WHERE usuario_id = ? AND estado = 'pendente'", [usuarioId]))?.t ?? null;
+/** Quando uma operação em espera (backoff) poderá ser tentada de novo, para o motor acordar na hora certa. Só conta horas futuras. */
+export const proximaHora = async (b: Banco, usuarioId: number, agora: number): Promise<number | null> =>
+  (await b.first<{ t: number | null }>("SELECT MIN(proxima_tentativa) AS t FROM outbox WHERE usuario_id = ? AND estado = 'pendente' AND proxima_tentativa > ?", [usuarioId, agora]))?.t ?? null;
 
 /** Reserva a operação para envio (pendente → enviando) de forma atômica; devolve false se outra tarefa chegou antes. */
 export const reservar = async (b: Banco, id: number, agora: number): Promise<boolean> =>
@@ -84,9 +84,9 @@ export const recuperarEnviando = async (b: Banco): Promise<number> =>
   (await b.run("UPDATE outbox SET estado = 'pendente', proxima_tentativa = 0 WHERE estado = 'enviando'")).alteradas;
 
 /** "Tentar de novo" depois de o técnico resolver o problema (ou de confirmar o envio de uma operação velha). */
-export const reenviar = async (b: Banco, id: number, agora: number): Promise<boolean> =>
-  (await b.run("UPDATE outbox SET estado = 'pendente', tentativas = 0, proxima_tentativa = 0, erro_status = NULL, erro_mensagem = NULL, erro_detalhes = NULL, atualizado_em = ? WHERE id = ? AND estado = 'atencao'",
-    [iso(agora), id])).alteradas === 1;
+export const reenviar = async (b: Banco, id: number, agora: number, opcoes: { forcar?: boolean } = {}): Promise<boolean> =>
+  (await b.run("UPDATE outbox SET estado = 'pendente', tentativas = 0, proxima_tentativa = 0, forcada = CASE WHEN ? THEN 1 ELSE forcada END, erro_status = NULL, erro_mensagem = NULL, erro_detalhes = NULL, atualizado_em = ? WHERE id = ? AND estado = 'atencao'",
+    [opcoes.forcar ? 1 : 0, iso(agora), id])).alteradas === 1;
 
 /** Remove uma operação que o servidor não confirmou. Nunca apaga uma em envio (resultado incerto) nem uma já confirmada. */
 export const cancelar = async (b: Banco, id: number): Promise<boolean> =>

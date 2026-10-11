@@ -22,7 +22,7 @@ const op = <T extends Operacao['tipo']>(tipo: T, osId: number, extra: Record<str
   };
   return {
     id, usuario_id: 7, os_id: osId, tipo, client_uuid: `u${id}`, chave: `k${id}`, payload: payloads[tipo], depende_de: [], estado: 'pendente', tentativas: 0,
-    proxima_tentativa: 0, criado_em: '2026-10-11T14:00:00.000Z', atualizado_em: '2026-10-11T14:00:00.000Z', ok_em: null, no_retrato: false, resposta: null,
+    proxima_tentativa: 0, criado_em: '2026-10-11T14:00:00.000Z', atualizado_em: '2026-10-11T14:00:00.000Z', ok_em: null, no_retrato: false, forcada: false, resposta: null,
     erro: null, os_numero: osId - 100, os_cliente: 'c', ...extra,
   } as Operacao;
 };
