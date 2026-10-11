@@ -1,11 +1,12 @@
 import { ApiError, NetworkError } from '@/api/erros';
-import { coalescerRascunho, enfileirar, obter, reenviar } from '@/db/outbox';
+import { coalescerRascunho, enfileirar, obter, reenviar, reservar } from '@/db/outbox';
 import { inserirFoto, lerRascunho, listarFotos, obterFoto, salvarRascunho } from '@/db/trabalho';
 import { rascunhoVazio } from '@/domain/etapas';
 import { DIAS_MAX_OPERACAO } from '@/domain/operacoes';
 import { criarApiFalsa } from '@/testing/apiFalsa';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { novaDevolucao, novaFinalizar, novaFoto, novaIniciar, novoLancamento, novoRascunhoOp, uuid } from '@/testing/operacoes';
+import type { RotaTrecho } from '@/domain/trecho';
 import { classificarErro, MotorOutbox, type PortaArquivos } from '../outbox';
 
 const T0 = Date.parse('2026-10-11T14:00:00Z');
@@ -474,5 +475,73 @@ describe('devolução de material', () => {
     relogio.v = T0 + 15 * DIA;
     expect((await motor.executar()).atencao).toBe(1);
     expect(chamadas).toHaveLength(0);
+  });
+});
+
+describe('trecho no mapa: marcado sem poder traçar, traçado antes de enviar', () => {
+  const retaDoTecnico: RotaTrecho = { pontos: [{ lat: -23.5, lng: -46.3 }, { lat: -23.51, lng: -46.31 }], metros: 1568, caminho: [] }; // linha reta (sem internet no momento)
+  const doServidor = { pontos: [{ lat: -23.50002, lng: -46.30001 }, { lat: -23.51003, lng: -46.31002 }], metros: 2100, caminho: [[-23.50002, -46.30001], [-23.505, -46.302], [-23.51003, -46.31002]] };
+  const comRota = (rota: RotaTrecho | undefined, extra = {}) => {
+    const n = novoLancamento(102, [{ lote_id: 11, quantidade: 100 }], extra);
+    return { ...n, payload: { ...n.payload, corpo: { ...(n as any).payload.corpo, ...(rota && { rota }) } } } as typeof n;
+  };
+
+  it('com internet, traça pelas ruas ANTES de enviar: o servidor recebe o caminho e a distância por vias, e a fila guarda o mesmo corpo', async () => {
+    const { banco, motor, chamadas } = await montar({ rotaPorVias: () => doServidor });
+    const op = await enfileirar(banco, comRota(retaDoTecnico));
+    await motor.executar();
+    expect(chamadas.map((c) => c.metodo)).toEqual(['rotaPorVias', 'lancar']);
+    expect(chamadas[0].args[0]).toEqual(retaDoTecnico.pontos);
+    const enviado = (chamadas[1].args[1] as any).rota;
+    expect(enviado).toEqual({ pontos: [{ lat: -23.50002, lng: -46.30001 }, { lat: -23.51003, lng: -46.31002 }], metros: 2100, caminho: doServidor.caminho });
+    expect((await obter(banco, op.id))?.payload).toMatchObject({ corpo: { rota: enviado } }); // o que saiu é o que ficou guardado
+  });
+
+  it('serviço de rotas fora do ar, sem internet ou ponto fora da rua: envia mesmo assim em linha reta, sem erro e sem atenção', async () => {
+    for (const falha of [new NetworkError(), new ApiError(502, 'Serviço de rotas indisponível. Tente novamente.'), new ApiError(422, 'Marque os pontos sobre uma rua, estrada ou rodovia.')]) {
+      const { banco, motor, chamadas } = await montar({ rotaPorVias: () => falha });
+      const op = await enfileirar(banco, comRota(retaDoTecnico));
+      const r = await motor.executar();
+      expect(r).toMatchObject({ enviadas: 1, atencao: 0, semConexao: false });
+      expect((chamadas.find((c) => c.metodo === 'lancar')!.args[1] as any).rota).toEqual(retaDoTecnico);
+      expect((await obter(banco, op.id))?.estado).toBe('ok');
+    }
+  });
+
+  it('o caminho traçado nunca muda de uma tentativa para outra: resposta perdida + reenvio manda EXATAMENTE o mesmo corpo com a mesma chave', async () => {
+    let respostas = 0;
+    const { banco, motor, chamadas, relogio } = await montar({ rotaPorVias: () => doServidor, lancar: () => { respostas++; return respostas === 1 ? new NetworkError() : { id: 1, descricao: 'x', trecho: null, quantidade: 1, materiais: [] }; } });
+    await enfileirar(banco, comRota(retaDoTecnico));
+    await motor.executar();          // 1ª tentativa: traçou, enviou, a resposta se perdeu
+    relogio.v += 60_000;
+    await motor.executar();          // 2ª: não traça de novo
+    expect(chamadas.map((c) => c.metodo)).toEqual(['rotaPorVias', 'lancar', 'lancar']);
+    expect(chamadas[2].args[1]).toEqual(chamadas[1].args[1]);
+    expect(chamadas[2].args[2]).toBe(chamadas[1].args[2]);
+  });
+
+  it('operação já tentada antes (app encerrado no meio do envio) NÃO é traçada: o corpo pode já estar no servidor', async () => {
+    const { banco, motor, chamadas } = await montar({ rotaPorVias: () => doServidor });
+    const op = await enfileirar(banco, comRota(retaDoTecnico));
+    await reservar(banco, op.id, T0);             // 1ª tentativa começou…
+    await banco.run("UPDATE outbox SET estado = 'pendente', proxima_tentativa = 0 WHERE id = ?", [op.id]); // …e o app morreu: recuperarEnviando
+    await motor.executar();
+    expect(chamadas.map((c) => c.metodo)).toEqual(['lancar']);
+    expect((chamadas[0].args[1] as any).rota).toEqual(retaDoTecnico);
+  });
+
+  it('rota que já tem caminho, ou lançamento sem rota, não consulta o serviço de rotas', async () => {
+    const { banco, motor, chamadas } = await montar({ rotaPorVias: () => doServidor });
+    await enfileirar(banco, comRota({ ...retaDoTecnico, caminho: [[-23.5, -46.3], [-23.51, -46.31]] }));
+    await enfileirar(banco, comRota(undefined));
+    await motor.executar();
+    expect(chamadas.map((c) => c.metodo)).toEqual(['lancar', 'lancar']);
+  });
+
+  it('resposta do serviço sem caminho utilizável mantém a linha reta', async () => {
+    const { banco, motor, chamadas } = await montar({ rotaPorVias: () => ({ pontos: [], metros: 0, caminho: [] }) });
+    await enfileirar(banco, comRota(retaDoTecnico));
+    await motor.executar();
+    expect((chamadas.find((c) => c.metodo === 'lancar')!.args[1] as any).rota).toEqual(retaDoTecnico);
   });
 });

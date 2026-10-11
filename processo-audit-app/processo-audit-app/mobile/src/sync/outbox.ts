@@ -2,13 +2,14 @@ import { ApiError, ArquivoAusenteError, NetworkError } from '@/api/erros';
 import type { Api } from '@/api/endpoints';
 import type { Banco } from '@/db/banco';
 import {
-  cancelarRascunhosPendentes, concluirOk, liberarEspera, marcarAtencao, proximaHora, proximaPronta, reagendar, recuperarEnviando, reservar,
+  atualizarPayload, cancelarRascunhosPendentes, concluirOk, liberarEspera, marcarAtencao, proximaHora, proximaPronta, reagendar, recuperarEnviando, reservar,
 } from '@/db/outbox';
 import { apagarFoto, apagarRascunho, definirServidorId, limparArquivoDaFoto, listarFotos, obterFoto } from '@/db/trabalho';
+import { montarRota, reduzirCaminho } from '@/domain/trecho';
 import { DIAS_MAX_OPERACAO, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, type ErroOp, type Operacao } from '@/domain/operacoes';
 
 /** O que o motor usa da API (as funções do `criarApi`). */
-export type ApiMotor = Pick<Api, 'iniciarOS' | 'lancar' | 'enviarFoto' | 'removerFoto' | 'finalizar' | 'salvarRascunho' | 'solicitarDevolucao'>;
+export type ApiMotor = Pick<Api, 'iniciarOS' | 'lancar' | 'enviarFoto' | 'removerFoto' | 'finalizar' | 'salvarRascunho' | 'solicitarDevolucao' | 'rotaPorVias'>;
 
 export interface PortaArquivos {
   existe(uri: string): Promise<boolean>;
@@ -161,7 +162,7 @@ export class MotorOutbox {
       case 'iniciar':
         return api.iniciarOS(op.os_id, op.payload.corpo.iniciado_em, op.chave);
       case 'lancamento':
-        return api.lancar(op.os_id, op.payload.corpo, op.chave);
+        return api.lancar(op.os_id, await this.tracarSePreciso(op), op.chave);
       case 'finalizar':
         return api.finalizar(op.os_id, op.payload.corpo, op.chave);
       case 'foto': {
@@ -187,6 +188,27 @@ export class MotorOutbox {
         return api.solicitarDevolucao(op.payload.corpo, op.chave);
       case 'rascunho':
         return api.salvarRascunho(op.os_id, { versao: 2, origem: 'mobile', ...op.payload.corpo.rascunho });
+    }
+  }
+
+  /**
+   * O técnico pode marcar o trecho sem conseguir traçá-lo pelas ruas (sem internet no momento, serviço de rotas fora do ar):
+   * a rota vai na fila só com os pontos, em linha reta. Na PRIMEIRA vez que a operação é enviada, com internet, o app tenta
+   * traçar o caminho pelas vias e põe o resultado no corpo ANTES de enviar. Depois de qualquer tentativa o corpo não muda mais
+   * (ele pode já ter chegado ao servidor, e a mesma chave com outro corpo é recusada). Qualquer falha aqui só mantém a linha reta.
+   */
+  private async tracarSePreciso(op: Extract<Operacao, { tipo: 'lancamento' }>): Promise<Extract<Operacao, { tipo: 'lancamento' }>['payload']['corpo']> {
+    const corpo = op.payload.corpo;
+    const rota = corpo.rota;
+    if (!rota || rota.caminho.length > 0 || op.tentativas !== 0) return corpo;
+    try {
+      const doServidor = await this.p.api.rotaPorVias(rota.pontos, { timeoutMs: 10_000 });
+      const tracada = montarRota(rota.pontos, { pontos: doServidor.pontos, metros: doServidor.metros, caminho: reduzirCaminho(doServidor.caminho) });
+      if (!tracada || tracada.caminho.length < 2) return corpo;
+      const novo = { ...corpo, rota: tracada };
+      return (await atualizarPayload(this.p.banco, op.id, { ...op.payload, corpo: novo })) ? novo : corpo;
+    } catch {
+      return corpo;
     }
   }
 

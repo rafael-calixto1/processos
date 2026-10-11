@@ -50,8 +50,8 @@ export const criarApi = (c: ApiClient, deps: { criarFormulario?: CriarFormulario
   geocodificar: (e: { street: string; numero: string; city: string; uf: string; cep: string; bairro: string }) =>
     c.request<PontoGeocodificado>('GET', `/geo/geocode?${new URLSearchParams(e).toString()}`, { timeoutMs: 30_000 }),
   /** Trajeto pelas vias passando pelos pontos tocados (OSRM, via servidor). 422 se algum ponto não estiver sobre uma via. */
-  rotaPorVias: (pontos: readonly PontoGeo[]) =>
-    c.request<Required<RotaDoServidor>>('GET', `/geo/rota?pontos=${encodeURIComponent(pontos.map((p) => `${p.lat},${p.lng}`).join(';'))}`, { timeoutMs: 30_000 }),
+  rotaPorVias: (pontos: readonly PontoGeo[], opcoes: { timeoutMs?: number } = {}) =>
+    c.request<Required<RotaDoServidor>>('GET', `/geo/rota?pontos=${encodeURIComponent(pontos.map((p) => `${p.lat},${p.lng}`).join(';'))}`, { timeoutMs: opcoes.timeoutMs ?? 30_000 }),
   /** Consulta online de um lote lido pelo QR (o técnico só enxerga lotes da própria posse: 403 caso contrário). */
   lotePorCodigo: (codigo: string) => c.request<{ id: number; codigo: string; item_nome: string; unidade: string; minha_posse?: number }>('GET', `/estoque/lotes/${encodeURIComponent(codigo)}`, { timeoutMs: 10_000 }),
   /** O técnico só SOLICITA; o estoque aprova ou nega. Um lote por chamada. */

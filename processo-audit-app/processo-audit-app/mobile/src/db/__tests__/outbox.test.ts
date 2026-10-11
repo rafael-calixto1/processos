@@ -1,7 +1,7 @@
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { novaFinalizar, novaFoto, novaIniciar, novoLancamento, novoRascunhoOp, uuid } from '@/testing/operacoes';
 import {
-  cancelar, cancelarRascunhosPendentes, coalescerRascunho, concluirOk, contagens, enfileirar, listarEmFila, listarPorEstado, marcarAtencao, marcarNoRetrato,
+  atualizarPayload, cancelar, cancelarRascunhosPendentes, coalescerRascunho, concluirOk, contagens, enfileirar, listarEmFila, listarPorEstado, marcarAtencao, marcarNoRetrato,
   obter, pendenciasDeOutros, podarConfirmadas, proximaHora, proximaPronta, reagendar, recuperarEnviando, reenviar, reservar,
 } from '../outbox';
 import { salvarRascunho } from '../trabalho';
@@ -219,4 +219,29 @@ describe('backup do rascunho (coalescência)', () => {
 
 it('uuid de teste é válido para o servidor', () => {
   expect(uuid(1)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+describe('atualizarPayload (só na 1ª tentativa, com a operação em envio)', () => {
+  it('troca o corpo de uma operação que está sendo enviada pela primeira vez', async () => {
+    const { banco } = await criarBancoDeTeste();
+    const op = await enfileirar(banco, novoLancamento(102));
+    await reservar(banco, op.id, T0);
+    expect(await atualizarPayload(banco, op.id, { novo: true })).toBe(true);
+    expect((await obter(banco, op.id))?.payload).toEqual({ novo: true });
+  });
+  it('não troca uma operação pendente, já tentada mais de uma vez, confirmada ou em atenção (o corpo pode já estar no servidor)', async () => {
+    const { banco } = await criarBancoDeTeste();
+    const pendente = await enfileirar(banco, novoLancamento(102));
+    expect(await atualizarPayload(banco, pendente.id, { x: 1 })).toBe(false); // ainda nem foi reservada
+    const reenvio = await enfileirar(banco, novoLancamento(102));
+    await reservar(banco, reenvio.id, T0); await reagendar(banco, reenvio.id, 0, T0); await reservar(banco, reenvio.id, T0); // 2ª tentativa
+    expect(await atualizarPayload(banco, reenvio.id, { x: 2 })).toBe(false);
+    const ok = await enfileirar(banco, novoLancamento(102));
+    await reservar(banco, ok.id, T0); await concluirOk(banco, ok.id, {}, T0);
+    expect(await atualizarPayload(banco, ok.id, { x: 3 })).toBe(false);
+    const atencao = await enfileirar(banco, novoLancamento(102));
+    await reservar(banco, atencao.id, T0); await marcarAtencao(banco, atencao.id, { status: 400, mensagem: 'x' }, T0);
+    expect(await atualizarPayload(banco, atencao.id, { x: 4 })).toBe(false);
+    expect((await obter(banco, pendente.id))?.payload).toEqual(pendente.payload);
+  });
 });

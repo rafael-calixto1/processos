@@ -62,6 +62,13 @@ export const proximaPronta = async (b: Banco, usuarioId: number, agora: number):
   return null;
 };
 
+/**
+ * Troca o corpo de uma operação que está sendo enviada AGORA pela primeira vez (ver `MotorOutbox.tracarSePreciso`).
+ * Só vale enquanto ela está "enviando": depois de qualquer falha o corpo é o que já pode ter chegado ao servidor e não muda mais.
+ */
+export const atualizarPayload = async (b: Banco, id: number, payload: unknown): Promise<boolean> =>
+  (await b.run("UPDATE outbox SET payload = ? WHERE id = ? AND estado = 'enviando' AND tentativas = 1", [JSON.stringify(payload), id])).alteradas === 1;
+
 /** Uma ação explícita (reconexão, "Sincronizar agora", voltar ao app) cancela a espera do backoff: tenta tudo o que está pendente agora. */
 export const liberarEspera = async (b: Banco, usuarioId: number): Promise<number> =>
   (await b.run("UPDATE outbox SET proxima_tentativa = 0 WHERE usuario_id = ? AND estado = 'pendente' AND proxima_tentativa > 0", [usuarioId])).alteradas;
