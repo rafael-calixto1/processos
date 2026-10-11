@@ -1,6 +1,6 @@
 import {
   BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill,
-  ScanSearch, CheckSquare,
+  ScanSearch, CheckSquare, ListChecks,
 } from 'lucide-react';
 
 // Visibilidade por perfil (o backend aplica as mesmas regras)
@@ -18,6 +18,7 @@ export const estoqueItems = [
   { label: 'Estoque por técnico', path: '/estoque/posse', group: 'Técnicos e equipamentos', Icon: HardHat, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minha posse' } },
   { label: 'Equipamentos', path: '/estoque/equipamentos', group: 'Técnicos e equipamentos', Icon: Drill, roles: STAFF },
   { label: 'Cadastros', path: '/estoque/cadastros', group: 'Cadastros', Icon: Contact, roles: STAFF },
+  { label: 'Catálogos da finalização', path: '/estoque/catalogos-os', group: 'Cadastros', Icon: ListChecks, roles: ['admin'] },
 ];
 
 // Menu lateral: um item "Estoque" e a seção de OS

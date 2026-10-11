@@ -110,6 +110,16 @@ export const osAPI = {
   estornar: (id: number, b: Body) => request('POST', `/os/${id}/estornos`, b),
 };
 
+// Administração (só admin) dos catálogos da finalização de OS pelo app e pelo web
+export const catalogosOsAPI = {
+  motivos: () => request('GET', '/os-catalogos/motivos'),
+  criarMotivo: (b: Body) => request('POST', '/os-catalogos/motivos', b),
+  atualizarMotivo: (id: number, b: Body) => request('PUT', `/os-catalogos/motivos/${id}`, b),
+  checklist: () => request('GET', '/os-catalogos/checklist'),
+  criarItemChecklist: (b: Body) => request('POST', '/os-catalogos/checklist', b),
+  atualizarItemChecklist: (id: number, b: Body) => request('PUT', `/os-catalogos/checklist/${id}`, b),
+};
+
 export const cadastrosAPI = {
   tecnicos: () => request('GET', '/tecnicos'),
   usuariosDisponiveis: () => request('GET', '/tecnicos/usuarios-disponiveis'),
