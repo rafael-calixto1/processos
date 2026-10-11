@@ -1,11 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ApiError } from '@/api/erros';
-import { criarBootstrap } from '@/testing/fixtures';
+import { criarBootstrap, criarOS } from '@/testing/fixtures';
 import { dadosDe, estadoDados, opDe, valorFinalizacao, type EstadoDados } from './ajudas';
 
 let mockDados: EstadoDados = estadoDados();
 let mockFin: ReturnType<typeof valorFinalizacao> = valorFinalizacao();
 let mockConfirmar = jest.fn(async (..._a: unknown[]) => true);
+let mockOnline = true;
+const mockApi = { buscarEndereco: jest.fn(), geocodificar: jest.fn() };
+const mockCapturar = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -15,6 +18,9 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 jest.mock('@/estado/DadosProvider', () => ({ useDados: () => mockDados }));
 jest.mock('@/estado/FinalizacaoProvider', () => ({ useFinalizacao: () => mockFin }));
 jest.mock('@/components/confirmar', () => ({ confirmar: (...a: unknown[]) => mockConfirmar(...a) }));
+jest.mock('@/estado/AppProvider', () => ({ useApp: () => ({ api: mockApi }) }));
+jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
+jest.mock('@/estado/localizacao', () => ({ capturarPosicao: (...a: unknown[]) => mockCapturar(...a) }));
 
 import Hub from '@/app/(app)/os/[id]/finalizar/index';
 import Descricao from '@/app/(app)/os/[id]/finalizar/descricao';
@@ -22,6 +28,8 @@ import Motivo from '@/app/(app)/os/[id]/finalizar/motivo';
 import Checklist from '@/app/(app)/os/[id]/finalizar/checklist';
 import Retirados from '@/app/(app)/os/[id]/finalizar/retirados';
 import Participantes from '@/app/(app)/os/[id]/finalizar/participantes';
+import Local from '@/app/(app)/os/[id]/finalizar/local';
+import { ErroLocalizacao } from '@/domain/localizacao';
 
 const LOCAL = { lat: -23.5445, lng: -46.3118, origem: 'gps' as const, precisao_m: 6 };
 const completo = { descricao: 'Rota lançada e CEO fechada no poste', motivo_codigo: 'route_launched', local: LOCAL, checklist: { fiberLaunchedMeters: '350,5' }, materiais_usados: false, materiais_retirados: false, fotos: ['u1'] };
@@ -31,6 +39,9 @@ beforeEach(() => {
   mockDados = estadoDados();
   mockFin = valorFinalizacao(101);
   mockConfirmar = jest.fn(async () => true);
+  mockOnline = true;
+  mockCapturar.mockReset().mockResolvedValue({ lat: -23.5445, lng: -46.3118, precisao_m: 6.2 });
+  mockApi.buscarEndereco.mockReset(); mockApi.geocodificar.mockReset();
 });
 
 describe('Hub da finalização', () => {
@@ -283,3 +294,108 @@ describe('Participantes', () => {
   });
 });
 
+describe('Local do endereço', () => {
+  it('GPS: guarda a posição com a precisão e mostra as coordenadas e a origem', async () => {
+    render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    await waitFor(() => expect(mockFin.rascunho.local).toMatchObject({ lat: -23.5445, lng: -46.3118, origem: 'gps', precisao_m: 6 }));
+    expect(mockFin.concluidas.local).toBe(true);
+  });
+  it('mostra a precisão em metros e avisa quando é ruim', async () => {
+    mockCapturar.mockResolvedValue({ lat: -23.5, lng: -46.3, precisao_m: 120 });
+    const { rerender } = render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    await waitFor(() => expect(mockFin.rascunho.local?.precisao_m).toBe(120));
+    rerender(<Local />);
+    expect(screen.getByTestId('local-origem').props.children).toBe('GPS · precisão de 120 m');
+    expect(screen.getByText(/Precisão baixa \(120 m\)\. Se puder, vá para um lugar aberto/)).toBeTruthy();
+  });
+  it.each([
+    ['permissao_negada', /não tem permissão para usar a localização/],
+    ['permissao_bloqueada', /Configurações do aparelho/],
+    ['gps_desligado', /GPS do aparelho está desligado/],
+    ['tempo_esgotado', /obter a posição a tempo/],
+  ] as const)('falha de GPS (%s) aparece em português e nada é registrado', async (codigo, texto) => {
+    mockCapturar.mockRejectedValue(new ErroLocalizacao(codigo));
+    render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    expect(await screen.findByText(texto)).toBeTruthy();
+    expect(mockFin.rascunho.local).toBeNull();
+  });
+  it('coordenadas do poste: um toque, funciona sem internet', () => {
+    mockOnline = false;
+    render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-poste'));
+    expect(mockFin.rascunho.local).toMatchObject({ lat: -23.5445, lng: -46.3118, origem: 'pole_reference' });
+    expect(screen.getByRole('button', { name: 'Usar coordenadas do PL-0901' })).toBeTruthy();
+  });
+  it('OS sem coordenadas: não oferece o poste, só diz por quê', () => {
+    mockFin = valorFinalizacao(101, { dados: dadosDe({ os: [criarOS(1, { status: 'em_andamento', latitude: null, longitude: null })] }) });
+    render(<Local />);
+    expect(screen.queryByTestId('botao-poste')).toBeNull();
+    expect(screen.getByText('Esta OS não tem coordenadas do poste.')).toBeTruthy();
+  });
+  it('sem internet a busca de endereço some e explica as alternativas', () => {
+    mockOnline = false;
+    render(<Local />);
+    expect(screen.queryByTestId('campo-endereco')).toBeNull();
+    expect(screen.getByText(/a busca de endereço precisa de internet/)).toBeTruthy();
+  });
+  it('endereço com coordenadas: escolhe da lista e registra como origem "endereço"', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([{ label: 'Estrada Takashi Kobata, 572 · Suzano - SP', logradouro: 'Estrada Takashi Kobata', numero: '572', bairro: '', cidade: 'Suzano', uf: 'SP', cep: '', latitude: -23.55, longitude: -46.31 }]);
+    render(<Local />);
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'estrada takashi kobata 572');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    fireEvent.press(await screen.findByTestId('sugestao-0'));
+    await waitFor(() => expect(mockFin.rascunho.local).toMatchObject({ lat: -23.55, lng: -46.31, origem: 'address', endereco: 'Estrada Takashi Kobata, 572 · Suzano - SP', aproximado: false }));
+    expect(mockApi.geocodificar).not.toHaveBeenCalled();
+  });
+  it('endereço sem coordenadas: geocodifica; se a rua não está no mapa avisa que é aproximado', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([{ label: 'Rua Nova, 10 · Suzano', logradouro: 'Rua Nova', numero: '10', bairro: 'Centro', cidade: 'Suzano', uf: 'SP', cep: '08600000', latitude: null, longitude: null }]);
+    mockApi.geocodificar.mockResolvedValue({ latitude: -23.54, longitude: -46.3, aproximado: true });
+    const { rerender } = render(<Local />);
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'rua nova 10 suzano');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    fireEvent.press(await screen.findByTestId('sugestao-0'));
+    await waitFor(() => expect(mockFin.rascunho.local).toMatchObject({ origem: 'address', aproximado: true }));
+    expect(mockApi.geocodificar).toHaveBeenCalledWith({ street: 'Rua Nova', numero: '10', city: 'Suzano', uf: 'SP', cep: '08600000', bairro: 'Centro' });
+    rerender(<Local />);
+    expect(screen.getByText(/Posição aproximada: a rua não está no mapa/)).toBeTruthy();
+  });
+  it('endereço que não dá para localizar no mapa: mensagem clara e nada registrado', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([{ label: 'Rua Sumida', logradouro: 'Rua Sumida', numero: '', bairro: '', cidade: 'Suzano', uf: 'SP', cep: '', latitude: null, longitude: null }]);
+    mockApi.geocodificar.mockResolvedValue({ latitude: null, longitude: null });
+    render(<Local />);
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'rua sumida');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    fireEvent.press(await screen.findByTestId('sugestao-0'));
+    expect(await screen.findByText(/Não foi possível localizar esse endereço no mapa/)).toBeTruthy();
+    expect(mockFin.rascunho.local).toBeNull();
+  });
+  it('busca sem resultados e busca curta demais explicam o que fazer', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([]);
+    render(<Local />);
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'ab');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    expect(await screen.findByText(/Digite ao menos 3 letras ou números/)).toBeTruthy();
+    expect(mockApi.buscarEndereco).not.toHaveBeenCalled();
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'rua que não existe');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    expect(await screen.findByText(/Nenhum endereço encontrado/)).toBeTruthy();
+  });
+  it('erro do serviço de endereços aparece como está (o servidor já devolve em português)', async () => {
+    mockApi.buscarEndereco.mockRejectedValue(new ApiError(502, 'Serviço de endereços indisponível. Preencha manualmente.'));
+    render(<Local />);
+    fireEvent.changeText(screen.getByTestId('campo-endereco'), 'rua x 10');
+    fireEvent.press(screen.getByTestId('botao-buscar'));
+    expect(await screen.findByText('Serviço de endereços indisponível. Preencha manualmente.')).toBeTruthy();
+  });
+  it('posição simulada (pré-visualização no navegador) é identificada na tela', async () => {
+    mockCapturar.mockResolvedValue({ lat: -23.5445, lng: -46.3118, precisao_m: 8, simulado: true });
+    const { rerender } = render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-gps'));
+    await waitFor(() => expect(mockFin.rascunho.local).not.toBeNull());
+    rerender(<Local />);
+    expect(screen.getByText(/SIMULAÇÃO: esta pré-visualização no navegador não tem GPS/)).toBeTruthy();
+  });
+});

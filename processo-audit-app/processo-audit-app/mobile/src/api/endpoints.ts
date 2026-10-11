@@ -1,5 +1,6 @@
 import type { ApiClient } from './client';
 import type { Bootstrap, DetalheOS } from '@/domain/tipos';
+import type { SugestaoEndereco } from '@/domain/localizacao';
 import type { CorpoFinalizar, PayloadLancamento } from '@/domain/operacoes';
 
 export interface Usuario { id: number; email: string; name: string; role: string }
@@ -14,6 +15,7 @@ export interface RespostaFinalizar { status: 'concluida'; fechamento_id: number;
 
 /** Arquivo local a enviar. Quem monta o corpo multipart (`criarFormulario`) sabe lê-lo no celular; nos testes é substituído. */
 export interface ArquivoUpload { uri: string; nome: string; mime: string }
+export interface PontoGeocodificado { latitude: number | null; longitude: number | null; aproximado?: boolean }
 export type CriarFormulario = (campos: Record<string, string>, arquivo: ArquivoUpload) => Promise<FormData>;
 
 /** Tempo para subir uma foto em rede ruim (as chamadas JSON usam o padrão, menor). */
@@ -41,6 +43,10 @@ export const criarApi = (c: ApiClient, deps: { criarFormulario?: CriarFormulario
   removerFoto: (id: number, fotoId: number) => c.request<{ ok: boolean }>('DELETE', `/os/${id}/fotos/${fotoId}`),
   finalizar: (id: number, corpo: CorpoFinalizar, chave: string) =>
     c.request<RespostaFinalizar>('POST', `/os/${id}/finalizar`, { body: corpo, idempotencyKey: chave }),
+  /** Busca de endereço (CEP, "lat, lng" ou rua com número). O servidor consulta ViaCEP e OpenStreetMap, por isso o prazo maior. */
+  buscarEndereco: (texto: string) => c.request<SugestaoEndereco[]>('GET', `/geo/search?q=${encodeURIComponent(texto)}`, { timeoutMs: 30_000 }),
+  geocodificar: (e: { street: string; numero: string; city: string; uf: string; cep: string; bairro: string }) =>
+    c.request<PontoGeocodificado>('GET', `/geo/geocode?${new URLSearchParams(e).toString()}`, { timeoutMs: 30_000 }),
   salvarRascunho: (id: number, rascunho: Record<string, unknown>) =>
     c.request<{ ok: boolean }>('PUT', `/os/${id}/rascunho`, { body: { rascunho } }),
 });

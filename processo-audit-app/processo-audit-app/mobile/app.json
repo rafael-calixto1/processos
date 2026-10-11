@@ -30,7 +30,13 @@
       "expo-sqlite",
       "expo-secure-store",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O aplicativo usa a sua localização para registrar o local onde o serviço foi feito."
+        }
+      ]
     ],
     "scheme": "ostecnicos"
   }
