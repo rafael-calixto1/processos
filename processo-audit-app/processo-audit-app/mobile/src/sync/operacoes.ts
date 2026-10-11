@@ -2,7 +2,7 @@ import type { Banco } from '@/db/banco';
 import { cancelar, cancelarRascunhosPendentes, coalescerRascunho, enfileirar, listarDaOS, obter, reenviar } from '@/db/outbox';
 import { apagarFoto, inserirFoto, lerRascunho, listarFotos, marcarFotoRemovida, obterFoto, salvarRascunho } from '@/db/trabalho';
 import { etapasConcluidas, ETAPAS, podeFinalizar, type LocalIntervencao, type Rascunho } from '@/domain/etapas';
-import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, idadeEmDias, SEM_OS, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
+import { contaComoPendencia, DIAS_MAX_REENVIO_FORCADO, emFila, idadeEmDias, SEM_OS, type CorpoFinalizar, type NovaOperacao, type Operacao } from '@/domain/operacoes';
 import { isPendente } from '@/domain/os';
 import { agrupar, distribuirEntreLotes, validarQuantidadeGrupo } from '@/domain/posse';
 import { parseQuantidade } from '@/domain/quantidade';
@@ -58,7 +58,9 @@ const base = (c: ContextoComandos, os: { id: number; numero: number; cliente: st
 export const iniciarOS = (c: ContextoComandos, osId: number): Promise<Operacao | null> => c.banco.transacao(async (tx) => {
   const { os, doOS } = await exigirOS(tx, c, osId);
   if (!isPendente(os.status)) throw new ErroOperacao('Esta OS não está aberta.');
-  const existente = doOS.find((o) => o.tipo === 'iniciar');
+  // só vale um "iniciar" que ainda produz efeito (na fila, ou confirmado e ainda fora do último retrato). Um já confirmado e refletido
+  // no retrato é história: se o servidor mostra a OS aberta de novo, o técnico precisa poder iniciar outra vez.
+  const existente = doOS.find((o) => o.tipo === 'iniciar' && emFila(o));
   if (existente) return existente;
   if (os.iniciado_em) return null; // já iniciada
   return enfileirar(tx, { ...base(c, os), depende_de: [], tipo: 'iniciar', payload: { corpo: { iniciado_em: new Date(agoraDe(c)).toISOString() } } }, agoraDe(c));

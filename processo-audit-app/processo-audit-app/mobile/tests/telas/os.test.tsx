@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import { ApiError } from '@/api/erros';
 import { criarBootstrap, criarOS } from '@/testing/fixtures';
@@ -113,6 +113,17 @@ describe('Detalhe da OS', () => {
     fireEvent.press(screen.getByTestId('botao-iniciar'));
     await waitFor(() => expect(mockDados.comandos.iniciarOS).toHaveBeenCalledWith(102));
     expect(screen.queryByText(/precisa|Sem conexão/)).toBeNull();
+  });
+
+  it('o erro do "Iniciar execução" aparece JUNTO do botão (na barra fixa), não lá no alto da página onde passaria despercebido', async () => {
+    mockDados.comandos.iniciarOS.mockRejectedValue(new Error('Falha qualquer ao iniciar'));
+    render(<DetalheOS />);
+    fireEvent.press(screen.getByTestId('botao-iniciar'));
+    await screen.findByText('Falha qualquer ao iniciar');
+    let el: any = screen.getByTestId('botao-iniciar');
+    while (el && !within(el).queryByText('Falha qualquer ao iniciar')) el = el.parent;
+    expect(el).toBeTruthy();
+    expect(within(el).queryByText('Nome da OS')).toBeNull(); // o ancestral comum é a barra de ação, não a página inteira
   });
 
   it('mostra a recusa do servidor (OS encerrada, de outro técnico)', async () => {

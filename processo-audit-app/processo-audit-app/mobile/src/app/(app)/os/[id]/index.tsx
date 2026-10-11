@@ -40,6 +40,7 @@ export default function DetalheOS() {
   const pendente = isPendente(os.status);
   const sla = slaInfo(os.prazo);
   const mapa = urlMapa(os);
+  const temBarra = os.status === 'aberta' || os.status === 'em_andamento'; // com barra de ação fixa, o erro aparece nela (junto do botão)
 
   const abrirMapa = async () => {
     try { if (mapa) await Linking.openURL(mapa); } catch { setErro('Não foi possível abrir o mapa neste aparelho.'); }
@@ -54,7 +55,7 @@ export default function DetalheOS() {
     <View style={s.tela}>
       <Cabecalho titulo={`OS #${os.numero}`} subtitulo={os.cliente} aoVoltar={voltar} />
       <ScrollView contentContainerStyle={s.conteudo}>
-        {erro ? <Faixa texto={erro} tom="erro" /> : null}
+        {erro && !temBarra ? <Faixa texto={erro} tom="erro" /> : null}
 
         <View style={s.selos}>
           <Selo texto={STATUS_LABEL[os.status]} tom={os.status === 'em_andamento' ? 'marca' : os.status === 'concluida' ? 'sucesso' : os.status === 'aberta' ? 'info' : 'neutro'} />
@@ -95,11 +96,13 @@ export default function DetalheOS() {
 
       {os.status === 'aberta' ? (
         <BarraAcao>
+          {erro ? <Faixa texto={erro} tom="erro" /> : null}{/* junto do botão: um erro lá em cima da página passaria despercebido */}
           <Botao titulo="Iniciar execução" onPress={iniciar} carregando={iniciando} testID="botao-iniciar" />
         </BarraAcao>
       ) : null}
       {os.status === 'em_andamento' ? (
         <BarraAcao>
+          {erro ? <Faixa texto={erro} tom="erro" /> : null}
           <Botao titulo={os.finalizacao === 'nenhuma' ? 'Continuar execução' : 'Ver finalização'} testID="botao-continuar"
             onPress={() => router.push({ pathname: '/os/[id]/finalizar', params: { id: String(os.id) } })} />
         </BarraAcao>

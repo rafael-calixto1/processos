@@ -1,4 +1,4 @@
-import { listarTodas, marcarAtencao, obter, reservar } from '@/db/outbox';
+import { concluirOk, enfileirar, listarTodas, marcarAtencao, marcarNoRetrato, obter, reservar } from '@/db/outbox';
 import { salvarBootstrap } from '@/db/repositorio';
 import { lerRascunho, listarFotos, obterFoto, salvarDetalhe } from '@/db/trabalho';
 import { rascunhoVazio, type Rascunho } from '@/domain/etapas';
@@ -6,7 +6,7 @@ import { agrupar } from '@/domain/posse';
 import { aplicarPendencias, lancamentosDaOS } from '@/domain/visao';
 import { criarBancoDeTeste } from '@/testing/bancoNode';
 import { criarBootstrap } from '@/testing/fixtures';
-import { uuid } from '@/testing/operacoes';
+import { novaIniciar, uuid } from '@/testing/operacoes';
 import { carregarEstadoLocal } from '../estadoLocal';
 import {
   adicionarFoto, descartarOperacao, ErroOperacao, finalizarOS, iniciarOS, registrarLancamento, reenviarOperacao, removerFotoDaOS, removerLancamento, salvarRascunhoLocal, solicitarDevolucao, substituirLancamento, voltarAEditar,
@@ -50,6 +50,27 @@ describe('iniciarOS (offline)', () => {
     expect(await pedir(iniciarOS(ctx, 103))).toBeInstanceOf(ErroOperacao);
     expect((await pedir(iniciarOS(ctx, 999)))?.message).toMatch(/não está mais na sua lista/);
     expect(await listarTodas(banco, 7)).toHaveLength(0);
+  });
+});
+
+describe('iniciarOS com um "iniciar" antigo guardado no aparelho', () => {
+  it('já confirmado e refletido no retrato, mas o servidor mostra a OS aberta de novo: cria um novo, não devolve o antigo (antes "nada acontecia")', async () => {
+    const { ctx, banco, estado } = await montar();
+    const antigo = (await enfileirar(banco, { ...novaIniciar(102), usuario_id: 7 }, T0 - 5000));
+    await reservar(banco, antigo.id, T0 - 4000); await concluirOk(banco, antigo.id, { status: 'em_andamento' }, T0 - 3000); await marcarNoRetrato(banco, 7, T0);
+    expect((await estado()).visao.os.find((o) => o.id === 102)?.status).toBe('aberta'); // é isso que a tela mostra, com o botão "Iniciar execução"
+    const nova = await iniciarOS(ctx, 102);
+    expect(nova?.id).not.toBe(antigo.id);
+    expect(nova).toMatchObject({ tipo: 'iniciar', estado: 'pendente', os_id: 102 });
+    expect((await estado()).visao.os.find((o) => o.id === 102)).toMatchObject({ status: 'em_andamento', sync: 'pendente' });
+  });
+  it('confirmado mas ainda fora do retrato conta como válido: tocar de novo não duplica', async () => {
+    const { ctx, banco } = await montar();
+    const op = await iniciarOS(ctx, 102);
+    await reservar(banco, op!.id, T0); await concluirOk(banco, op!.id, { status: 'em_andamento' }, T0);
+    const de_novo = await iniciarOS(ctx, 102);
+    expect(de_novo?.id).toBe(op!.id); // devolve o mesmo registro, não cria outro
+    expect((await listarTodas(banco, 7)).filter((o) => o.tipo === 'iniciar')).toHaveLength(1);
   });
 });
 
