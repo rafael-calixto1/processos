@@ -9,6 +9,8 @@ const executor = (db: SQLite.SQLiteDatabase): Executor => ({
 });
 
 /** Abre o banco do aparelho, liga o modo WAL e aplica as migrações. */
+// O nome do ARQUIVO do banco continua "os-tecnicos.db" de propósito: é interno (o técnico nunca o vê) e trocá-lo faria os aparelhos já em uso
+// "esquecerem" o trabalho ainda não enviado. O nome do app (CW Campo) e o identificador mudaram; este arquivo não.
 export const abrirBanco = async (nome = 'os-tecnicos.db'): Promise<Banco> => {
   const db = await SQLite.openDatabaseAsync(nome);
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');

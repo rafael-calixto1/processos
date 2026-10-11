@@ -60,7 +60,7 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.tela}>
         <ScrollView contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
           <View style={s.marca}>
-            <Text style={s.titulo} accessibilityRole="header">OS Técnicos</Text>
+            <Text style={s.titulo} accessibilityRole="header">CW Campo</Text>
             <Text style={s.subtitulo}>Execução de ordens de serviço em campo</Text>
           </View>
 

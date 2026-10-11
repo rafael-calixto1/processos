@@ -94,6 +94,15 @@ describe('build e distribuição (EAS)', () => {
     expect(JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).dependencies['expo-updates']).toBeDefined(); // sem ele um build nunca receberia atualização pelo ar
   });
 
+  it('nome e identificador seguem a marca: "CW Campo", br.net.cwtelecom.* (padrão do app de TV da empresa) e slug do Expo coerente', () => {
+    expect(app.name).toBe('CW Campo');
+    expect(app.slug).toBe('cw-campo');
+    expect(app.android.package).toBe('br.net.cwtelecom.campo');
+    expect(app.ios.bundleIdentifier).toBe(app.android.package);
+    expect(app.scheme).toBe('cwcampo');
+    expect(JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).name).toBe(app.slug);
+  });
+
   it('dados do aparelho não vão para a nuvem do Google (restaurar a fila de envio em outro celular repetiria operações)', () => {
     expect(app.android.allowBackup).toBe(false);
   });

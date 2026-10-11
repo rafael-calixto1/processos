@@ -1,4 +1,4 @@
-# OS Técnicos (app mobile)
+# CW Campo (app mobile)
 
 App dos técnicos de campo para ver e executar as Ordens de Serviço e acompanhar o material em posse. É um cliente do mesmo backend do sistema (pasta acima): a API está documentada em [`../docs/APP_MOBILE_API.md`](../docs/APP_MOBILE_API.md).
 
@@ -110,5 +110,5 @@ Decisões que valem saber:
 
 ## Pendências conhecidas
 
-- Ícone e splash agora são da marca (Fase 4a), mas só aparecem em build instalado, não no Expo Go. `android.package` e `ios.bundleIdentifier` (`br.com.conexaoweb.ostecnicos`) ainda são provisórios (definitivos na Fase 4b/4c; no Google Play o identificador não muda depois de publicado).
+- Ícone e splash agora são da marca (Fase 4a), mas só aparecem em build instalado, não no Expo Go. O identificador escolhido é `br.net.cwtelecom.campo` (segue o padrão do app de TV da empresa, `br.net.cwtelecom.tv.mobile`); falta apenas a confirmação final antes do primeiro build entregue a alguém, porque no Google Play ele não muda depois de publicado.
 - `npm audit` aponta vulnerabilidades (`braces`, `node-forge`, `uuid`, `decode-uri-component`, `sprintf-js`) em dependências transitivas do `@expo/cli`, do Metro e do Jest: são ferramentas de build e de teste, que não vão dentro do app instalado. **Não** rode `npm audit fix --force` (quebra o SDK); acompanhe pelas atualizações do Expo.

@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "OS Técnicos",
-    "slug": "os-tecnicos",
+    "name": "CW Campo",
+    "slug": "cw-campo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.conexaoweb.ostecnicos",
+      "bundleIdentifier": "br.net.cwtelecom.campo",
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
@@ -21,7 +21,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "br.com.conexaoweb.ostecnicos",
+      "package": "br.net.cwtelecom.campo",
       "versionCode": 1,
       "allowBackup": false
     },
@@ -67,7 +67,7 @@
         }
       ]
     ],
-    "scheme": "ostecnicos",
+    "scheme": "cwcampo",
     "runtimeVersion": {
       "policy": "appVersion"
     }
