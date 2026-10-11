@@ -150,6 +150,8 @@ describe('lançamentos da OS (servidor + fila)', () => {
   it('rota_trecho vazia ou inválida no servidor é ignorada (sem quebrar a lista)', () => {
     const ruim: DetalheOS = { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: { pontos: [{ lat: 1, lng: 1 }], metros: 5, caminho: [] } } : s)) };
     expect(lancamentosDaOS(101, ruim, [])[0].rota).toBeUndefined();
+    const impossivel: DetalheOS = { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: { pontos: [{ lat: 1, lng: 1 }, { lat: 99, lng: 1 }], metros: 5, caminho: [] } } : s)) };
+    expect(lancamentosDaOS(101, impossivel, [])[0].rota).toBeUndefined(); // coordenada fora do planeta não vira mapa
     expect(lancamentosDaOS(101, { ...detalhe, servicos: detalhe.servicos.map((s) => (s.id === 5 ? { ...s, rota_trecho: null } : s)) }, [])[0].rota).toBeUndefined();
   });
   it('uma da fila já confirmada e já presente no cache não é contada duas vezes', () => {
