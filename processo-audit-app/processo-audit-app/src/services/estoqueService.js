@@ -424,7 +424,8 @@ export const lancarNaTx = async (conn, { os_id, descricao, trecho, rota, quantid
   const tr = String(trecho || '').trim().slice(0, 255) || null;
   // Rota desenhada no mapa: 2 ou mais pontos com coordenadas válidas, mais o caminho traçado pelas vias
   const pts = Array.isArray(rota?.pontos)
-    ? rota.pontos.slice(0, 25).map((p) => ({ lat: Number(p?.lat), lng: Number(p?.lng) })).filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
+    ? rota.pontos.slice(0, 25).filter((p) => p?.lat != null && p?.lng != null && p.lat !== '' && p.lng !== '') // null/vazio não vira o ponto (0, 0)
+      .map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) })).filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180)
     : [];
   const rotaJson = pts.length >= 2 ? JSON.stringify({
     pontos: pts, metros: Math.round(Number(rota.metros) || 0),
