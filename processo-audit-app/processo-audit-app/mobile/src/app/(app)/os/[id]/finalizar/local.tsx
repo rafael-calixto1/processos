@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import { mensagemDeErro } from '@/api/erros';
 import type { PontoGeocodificado } from '@/api/endpoints';
 import { Botao } from '@/components/Botao';
 import { Cartao } from '@/components/Cartao';
 import { Faixa } from '@/components/Faixa';
 import { LinhaOpcao } from '@/components/LinhaOpcao';
+import { MapaLocal } from '@/components/MapaLocal';
 import { TelaEtapa } from '@/components/TelaEtapa';
 import { ErroLocalizacao, localDoEndereco, localDoGps, localDoPoste, qualidadeDaPrecisao, rotuloOrigem, type SugestaoEndereco } from '@/domain/localizacao';
+import { urlDoPonto } from '@/domain/mapa';
 import { useApp } from '@/estado/AppProvider';
 import { useFinalizacao } from '@/estado/FinalizacaoProvider';
 import { capturarPosicao } from '@/estado/localizacao';
@@ -17,19 +19,45 @@ import { ALVO_MINIMO, cores, espaco, fonte, raio } from '@/theme';
 /** Onde o serviço foi feito: GPS (com a precisão à vista), coordenadas do poste (funciona sem sinal) ou busca de endereço (precisa de internet). */
 export default function Local() {
   const f = useFinalizacao();
-  const { api } = useApp();
+  const { api, servidor } = useApp();
   const online = useOnline();
+  const urlServidor = servidor?.url?.();
+  const origemDoServidor = urlServidor ? new URL(urlServidor).origin : undefined;
   const [obtendo, setObtendo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [simulado, setSimulado] = useState(false);
   const [texto, setTexto] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [sugestoes, setSugestoes] = useState<SugestaoEndereco[] | null>(null);
+  const [rua, setRua] = useState<{ chave: string; estado: 'buscando' | 'nao_achou' | 'erro' } | null>(null);
+  const [tentativa, setTentativa] = useState(0);
 
   const local = f.rascunho.local;
   const poste = f.os ? localDoPoste(f.os) : null;
   const qualidade = local?.origem === 'gps' ? qualidadeDaPrecisao(local.precisao_m) : null;
   const definir = (l: NonNullable<typeof local>) => f.alterar((r) => ({ ...r, local: l }));
+  const chave = local ? `${local.lat.toFixed(6)},${local.lng.toFixed(6)}` : null;
+
+  // Nome da rua do ponto (GPS ou poste): consulta reversa pelo servidor, só com internet. O resultado é guardado no local para ir no fechamento.
+  useEffect(() => {
+    if (!local || !chave || local.origem === 'address' || local.endereco || !online) return;
+    let ativo = true;
+    setRua({ chave, estado: 'buscando' });
+    api.buscarEndereco(`${local.lat.toFixed(6)}, ${local.lng.toFixed(6)}`).then((itens) => {
+      if (!ativo) return;
+      const i = itens[0];
+      if (!i || !(i.logradouro || i.bairro || i.cidade)) { setRua({ chave, estado: 'nao_achou' }); return; }
+      setRua(null);
+      f.alterar((r) => (r.local && r.local.lat === local.lat && r.local.lng === local.lng && !r.local.endereco ? { ...r, local: { ...r.local, endereco: i.label } } : r));
+    }).catch(() => { if (ativo) setRua({ chave, estado: 'erro' }); });
+    return () => { ativo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave, online, tentativa, local?.endereco]);
+
+  const abrirNoMapa = async () => {
+    if (!local) return;
+    try { await Linking.openURL(urlDoPonto(local.lat, local.lng)); } catch { setErro('Não foi possível abrir o app de mapas neste aparelho.'); }
+  };
 
   const gps = async () => {
     setErro(null); setObtendo(true);
@@ -67,10 +95,23 @@ export default function Local() {
           <View style={{ gap: espaco.xs }} accessible accessibilityLabel={`Local registrado: ${local.lat.toFixed(5)}, ${local.lng.toFixed(5)}. ${rotuloOrigem(local)}`}>
             <Text style={s.coordenadas} testID="local-coordenadas">{local.lat.toFixed(5)}, {local.lng.toFixed(5)}</Text>
             <Text style={s.origem} testID="local-origem">{rotuloOrigem(local)}</Text>
-            {local.endereco ? <Text style={s.endereco}>{local.endereco}</Text> : null}
+            {local.endereco ? <Text style={s.endereco} testID="local-endereco">{local.origem === 'address' ? local.endereco : `Perto de: ${local.endereco}`}</Text> : null}
+            {local.origem !== 'address' && !local.endereco ? (
+              !online ? <Text style={s.nota} testID="rua-sem-conexao">O nome da rua aparece quando houver internet. As coordenadas já estão guardadas.</Text>
+                : rua?.estado === 'buscando' ? <Text style={s.nota} testID="rua-buscando">Buscando o nome da rua…</Text>
+                : rua?.estado === 'nao_achou' ? <Text style={s.nota} testID="rua-nao-achou">Não encontramos o nome da rua para este ponto (pode ser estrada ou rua fora do mapa). As coordenadas valem do mesmo jeito.</Text>
+                : rua?.estado === 'erro' ? <Text style={s.nota} testID="rua-erro">Não foi possível buscar o nome da rua agora.</Text> : null
+            ) : null}
+            {rua?.estado === 'erro' && online && !local.endereco ? <Botao titulo="Tentar de novo" variante="fantasma" onPress={() => setTentativa((t) => t + 1)} testID="rua-tentar" /> : null}
           </View>
         ) : <Text style={s.vazio}>Nenhuma posição registrada ainda.</Text>}
       </Cartao>
+      {local ? (
+        <>
+          <MapaLocal lat={local.lat} lng={local.lng} precisaoM={local.origem === 'gps' ? local.precisao_m : null} online={online} origem={origemDoServidor} />
+          <Botao titulo="Abrir no app de mapas" variante="secundario" onPress={() => void abrirNoMapa()} testID="botao-abrir-mapa" />
+        </>
+      ) : null}
       {qualidade === 'ruim' ? <Faixa tom="aviso" icone="warning-outline" texto={`Precisão baixa (${local?.precisao_m} m). Se puder, vá para um lugar aberto e capture de novo.`} /> : null}
       {qualidade === 'media' ? <Faixa tom="info" icone="information-circle-outline" texto={`Precisão razoável (${local?.precisao_m} m). Serve para o registro; capture de novo se quiser mais exatidão.`} /> : null}
       {local?.origem === 'address' && local.aproximado ? <Faixa tom="aviso" icone="warning-outline" texto="Posição aproximada: a rua não está no mapa. Se puder, confirme pelo GPS no local." /> : null}

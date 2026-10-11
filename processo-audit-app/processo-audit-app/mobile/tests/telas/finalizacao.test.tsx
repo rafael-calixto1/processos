@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import { ApiError } from '@/api/erros';
 import { criarBootstrap, criarOS } from '@/testing/fixtures';
 import { dadosDe, estadoDados, opDe, valorFinalizacao, type EstadoDados } from './ajudas';
@@ -9,6 +10,7 @@ let mockConfirmar = jest.fn(async (..._a: unknown[]) => true);
 let mockOnline = true;
 const mockApi = { buscarEndereco: jest.fn(), geocodificar: jest.fn() };
 const mockCapturar = jest.fn();
+let mockMapa: any = null;
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -20,6 +22,7 @@ jest.mock('@/estado/FinalizacaoProvider', () => ({ useFinalizacao: () => mockFin
 jest.mock('@/components/confirmar', () => ({ confirmar: (...a: unknown[]) => mockConfirmar(...a) }));
 jest.mock('@/estado/AppProvider', () => ({ useApp: () => ({ api: mockApi }) }));
 jest.mock('@/estado/rede', () => ({ useOnline: () => mockOnline }));
+jest.mock('@/components/MapaLocal', () => ({ MapaLocal: (p: unknown) => { mockMapa = p; return require('react').createElement('Mapa', { testID: 'mapa-mock' }); } }));
 jest.mock('@/estado/localizacao', () => ({ capturarPosicao: (...a: unknown[]) => mockCapturar(...a) }));
 
 import Hub from '@/app/(app)/os/[id]/finalizar/index';
@@ -41,7 +44,8 @@ beforeEach(() => {
   mockConfirmar = jest.fn(async () => true);
   mockOnline = true;
   mockCapturar.mockReset().mockResolvedValue({ lat: -23.5445, lng: -46.3118, precisao_m: 6.2 });
-  mockApi.buscarEndereco.mockReset(); mockApi.geocodificar.mockReset();
+  mockApi.buscarEndereco.mockReset().mockResolvedValue([]); mockApi.geocodificar.mockReset();
+  mockMapa = null;
 });
 
 describe('Hub da finalização', () => {
@@ -397,5 +401,107 @@ describe('Local do endereço', () => {
     await waitFor(() => expect(mockFin.rascunho.local).not.toBeNull());
     rerender(<Local />);
     expect(screen.getByText(/SIMULAÇÃO: esta pré-visualização no navegador não tem GPS/)).toBeTruthy();
+  });
+});
+
+describe('Local: nome da rua e mapa', () => {
+  const ruaDoPonto = { label: 'Estrada Takashi Kobata, 572 · Jardim Revista · Suzano - SP', logradouro: 'Estrada Takashi Kobata', numero: '572', bairro: 'Jardim Revista', cidade: 'Suzano', uf: 'SP', cep: '', latitude: -23.50416, longitude: -46.28119 };
+  const comGps = (extra: Record<string, unknown> = {}) => valorFinalizacao(101, { rascunho: { local: { lat: -23.50416, lng: -46.28119, origem: 'gps', precisao_m: 38, ...extra } as never } });
+
+  it('com o ponto do GPS e internet, descobre o nome da rua e guarda no local (vai no fechamento)', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([ruaDoPonto]);
+    mockFin = comGps();
+    const { rerender } = render(<Local />);
+    expect(mockApi.buscarEndereco).toHaveBeenCalledWith('-23.504160, -46.281190');
+    await waitFor(() => expect(mockFin.rascunho.local?.endereco).toBe(ruaDoPonto.label));
+    rerender(<Local />);
+    expect(screen.getByTestId('local-endereco').props.children).toBe(`Perto de: ${ruaDoPonto.label}`);
+  });
+  it('enquanto procura mostra "Buscando o nome da rua…"', async () => {
+    let responder!: (v: unknown) => void;
+    mockApi.buscarEndereco.mockReturnValue(new Promise((r) => { responder = r; }));
+    mockFin = comGps();
+    render(<Local />);
+    expect(await screen.findByTestId('rua-buscando')).toBeTruthy();
+    await act(async () => { responder([]); });
+  });
+  it('ponto sem rua no mapa (estrada, área rural): explica que as coordenadas valem do mesmo jeito', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([{ ...ruaDoPonto, logradouro: '', bairro: '', cidade: '', label: '-23.5, -46.3' }]);
+    mockFin = comGps();
+    render(<Local />);
+    expect(await screen.findByTestId('rua-nao-achou')).toBeTruthy();
+    expect(mockFin.rascunho.local?.endereco).toBeUndefined();
+  });
+  it('falha ao buscar: avisa e oferece tentar de novo', async () => {
+    mockApi.buscarEndereco.mockRejectedValueOnce(new ApiError(502, 'Serviço de endereços indisponível. Preencha manualmente.')).mockResolvedValue([ruaDoPonto]);
+    mockFin = comGps();
+    render(<Local />);
+    expect(await screen.findByTestId('rua-erro')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('rua-tentar'));
+    await waitFor(() => expect(mockFin.rascunho.local?.endereco).toBe(ruaDoPonto.label));
+    expect(mockApi.buscarEndereco).toHaveBeenCalledTimes(2);
+  });
+  it('sem internet não consulta e diz que o nome da rua aparece depois', () => {
+    mockOnline = false;
+    mockFin = comGps();
+    render(<Local />);
+    expect(mockApi.buscarEndereco).not.toHaveBeenCalled();
+    expect(screen.getByTestId('rua-sem-conexao')).toBeTruthy();
+  });
+  it('se o local já tem o endereço guardado, não consulta de novo', () => {
+    mockFin = comGps({ endereco: 'Rua Já Guardada, 10 · Suzano - SP' });
+    render(<Local />);
+    expect(mockApi.buscarEndereco).not.toHaveBeenCalled();
+    expect(screen.getByTestId('local-endereco').props.children).toBe('Perto de: Rua Já Guardada, 10 · Suzano - SP');
+  });
+  it('coordenadas do poste também ganham o nome da rua', async () => {
+    mockApi.buscarEndereco.mockResolvedValue([ruaDoPonto]);
+    mockFin = valorFinalizacao(101, { rascunho: { local: { lat: -23.5445, lng: -46.3118, origem: 'pole_reference' } } });
+    render(<Local />);
+    await waitFor(() => expect(mockFin.rascunho.local?.endereco).toBe(ruaDoPonto.label));
+  });
+  it('se o técnico mudar o local antes da resposta chegar, o nome da rua antigo NÃO é gravado no ponto novo', async () => {
+    let responder!: (v: unknown) => void;
+    mockApi.buscarEndereco.mockReturnValueOnce(new Promise((r) => { responder = r; })).mockReturnValue(new Promise(() => undefined)); // a consulta do ponto novo nunca responde
+    mockFin = comGps();
+    render(<Local />);
+    mockFin.rascunho = { ...mockFin.rascunho, local: { lat: -23.6, lng: -46.4, origem: 'gps', precisao_m: 5 } };
+    await act(async () => { responder([ruaDoPonto]); });
+    expect(mockFin.rascunho.local?.endereco).toBeUndefined();
+  });
+  it('endereço escolhido na busca não é consultado de novo (já é o endereço)', () => {
+    mockFin = valorFinalizacao(101, { rascunho: { local: { lat: -23.5, lng: -46.3, origem: 'address', endereco: 'Rua X, 1 · Suzano - SP', aproximado: false } } });
+    render(<Local />);
+    expect(mockApi.buscarEndereco).not.toHaveBeenCalled();
+    expect(screen.getByTestId('local-endereco').props.children).toBe('Rua X, 1 · Suzano - SP');
+  });
+
+  it('mostra o mapa do ponto com a precisão do GPS (círculo) e avisa quando não há internet', () => {
+    mockFin = comGps();
+    const { rerender } = render(<Local />);
+    expect(mockMapa).toMatchObject({ lat: -23.50416, lng: -46.28119, precisaoM: 38, online: true });
+    mockOnline = false;
+    rerender(<Local />);
+    expect(mockMapa.online).toBe(false);
+  });
+  it('no poste o mapa não tem círculo de precisão', () => {
+    mockFin = valorFinalizacao(101, { rascunho: { local: { lat: -23.5445, lng: -46.3118, origem: 'pole_reference' } } });
+    render(<Local />);
+    expect(mockMapa.precisaoM).toBeNull();
+  });
+  it('sem local registrado não há mapa', () => {
+    render(<Local />);
+    expect(screen.queryByTestId('mapa-mock')).toBeNull();
+    expect(screen.queryByTestId('botao-abrir-mapa')).toBeNull();
+  });
+  it('"Abrir no app de mapas" abre o ponto no celular; se falhar, avisa', async () => {
+    const abrir = jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true as never);
+    mockFin = comGps();
+    render(<Local />);
+    fireEvent.press(screen.getByTestId('botao-abrir-mapa'));
+    await waitFor(() => expect(abrir).toHaveBeenCalledWith('https://www.google.com/maps/search/?api=1&query=-23.50416,-46.28119'));
+    abrir.mockRejectedValueOnce(new Error('sem app'));
+    fireEvent.press(screen.getByTestId('botao-abrir-mapa'));
+    expect(await screen.findByText('Não foi possível abrir o app de mapas neste aparelho.')).toBeTruthy();
   });
 });
