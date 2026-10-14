@@ -1,6 +1,6 @@
 import {
   BarChart3, Package, PackagePlus, PackageMinus, Undo2, ClipboardList, HardHat, Contact, Drill,
-  ScanSearch, CheckSquare, ListChecks,
+  ScanSearch, CheckSquare, ListChecks, ShieldCheck,
 } from 'lucide-react';
 
 // Visibilidade por perfil (o backend aplica as mesmas regras)
@@ -26,4 +26,5 @@ export const estoqueMenu = { label: 'Estoque', path: '/estoque', Icon: Package, 
 export const osItems = [
   { label: 'Ordens de Serviço', path: '/os', Icon: ClipboardList, roles: [...STAFF, 'tecnico'], labelByRole: { tecnico: 'Minhas OS' } },
   { label: 'Painel de OS', path: '/os/painel', Icon: BarChart3, roles: STAFF },
+  { label: 'Auditoria das OS', path: '/os/auditoria', Icon: ShieldCheck, roles: STAFF },
 ];

@@ -71,6 +71,7 @@ export const osAPI = {
   tiposServico: () => request('GET', '/os/tipos-servico'),
   criarTipoServico: (nome: string) => request('POST', '/os/tipos-servico', { nome }),
   list: (p?: Record<string, unknown>) => request('GET', `/os${qs(p)}`),
+  auditoria: (p?: Record<string, unknown>) => request('GET', `/os/auditoria${qs(p)}`),
   get: (id: number | string) => request('GET', `/os/${id}`),
   criar: (b: Body) => request('POST', '/os', b),
   atualizar: (id: number, b: Body) => request('PUT', `/os/${id}`, b),

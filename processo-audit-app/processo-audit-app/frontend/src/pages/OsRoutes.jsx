@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import OrdensServico from './OrdensServico';
 import OrdemServicoDetalhe from './OrdemServicoDetalhe';
 import PainelOs from './PainelOs';
+import OsAuditoria from './OsAuditoria';
 import FieldWorkFlow from './fieldwork/FieldWorkFlow';
 
 /* /os/*: técnico usa o fluxo de campo; admin/estoque mantêm criação e gestão das OS. */
@@ -13,6 +14,7 @@ const OsRoutes = () => {
   return (
     <Routes>
       <Route path="painel" element={<PainelOs />} />
+      <Route path="auditoria" element={<OsAuditoria />} />
       <Route index element={<OrdensServico />} />
       <Route path=":id" element={<OrdemServicoDetalhe />} />
     </Routes>
