@@ -20,7 +20,7 @@ import {
 } from '../services/referral/referralService.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { buscarPlano } from '../config/planos.js';
-import { registrarAuditoria, diferencas, listarAuditoria, dadosRequisicao } from '../services/referral/auditoria.js';
+import { registrarAuditoria, diferencas, listarAuditoria, dadosRequisicao, registrarVisualizacao, auditarRecusas } from '../services/referral/auditoria.js';
 
 const soDigitos = (v) => String(v || '').replace(/\D/g, '');
 const cpfValido = (v) => {
@@ -31,6 +31,8 @@ const cpfValido = (v) => {
 };
 
 const router = express.Router();
+// tentativas recusadas (painel e portal público) também ficam na auditoria; as que deram certo cada rota registra
+router.use(auditarRecusas);
 
 // Histórico do lead: falha ao registrar não deve impedir a ação principal
 async function registrarEvento(req, idIndicacao, tipo, descricao) {
@@ -278,6 +280,7 @@ router.get('/leads/:id/historico', verifyToken, async (req, res) => {
       'SELECT id, tipo, descricao, usuario, usuario_nome, ip, user_agent, created_at FROM indicacao_eventos WHERE id_indicacao = ? ORDER BY created_at ASC, id ASC',
       [req.params.id]
     );
+    await registrarVisualizacao(req, lead.id, 'historico');
     // Leads anteriores ao histórico não têm o evento de recebimento gravado
     if (!eventos.some(e => e.tipo === 'recebido')) {
       eventos.unshift({ id: 0, tipo: 'recebido', descricao: 'Indicação recebida', usuario: null, created_at: lead.created_at });
@@ -289,6 +292,12 @@ router.get('/leads/:id/historico', verifyToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// "Ver detalhes" do lead na tela /leads (os dados já vêm na lista): só registra quem abriu
+router.post('/leads/:id/visualizacao', verifyToken, async (req, res) => {
+  await registrarVisualizacao(req, req.params.id, 'detalhes');
+  res.status(204).end();
 });
 
 // Busca os CRMs do Hubsoft

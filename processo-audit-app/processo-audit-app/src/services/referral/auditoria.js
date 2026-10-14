@@ -28,6 +28,9 @@ export const ACOES = {
   webhook_ignorado: 'Webhook sem efeito',
   webhook_rejeitado: 'Webhook recusado (segredo inválido)',
   webhook_erro: 'Webhook com erro',
+  visualizada: 'Lead aberto',
+  recusada_portal: 'Indicação recusada no portal',
+  acao_recusada: 'Ação recusada',
 };
 
 const MAX_JSON = 20000;
@@ -158,3 +161,78 @@ export async function listarAuditoria(f = {}) {
     origens: ORIGENS,
   };
 }
+
+/* ───── Leads: aberturas, tentativas recusadas e indicações recusadas no portal ───── */
+
+/** "123.456.789-01" → "***.***.789-01" (o suficiente para reconhecer, sem guardar o CPF inteiro). Exportado para teste. */
+export const mascararCpf = (cpf) => {
+  const d = String(cpf ?? '').replace(/\D/g, '');
+  return d.length >= 4 ? `***.***.${d.slice(-5, -2).padStart(3, '*')}-${d.slice(-2)}` : null;
+};
+
+/** Alguém abriu o lead (detalhes ou histórico): no máximo um registro por pessoa e lead a cada 10 minutos. */
+export async function registrarVisualizacao(req, idIndicacao, onde) {
+  try {
+    const id = Number(idIndicacao);
+    if (!Number.isInteger(id) || id <= 0 || !req?.userId) return;
+    const [[recente]] = await pool.execute(
+      `SELECT 1 AS ok FROM indicacao_auditoria WHERE acao = 'visualizada' AND usuario_id = ? AND id_indicacao = ?
+         AND created_at > NOW(3) - INTERVAL 10 MINUTE LIMIT 1`, [req.userId, id]);
+    if (recente) return;
+    const [[lead]] = await pool.execute('SELECT nome_indicado FROM indicacoes WHERE id = ?', [id]);
+    if (!lead) return;
+    await registrarAuditoria({
+      req, acao: 'visualizada', origem: 'painel', idIndicacao: id,
+      resumo: `Lead #${id} aberto (${onde === 'historico' ? 'histórico' : 'detalhes'})${lead.nome_indicado ? ` — ${lead.nome_indicado}` : ''}`,
+    });
+  } catch (err) {
+    console.error('[Indique e Ganhe] Erro ao registrar abertura do lead:', err.message);
+  }
+}
+
+// rotas com o id da indicação no caminho
+const ID_NO_CAMINHO = /^\/(?:leads|indicacao|indicacoes|prospecto)\/(\d+)(?:\/|$)/;
+
+/** Qual registro uma resposta de erro vira (null = não registra). Exportado para teste. */
+export const recusaDaRota = (metodo, caminho, status) => {
+  if (status < 400) return null;
+  const m = String(metodo || '').toUpperCase();
+  const p = String(caminho || '');
+  if (m === 'POST' && p === '/public/register-indication') return { acao: 'recusada_portal', origem: 'portal_publico' };
+  // webhooks já registram tudo (inclusive recusas); leituras e o restante do portal público não mexem em lead
+  if (['GET', 'HEAD', 'OPTIONS'].includes(m) || p.startsWith('/webhook/') || p.startsWith('/public/')) return null;
+  const id = p.match(ID_NO_CAMINHO);
+  return { acao: 'acao_recusada', origem: 'painel', idIndicacao: id ? Number(id[1]) : null };
+};
+
+/**
+ * Middleware do router do Indique e Ganhe: registra as tentativas que o sistema recusou (painel e portal),
+ * sem atrasar a resposta. As que deram certo cada rota já registra com o detalhe dela.
+ */
+export const auditarRecusas = (req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (corpo) => { res.locals.auditCorpo = corpo; return json(corpo); };
+  res.on('finish', () => {
+    const alvo = recusaDaRota(req.method, req.path, res.statusCode);
+    if (!alvo) return;
+    const erro = typeof res.locals.auditCorpo?.error === 'string' ? res.locals.auditCorpo.error : `HTTP ${res.statusCode}`;
+    const b = req.body && typeof req.body === 'object' ? req.body : {};
+    setImmediate(() => {
+      if (alvo.acao === 'recusada_portal') {
+        const cpf = mascararCpf(b.cpf);
+        return registrarAuditoria({
+          req, acao: 'recusada_portal', origem: 'portal_publico',
+          resumo: `Indicação recusada no portal: ${erro}${b.nome ? ` — indicado ${String(b.nome).slice(0, 80)}` : ''}${cpf ? `, CPF ${cpf}` : ''}${b.referrer_code ? `, indicador ${String(b.referrer_code).slice(0, 30)}` : ''}`,
+          depois: { motivo: erro, indicador: b.referrer_code ?? null, nome: b.nome ?? null, cpf, plano: b.plano_codigo ?? null, cidade: b.cidade ?? null },
+        });
+      }
+      const idIndicacao = alvo.idIndicacao ?? (/^\d+$/.test(String(b.id_indicacao ?? '')) ? Number(b.id_indicacao) : null);
+      return registrarAuditoria({
+        req, acao: 'acao_recusada', origem: 'painel', idIndicacao,
+        resumo: `Recusado: ${req.method} ${req.baseUrl}${req.path}${idIndicacao ? ` (lead #${idIndicacao})` : ''} — ${erro}`,
+        depois: { status: res.statusCode, erro, enviado: Object.keys(b).length ? b : null },
+      });
+    });
+  });
+  next();
+};
