@@ -6,6 +6,8 @@ import {
 import { referralAPI } from '../api';
 import styles from './Leads.module.css';
 import { Select } from '../components/Select/Select';
+import FiltroPeriodo from '../components/FiltroPeriodo';
+import { noPeriodo } from '../components/periodo';
 
 /* ── Helpers ── */
 const parseEndereco = (str) => {
@@ -199,12 +201,13 @@ const Leads = () => {
   const [historyEvents, setHistoryEvents] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
   const [searchIndicadorId, setSearchIndicadorId] = useState('');
+  const [periodo, setPeriodo] = useState({ de: '', ate: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { fetchLeads(); fetchCRMs(); }, []);
 
   // Volta para a primeira página sempre que a busca ou o filtro mudam
-  useEffect(() => { setCurrentPage(1); }, [activeFilter, searchIndicadorId]);
+  useEffect(() => { setCurrentPage(1); }, [activeFilter, searchIndicadorId, periodo]);
 
   const fetchLeads = async () => {
     try { setLeads(await referralAPI.getLeads()); }
@@ -239,18 +242,21 @@ const Leads = () => {
     finally { setSubmitting(false); }
   };
 
+  // período (data de cadastro) vale para a lista e para os contadores
+  const leadsNoPeriodo = leads.filter(l => noPeriodo(l.created_at, periodo.de, periodo.ate));
+
   /* Stats */
   const stats = {
-    total: leads.length,
-    pendente:    leads.filter(l => l.status === 'pendente').length,
-    encaminhado: leads.filter(l => l.status === 'encaminhado').length,
-    ativo:       leads.filter(l => l.status === 'ativo').length,
-    cancelado:   leads.filter(l => l.status === 'cancelado').length,
-    manual:      leads.filter(l => l.status === 'manual').length,
+    total: leadsNoPeriodo.length,
+    pendente:    leadsNoPeriodo.filter(l => l.status === 'pendente').length,
+    encaminhado: leadsNoPeriodo.filter(l => l.status === 'encaminhado').length,
+    ativo:       leadsNoPeriodo.filter(l => l.status === 'ativo').length,
+    cancelado:   leadsNoPeriodo.filter(l => l.status === 'cancelado').length,
+    manual:      leadsNoPeriodo.filter(l => l.status === 'manual').length,
   };
 
   const searchId = searchIndicadorId.trim();
-  const filteredLeads = leads
+  const filteredLeads = leadsNoPeriodo
     .filter(l => activeFilter ? l.status === activeFilter : true)
     .filter(l => searchId ? String(l.cod_cliente_indicador ?? '') === searchId : true);
 
@@ -352,12 +358,17 @@ const Leads = () => {
         )}
       </div>
 
+      <div className={styles.searchBar}>
+        <FiltroPeriodo value={periodo} onChange={setPeriodo} />
+      </div>
+
       {/* Table */}
       <div className={styles.tableWrap}>
         {filteredLeads.length === 0 ? (
           <div className={styles.emptyRow}>
             <Inbox size={32} strokeWidth={1.5} className={styles.emptyIcon} />
             {activeFilter ? `Nenhum lead com status "${STATUS_LABELS[activeFilter]}"` : 'Nenhum lead encontrado'}
+            {(periodo.de || periodo.ate) && ' no período escolhido'}
           </div>
         ) : (
           <>

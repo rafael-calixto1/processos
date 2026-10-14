@@ -44,7 +44,8 @@
 }
 
 .campo > select,
-.campo > input {
+.campo > input,
+.campo input {
   width: 100%;
   font-size: 0.82rem;
   padding: 7px 10px;

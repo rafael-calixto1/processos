@@ -3,6 +3,8 @@ import { Gift, Plus, X, Search, CheckCircle2, Clock, XCircle, AlertCircle, Refre
 import { referralAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import AuditoriaIndicacoes from './AuditoriaIndicacoes';
+import FiltroPeriodo from '../components/FiltroPeriodo';
+import { noPeriodo } from '../components/periodo';
 import styles from './Referral.module.css';
 import { Select } from '../components/Select/Select';
 
@@ -51,6 +53,7 @@ export default function Referral() {
   const [error, setError]             = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm]   = useState('');
+  const [periodo, setPeriodo]         = useState({ de: '', ate: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal]       = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -197,7 +200,7 @@ export default function Referral() {
   useEffect(() => { load(); }, [load]);
 
   // Volta para a primeira página sempre que a busca ou o filtro mudam
-  useEffect(() => { setCurrentPage(1); }, [filterStatus, searchTerm]);
+  useEffect(() => { setCurrentPage(1); }, [filterStatus, searchTerm, periodo]);
 
   const handleTesteIdChange = (val) => {
     setTesteForm(f => ({ ...f, cod_cliente: val, id_cliente_servico: '', alvo: '' }));
@@ -436,7 +439,10 @@ export default function Referral() {
     }
   };
 
-  const filtered = indicacoes.filter((i) => {
+  // período vale para a lista e para os contadores do topo
+  const noPeriodoSel = indicacoes.filter(i => noPeriodo(i.created_at, periodo.de, periodo.ate));
+
+  const filtered = noPeriodoSel.filter((i) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -455,12 +461,12 @@ export default function Referral() {
   const rangeEnd   = Math.min(page * PAGE_SIZE, filtered.length);
 
   const stats = {
-    total:                indicacoes.length,
-    pendente:             indicacoes.filter(i => i.status === 'pendente').length,
-    aguardando_pagamento: indicacoes.filter(i => i.status === 'aguardando_pagamento').length,
-    ativo:                indicacoes.filter(i => i.status === 'ativo').length,
-    cancelado:            indicacoes.filter(i => i.status === 'cancelado').length,
-    manual:               indicacoes.filter(i => i.status === 'manual').length,
+    total:                noPeriodoSel.length,
+    pendente:             noPeriodoSel.filter(i => i.status === 'pendente').length,
+    aguardando_pagamento: noPeriodoSel.filter(i => i.status === 'aguardando_pagamento').length,
+    ativo:                noPeriodoSel.filter(i => i.status === 'ativo').length,
+    cancelado:            noPeriodoSel.filter(i => i.status === 'cancelado').length,
+    manual:               noPeriodoSel.filter(i => i.status === 'manual').length,
   };
 
   return (
@@ -547,6 +553,7 @@ export default function Referral() {
         <button className={styles.btnRefresh} onClick={load} title="Atualizar">
           <RefreshCw size={15} />
         </button>
+        <FiltroPeriodo value={periodo} onChange={setPeriodo} />
       </div>
 
       {/* Table */}
@@ -562,7 +569,7 @@ export default function Referral() {
           <div className={styles.empty}>
             <Gift size={40} strokeWidth={1.2} />
             <p>Nenhuma indicação encontrada</p>
-            <span>Clique em "Nova Indicação" para registrar</span>
+            <span>{periodo.de || periodo.ate ? 'Nenhuma no período escolhido — ajuste ou limpe as datas' : 'Clique em "Nova Indicação" para registrar'}</span>
           </div>
         ) : (
           <>

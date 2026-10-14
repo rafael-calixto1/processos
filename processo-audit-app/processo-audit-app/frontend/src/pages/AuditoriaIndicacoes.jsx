@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, X, Search, RefreshCw, AlertCircle, ChevronDown, ChevronRight, Globe, User, Webhook, RotateCw } from 'lucide-react';
 import { referralAPI } from '../api';
+import DateInput from '../components/DateInput';
 import styles from './Referral.module.css';
 import a from './AuditoriaIndicacoes.module.css';
 
@@ -175,11 +176,11 @@ export default function AuditoriaIndicacoes({ onClose }) {
             </label>
             <label className={a.campo}>
               <span>De</span>
-              <input type="date" className={styles.select} value={filtro.de} onChange={muda('de')} />
+              <DateInput className={styles.select} value={filtro.de} max={filtro.ate || undefined} onChange={muda('de')} />
             </label>
             <label className={a.campo}>
               <span>Até</span>
-              <input type="date" className={styles.select} value={filtro.ate} onChange={muda('ate')} />
+              <DateInput className={styles.select} value={filtro.ate} min={filtro.de || undefined} onChange={muda('ate')} />
             </label>
             <label className={a.campo}>
               <span>IP</span>

@@ -1,0 +1,93 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-medium);
+}
+
+.datas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.datas > div {
+  width: 150px;
+}
+
+.data {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.84rem;
+  color: var(--text-dark);
+  background: var(--surface-color);
+  outline: none;
+}
+
+.data:focus {
+  border-color: var(--primary-color);
+}
+
+.ate {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.atalho,
+.limpar {
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--surface-color);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.atalho:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.ativo {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.ativo:hover {
+  color: #fff;
+}
+
+.limpar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-style: dashed;
+}
+
+@media (max-width: 700px) {
+  .wrap { width: 100%; }
+  .datas { flex: 1 1 100%; }
+  .datas > div { flex: 1; width: auto; }
+}
