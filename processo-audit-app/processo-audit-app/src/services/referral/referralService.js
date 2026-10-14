@@ -1,5 +1,6 @@
 import { hubsoft } from '../hubsoft/hubsoftClient.js';
 import pool from '../../config/database.js';
+import { registrarAuditoria } from './auditoria.js';
 
 async function getSetting(key, fallback) {
   const [[row]] = await pool.execute(
@@ -134,9 +135,17 @@ export async function criarEventoDesconto({ id_cliente_servico, servico, valor, 
 // Usa GraphQL para detectar clientes cancelados (REST omite clientes sem serviços ativos).
 // Também detecta o pagamento do 1º boleto e atualiza o status da fatura vigente (fatura_atual_*)
 // consultando as faturas do cliente no HubSoft.
-export async function sincronizarLeads(leads) {
+// `req` só é passado quando um usuário pediu a sincronização (fica como autor na auditoria);
+// na sincronização automática da listagem a informação vem só do Hubsoft.
+export async function sincronizarLeads(leads, { req = null } = {}) {
   const comCliente = leads.filter(l => l.cod_cliente_indicado);
   if (comCliente.length === 0) return;
+
+  const auditar = (lead, acao, resumo, antes, depois) => registrarAuditoria({
+    req, acao, origem: 'sincronizacao_hubsoft', idIndicacao: lead.id,
+    resumo: `Hubsoft (cliente ${lead.cod_cliente_indicado}): ${resumo} — indicação #${lead.id} (${lead.nome_indicado ?? 'sem nome'})`,
+    antes, depois, campos: depois ? Object.keys(depois) : null,
+  });
 
   await Promise.allSettled(comCliente.map(async (lead) => {
     try {
@@ -162,6 +171,7 @@ export async function sincronizarLeads(leads) {
           "UPDATE indicacoes SET status = 'cancelado', updated_at = NOW() WHERE id = ?",
           [lead.id]
         );
+        await auditar(lead, 'cancelada', 'cliente sem serviço habilitado, indicação cancelada', { status: lead.status }, { status: 'cancelado' });
         return;
       }
 
@@ -196,6 +206,8 @@ export async function sincronizarLeads(leads) {
                    WHERE id = ?`,
                   [pagas[0].data_pagamento, lead.id]
                 );
+                await auditar(lead, 'pagamento_registrado', `1º pagamento encontrado (${pagas[0].data_pagamento})`,
+                  { pagou_primeiro_boleto: 0 }, { pagou_primeiro_boleto: 1, data_pagamento_primeiro_boleto: pagas[0].data_pagamento });
               }
             }
 
@@ -215,6 +227,12 @@ export async function sincronizarLeads(leads) {
                  WHERE id = ?`,
                 [maisRecente.data_vencimento, maisRecente.data_pagamento ?? null, status, lead.id]
               );
+              // a listagem sincroniza a cada abertura: só audita quando a situação da fatura muda
+              if ((lead.fatura_atual_status ?? null) !== status) {
+                await auditar(lead, 'fatura_atualizada', `fatura atual ${lead.fatura_atual_status ?? 'sem situação'} → ${status} (vence ${maisRecente.data_vencimento})`,
+                  { fatura_atual_status: lead.fatura_atual_status ?? null },
+                  { fatura_atual_status: status, fatura_atual_vencimento: maisRecente.data_vencimento, fatura_atual_baixa: maisRecente.data_pagamento ?? null });
+              }
             } else {
               await pool.execute(
                 `UPDATE indicacoes
@@ -258,6 +276,10 @@ export async function sincronizarLeads(leads) {
                 [pagas[0].data_pagamento, lead.id]
               );
               console.log(`[Indique e Ganhe] Desconto aplicado via sync (webhook não chegou): indicação #${lead.id} | evento Hubsoft #${resultado.idEvento}${resultado.descontoAdiado ? ' | ADIADO para a próxima fatura (a atual já existia)' : ''}`);
+              await auditar(lead, 'desconto_aplicado',
+                `1º pagamento encontrado (${pagas[0].data_pagamento}) sem webhook — desconto de R$ ${resultado.valorDesconto} aplicado, evento Hubsoft #${resultado.idEvento}${resultado.descontoAdiado ? ', adiado para a próxima fatura' : ''}`,
+                { status: lead.status, pagou_primeiro_boleto: lead.pagou_primeiro_boleto },
+                { status: 'ativo', pagou_primeiro_boleto: 1, data_pagamento_primeiro_boleto: pagas[0].data_pagamento, id_evento_faturamento: resultado.idEvento, valor_desconto: resultado.valorDesconto, fatura_referencia: resultado.fatura_referencia });
             }
           } catch (e) {
             console.error(`[Indique e Ganhe] Falha ao aplicar desconto via sync para indicação #${lead.id}:`, e.message);

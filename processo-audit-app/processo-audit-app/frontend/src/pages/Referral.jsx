@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Gift, Plus, X, Search, CheckCircle2, Clock, XCircle, AlertCircle, RefreshCw, Settings, FlaskConical, Pencil, Trash2 } from 'lucide-react';
+import { Gift, Plus, X, Search, CheckCircle2, Clock, XCircle, AlertCircle, RefreshCw, Settings, FlaskConical, Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import { referralAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import AuditoriaIndicacoes from './AuditoriaIndicacoes';
 import styles from './Referral.module.css';
 import { Select } from '../components/Select/Select';
 
@@ -41,6 +43,9 @@ const fmtMoney = (v) =>
   v != null ? `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}` : '—';
 
 export default function Referral() {
+  const { user } = useAuth();
+  const podeAuditar = ['admin', 'manager'].includes(user?.role);
+  const [showAuditoria, setShowAuditoria] = useState(false);
   const [indicacoes, setIndicacoes]   = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
@@ -472,6 +477,12 @@ export default function Referral() {
           </div>
         </div>
         <div className={styles.headerActions}>
+          {podeAuditar && (
+            <button className={styles.btnSecondary} onClick={() => setShowAuditoria(true)}>
+              <ShieldCheck size={15} />
+              <span>Auditoria</span>
+            </button>
+          )}
           <button className={styles.btnSecondary} onClick={openConfig}>
             <Settings size={15} />
             <span>Configurações</span>
@@ -1029,6 +1040,8 @@ export default function Referral() {
           </div>
         </div>
       )}
+
+      {showAuditoria && <AuditoriaIndicacoes onClose={() => setShowAuditoria(false)} />}
 
       {/* Modal Config */}
       {showConfig && (

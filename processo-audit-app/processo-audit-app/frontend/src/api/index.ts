@@ -774,6 +774,15 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+  getAuditoria: async (filtros: Record<string, string | number | undefined>) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(filtros)) if (v !== undefined && v !== '') qs.set(k, String(v));
+    const res = await fetch(`${API_URL}/referral/auditoria?${qs}`, { headers: headers(getToken()) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 404) throw new Error('A auditoria ainda não está ativa no servidor (falta reiniciar o backend).');
+    if (!res.ok) throw new Error(data.error || 'Erro ao carregar a auditoria');
+    return data;
+  },
   getLeadHistory: async (id: string | number) => {
     const res = await fetch(`${API_URL}/referral/leads/${id}/historico`, { headers: headers(getToken()) });
     if (!res.ok) throw new Error(await res.text());
