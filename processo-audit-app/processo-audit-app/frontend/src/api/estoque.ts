@@ -41,6 +41,7 @@ const qs = (p: Record<string, unknown> = {}) => {
 };
 
 export const estoqueAPI = {
+  auditoria: (p?: Record<string, unknown>) => request('GET', `/estoque/auditoria${qs(p)}`),
   itens: (p?: Record<string, unknown>) => request('GET', `/estoque/itens${qs(p)}`),
   item: (id: number | string) => request('GET', `/estoque/itens/${id}`),
   criarItem: (b: Body) => request('POST', '/estoque/itens', b),

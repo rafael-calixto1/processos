@@ -11,6 +11,7 @@ export const estoqueItems = [
   { label: 'Painel de estoque', path: '/estoque/painel', group: 'Consulta e painéis', Icon: BarChart3, roles: STAFF },
   { label: 'Patrimônio', path: '/estoque/patrimonio', group: 'Consulta e painéis', Icon: ScanSearch, roles: STAFF },
   { label: 'Itens', path: '/estoque/itens', group: 'Consulta e painéis', Icon: Package, roles: STAFF },
+  { label: 'Auditoria do estoque', path: '/estoque/auditoria', group: 'Consulta e painéis', Icon: ShieldCheck, roles: STAFF },
   { label: 'Entrada / Compra', path: '/estoque/entrada', group: 'Movimentações', Icon: PackagePlus, roles: STAFF },
   { label: 'Retirada', path: '/estoque/retirada', group: 'Movimentações', Icon: PackageMinus, roles: STAFF },
   { label: 'Devolução', path: '/estoque/devolucao', group: 'Movimentações', Icon: Undo2, roles: [...STAFF, 'tecnico'] },
