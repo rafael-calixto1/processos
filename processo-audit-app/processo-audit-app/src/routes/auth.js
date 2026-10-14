@@ -177,10 +177,11 @@ router.post('/logout', async (req, res) => {
     if (bearer) {
       let t = null;
       try { t = jwt.verify(bearer, process.env.JWT_SECRET, { ignoreExpiration: true }); } catch { /* token falso: ignora */ }
-      if (t?.sid) {
+      if (t?.id) {
         req.userId = t.id; req.userEmail = t.email;
         const vencido = t.exp && t.exp * 1000 < Date.now();
-        await acessos.encerrarSessao(t.sid, vencido ? 'expirada' : 'logout', { req, quando: vencido ? new Date(t.exp * 1000) : null });
+        // token sem sid = login de antes da auditoria (a sessão foi registrada pelo hash do token)
+        await acessos.encerrarSessao(t.sid ?? acessos.sidDoTokenAntigo(bearer), vencido ? 'expirada' : 'logout', { req, quando: vencido ? new Date(t.exp * 1000) : null });
       }
     }
     res.json({ message: 'Sessão encerrada' });

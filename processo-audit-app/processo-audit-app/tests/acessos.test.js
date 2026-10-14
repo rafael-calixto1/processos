@@ -183,6 +183,36 @@ test('logout com token do web já vencido conta como "expirou"', async () => {
   assert.equal((await sessao(sid)).motivo_encerramento, 'expirada');
 });
 
+test('login de antes da auditoria (token do web sem sid): vira sessão na 1ª atividade e o logout encerra', async () => {
+  const u = await mkUsuario();
+  const iat = Math.floor(Date.now() / 1000) - 3600; // logou há 1 hora, antes de a auditoria existir
+  const antigo = jwt.sign({ id: u.id, email: u.email, role: 'viewer', iat }, process.env.JWT_SECRET, { expiresIn: '24h' });
+  const sid = acessos.sidDoTokenAntigo(antigo);
+  assert.equal(sid, acessos.sidDoTokenAntigo(antigo)); // o mesmo token dá sempre a mesma sessão
+  assert.match(sid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+  assert.equal((await api('GET', '/auth/me', { token: antigo })).status, 200);
+  const s = await sessao(sid);
+  assert.equal(s.origem, 'web');
+  assert.equal(s.usuario_id, u.id);
+  assert.equal(s.ip, null); // o IP do login não é conhecido
+  assert.equal(s.ultimo_ip, '127.0.0.1');
+  assert.equal(Math.round(s.iniciada_em.getTime() / 1000), iat);
+  assert.equal(Math.round(s.expira_em.getTime() / 1000), iat + 24 * 3600);
+  assert.equal(s.encerrada_em, null);
+  const [ev] = await eventos(`sid = '${sid}' AND evento = 'sessao_reconhecida'`);
+  assert.equal(ev.usuario_id, u.id);
+
+  acessos._limparCache();
+  assert.equal((await api('GET', '/auth/me', { token: antigo })).status, 200); // não duplica
+  assert.equal((await eventos(`sid = '${sid}'`)).length, 1);
+
+  assert.equal((await api('POST', '/auth/logout', { token: antigo })).status, 200);
+  assert.equal((await sessao(sid)).motivo_encerramento, 'logout');
+  acessos._limparCache();
+  assert.equal((await api('GET', '/auth/me', { token: antigo })).status, 403);
+});
+
 test('filtros: só aceitam valores conhecidos', () => {
   const f = acessos.filtroSessoes({ origem: 'web,hack', situacao: 'ativa', motivo: 'logout,xx', de: '2026-10-01', ate: 'lixo', usuario_id: '3' });
   assert.match(f.sql, /usuario_id = \?/);

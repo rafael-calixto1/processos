@@ -25,6 +25,7 @@ export const EVENTOS = {
   logout: 'Logout',
   sessao_encerrada: 'Sessão encerrada',
   renovacao_negada: 'Renovação do app negada',
+  sessao_reconhecida: 'Sessão aberta antes da auditoria',
 };
 
 // motivos de login recusado/negado (coluna `motivo` dos eventos)
@@ -39,6 +40,15 @@ export const MOTIVOS_RECUSA = {
 };
 
 export const novoSid = () => crypto.randomUUID();
+
+/**
+ * Token do web emitido antes da auditoria (sem `sid`): o próprio token vira a identidade da sessão
+ * (hash em formato de UUID). O mesmo token sempre dá o mesmo sid, então logout e "encerrar" do admin valem para ele.
+ */
+export const sidDoTokenAntigo = (token) => {
+  const h = crypto.createHash('sha256').update(String(token)).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
 
 let avisouSemTabela = false;
 const falhou = (onde, err) => {
@@ -104,7 +114,7 @@ export async function abrirSessao({ req, sid, origem, usuario, dispositivo = nul
  * A cada requisição autenticada: anota a última atividade (no máximo 1x por minuto por sessão) e diz se a sessão
  * já foi encerrada. Devolve { encerrada, motivo } ou null quando não dá para saber (aí a requisição segue).
  */
-export async function tocarSessao(sid, req) {
+export async function tocarSessao(sid, req, token = null) {
   const c = cache.get(sid);
   if (c && Date.now() - c.em < TOQUE_MS) return c;
   try {
@@ -114,13 +124,48 @@ export async function tocarSessao(sid, req) {
       [ip, sid]);
     if (r.affectedRows) { lembrar(sid, { encerrada: false }); return cache.get(sid); }
     const [[s]] = await pool.execute('SELECT motivo_encerramento FROM acessos_sessoes WHERE sid = ?', [sid]);
-    // sessão aberta antes da auditoria existir: segue valendo até o token vencer
+    // sessão aberta antes da auditoria existir: passa a ser registrada agora e segue valendo até o token vencer
+    if (!s && token) await reconhecerSessao({ req, sid, token });
     lembrar(sid, s ? { encerrada: true, motivo: s.motivo_encerramento } : { encerrada: false });
     return cache.get(sid);
   } catch (err) {
     falhou('anotar atividade', err);
     lembrar(sid, { encerrada: false }); // não insiste a cada requisição enquanto o banco/tabela não responde
     return null;
+  }
+}
+
+/**
+ * Sessão que já estava aberta quando a auditoria foi instalada (login antes das tabelas existirem): registra na
+ * primeira atividade, com o início pelo horário do token (`iat` = hora do login) e a validade dele. O IP do login
+ * não é conhecido (fica vazio); o de agora vai como último IP. Sessão do app (família de refresh token) usa o
+ * início e a validade da família.
+ */
+export async function reconhecerSessao({ req, sid, token }) {
+  try {
+    const [[u]] = await pool.execute('SELECT id, email, name, role FROM users WHERE id = ?', [token.id ?? null]);
+    if (!u) return;
+    const [[fam]] = await pool.execute(
+      'SELECT MIN(criado_em) AS inicio, MAX(expira_em) AS fim, MAX(dispositivo) AS dispositivo FROM refresh_tokens WHERE familia = ?', [sid]);
+    const app = Boolean(fam?.inicio);
+    const inicio = app ? fam.inicio : token.iat ? new Date(token.iat * 1000) : null;
+    const fim = app ? fam.fim : token.exp ? new Date(token.exp * 1000) : null;
+    const d = dadosRequisicao(req);
+    const [r] = await pool.execute(
+      `INSERT IGNORE INTO acessos_sessoes
+         (sid, origem, usuario_id, usuario_email, usuario_nome, usuario_papel, dispositivo, ip, ip_cadeia, user_agent,
+          iniciada_em, ultima_atividade, ultimo_ip, expira_em)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, COALESCE(?, CURRENT_TIMESTAMP(3)), CURRENT_TIMESTAMP(3), ?, ?)`,
+      [sid, app ? 'app' : 'web', u.id, corta(u.email, 255), corta(u.name, 255), corta(u.role, 30), corta(app ? fam.dispositivo : null, 160),
+       d.user_agent, inicio, d.ip, fim]);
+    if (r.affectedRows) {
+      await registrarEvento({
+        req, evento: 'sessao_reconhecida', sid, origem: app ? 'app' : 'web', usuario: u, quando: null,
+        detalhe: `Login feito${inicio ? ` em ${inicio.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : ''}, antes de a auditoria de acessos existir: o IP do login não foi registrado`,
+      });
+    }
+  } catch (err) {
+    falhou('registrar sessão já aberta', err);
   }
 }
 

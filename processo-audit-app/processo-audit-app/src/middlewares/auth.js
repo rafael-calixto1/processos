@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { tocarSessao, MOTIVOS } from '../services/acessos.js';
+import { tocarSessao, sidDoTokenAntigo, MOTIVOS } from '../services/acessos.js';
 
 export const verifyToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -18,12 +18,12 @@ export const verifyToken = (req, res, next) => {
   req.userId = decoded.id;
   req.userRole = decoded.role;
   req.userEmail = decoded.email;
-  req.sessaoId = decoded.sid ?? null;
-  if (!req.sessaoId) return next(); // token emitido antes da auditoria de acessos: vale até vencer
+  // token do web emitido antes da auditoria de acessos (sem sid): o hash do token identifica a sessão; vale até vencer
+  req.sessaoId = decoded.sid ?? sidDoTokenAntigo(token);
 
   // Anota a atividade da sessão e recusa token de sessão já encerrada (logout, senha trocada, admin...).
   // Se o banco não responder, a requisição segue: a auditoria nunca derruba o sistema.
-  tocarSessao(req.sessaoId, req).then((s) => {
+  tocarSessao(req.sessaoId, req, decoded).then((s) => {
     if (s?.encerrada) {
       // "Token ..." no início: o web já trata como sessão vencida; `token_invalido` faz o app tentar renovar (e cair no login)
       return res.status(403).json({ error: `Token inválido: sessão encerrada (${MOTIVOS[s.motivo] ?? 'encerrada'})`, code: 'token_invalido', motivo: s.motivo ?? null });
