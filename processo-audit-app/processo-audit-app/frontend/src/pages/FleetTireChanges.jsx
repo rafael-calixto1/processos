@@ -4,6 +4,7 @@ import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 const LIMIT = 15;
 const emptyForm = { car_id: '', tire_change_date: '', tire_change_kilometers: '', observation: '' };
 
@@ -27,7 +28,7 @@ const FleetTireChanges = () => {
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
   useEffect(() => {
-    fetch('/api/fleet/cars?limit=500')
+    fleetFetch('/api/fleet/cars?limit=500')
       .then(r => r.json())
       .then(j => setCars(j.cars || []))
       .catch(() => {});
@@ -38,7 +39,7 @@ const FleetTireChanges = () => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT, sort_field: sortField, sort_order: sortOrder });
-      const res  = await fetch(`/api/fleet/tire-changes?${params}`);
+      const res  = await fleetFetch(`/api/fleet/tire-changes?${params}`);
       const json = await res.json();
       setRecords(json.tireChangeHistory || []);
       setTotal(json.total || 0);
@@ -90,13 +91,13 @@ const FleetTireChanges = () => {
         tire_change_kilometers: form.tire_change_kilometers !== '' ? Number(form.tire_change_kilometers) : undefined,
       };
       if (editId) {
-        await fetch(`/api/fleet/tire-changes/${editId}`, {
+        await fleetFetch(`/api/fleet/tire-changes/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/fleet/tire-changes', {
+        await fleetFetch('/api/fleet/tire-changes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -114,7 +115,7 @@ const FleetTireChanges = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/tire-changes/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/tire-changes/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchRecords();
     } catch (e) {

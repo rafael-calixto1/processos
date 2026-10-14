@@ -19,6 +19,7 @@ import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const defaultStart = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
@@ -48,11 +49,11 @@ const FleetDashboard = () => {
     try {
       const qs = `startDate=${startDate}&endDate=${endDate}`;
       const [v, ft, fct, mt, fd] = await Promise.all([
-        fetch(`/api/fleet/fueling/statistics?${qs}`).then(r => r.json()),
-        fetch(`/api/fleet/fueling/statistics/fuel-by-type?${qs}`).then(r => r.json()),
-        fetch(`/api/fleet/fueling/statistics/fuel-cost-by-type?${qs}`).then(r => r.json()),
-        fetch(`/api/fleet/fueling/statistics/maintenance-by-type?${qs}`).then(r => r.json()),
-        fetch(`/api/fleet/fueling/statistics/fueling-by-date?${qs}&groupBy=${groupBy}`).then(r => r.json()),
+        fleetFetch(`/api/fleet/fueling/statistics?${qs}`).then(r => r.json()),
+        fleetFetch(`/api/fleet/fueling/statistics/fuel-by-type?${qs}`).then(r => r.json()),
+        fleetFetch(`/api/fleet/fueling/statistics/fuel-cost-by-type?${qs}`).then(r => r.json()),
+        fleetFetch(`/api/fleet/fueling/statistics/maintenance-by-type?${qs}`).then(r => r.json()),
+        fleetFetch(`/api/fleet/fueling/statistics/fueling-by-date?${qs}&groupBy=${groupBy}`).then(r => r.json()),
       ]);
       setCostByVehicle(Array.isArray(v)   ? v   : []);
       setFuelByType(Array.isArray(ft)  ? ft  : []);

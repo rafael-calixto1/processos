@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, Users } from 'lucide-react';
 import styles from './Fleet.module.css';
+import { fleetFetch } from './fleetFetch';
 
 const LIMIT = 15;
 const emptyForm = { name: '', license_number: '' };
@@ -26,7 +27,7 @@ const FleetDrivers = () => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
-      const res  = await fetch(`/api/fleet/drivers?${params}`);
+      const res  = await fleetFetch(`/api/fleet/drivers?${params}`);
       const json = await res.json();
       setDrivers(json.drivers || []);
       setTotal(json.total || 0);
@@ -49,13 +50,13 @@ const FleetDrivers = () => {
     setError('');
     try {
       if (editId) {
-        await fetch(`/api/fleet/drivers/${editId}`, {
+        await fleetFetch(`/api/fleet/drivers/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form),
         });
       } else {
-        await fetch('/api/fleet/drivers', {
+        await fleetFetch('/api/fleet/drivers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form),
@@ -73,7 +74,7 @@ const FleetDrivers = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/drivers/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/drivers/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchDrivers();
     } catch (e) {

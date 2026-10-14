@@ -1,8 +1,30 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { parseFuelReceipt } from '../services/receiptService.js';
+import { verifyToken, checkRole } from '../middlewares/auth.js';
+import {
+  auditarCriacao, auditarEdicao, prepararExclusao, auditarCupom, buscar, listarAuditoria,
+} from '../services/fleet/auditoria.js';
 
 const router = express.Router();
+
+// Toda a Frota exige login: é o que permite a auditoria saber quem fez cada ação
+router.use(verifyToken);
+
+/* ──────────────────────────────────────────
+   AUDITORIA (só admin e gerente)
+   ────────────────────────────────────────── */
+
+router.get('/auditoria', checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    res.json(await listarAuditoria(req.query));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria ainda não instalada: rode scripts/migrate_frota_auditoria.js' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /* ──────────────────────────────────────────
    RECEIPT PARSING
@@ -27,6 +49,7 @@ router.post('/fueling/parse-receipt', async (req, res) => {
     }
 
     const data = parseFuelReceipt(html);
+    await auditarCupom(req, { url, dados: data });
     res.json(data);
   } catch (err) {
     console.error('Erro no parse-receipt:', err);
@@ -64,6 +87,7 @@ router.post('/drivers', async (req, res) => {
       'INSERT INTO fleet_drivers (name, license_number) VALUES (?, ?)',
       [name, license_number || null]
     );
+    await auditarCriacao(req, 'motorista', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Motorista criado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -73,10 +97,12 @@ router.post('/drivers', async (req, res) => {
 router.put('/drivers/:id', async (req, res) => {
   try {
     const { name, license_number } = req.body;
+    const antes = await buscar('motorista', req.params.id);
     await pool.execute(
       'UPDATE fleet_drivers SET name = ?, license_number = ? WHERE id = ?',
       [name, license_number || null, req.params.id]
     );
+    await auditarEdicao(req, 'motorista', antes, req.params.id);
     res.json({ message: 'Motorista atualizado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,7 +111,9 @@ router.put('/drivers/:id', async (req, res) => {
 
 router.delete('/drivers/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'motorista', req.params.id);
     await pool.execute('DELETE FROM fleet_drivers WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Motorista excluído' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -231,6 +259,7 @@ router.post('/cars', async (req, res) => {
        current_kilometers ?? null, next_tire_change ?? null, next_oil_change ?? null,
        driver_id || null, status || 'active']
     );
+    await auditarCriacao(req, 'veiculo', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Veículo criado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -240,6 +269,7 @@ router.post('/cars', async (req, res) => {
 router.put('/cars/:id', async (req, res) => {
   try {
     const { make, model, license_plate, current_kilometers, next_tire_change, next_oil_change, driver_id, status } = req.body;
+    const antes = await buscar('veiculo', req.params.id);
     await pool.execute(
       `UPDATE fleet_cars
        SET make = ?, model = ?, license_plate = ?, current_kilometers = ?,
@@ -249,6 +279,7 @@ router.put('/cars/:id', async (req, res) => {
        current_kilometers ?? null, next_tire_change ?? null, next_oil_change ?? null,
        driver_id || null, status || 'active', req.params.id]
     );
+    await auditarEdicao(req, 'veiculo', antes, req.params.id);
     res.json({ message: 'Veículo atualizado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -257,7 +288,9 @@ router.put('/cars/:id', async (req, res) => {
 
 router.delete('/cars/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'veiculo', req.params.id);
     await pool.execute('DELETE FROM fleet_cars WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Veículo excluído' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -399,6 +432,7 @@ router.post('/fueling', async (req, res) => {
        liters_quantity ?? null, price_per_liter ?? null, total_cost ?? null,
        fuel_type || 'Gasolina', observation || null]
     );
+    await auditarCriacao(req, 'abastecimento', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Abastecimento registrado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -408,6 +442,7 @@ router.post('/fueling', async (req, res) => {
 router.put('/fueling/:id', async (req, res) => {
   try {
     const { car_id, fuel_date, fueling_kilometers, fuel_amount, liters_quantity, price_per_liter, total_cost, fuel_type, observation } = req.body;
+    const antes = await buscar('abastecimento', req.params.id);
     await pool.execute(
       `UPDATE fleet_fueling
        SET car_id = ?, fuel_date = ?, fueling_kilometers = ?, fuel_amount = ?,
@@ -417,6 +452,7 @@ router.put('/fueling/:id', async (req, res) => {
        liters_quantity ?? null, price_per_liter ?? null, total_cost ?? null,
        fuel_type || 'Gasolina', observation || null, req.params.id]
     );
+    await auditarEdicao(req, 'abastecimento', antes, req.params.id);
     res.json({ message: 'Abastecimento atualizado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -425,7 +461,9 @@ router.put('/fueling/:id', async (req, res) => {
 
 router.delete('/fueling/entry/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'abastecimento', req.params.id);
     await pool.execute('DELETE FROM fleet_fueling WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Abastecimento excluído' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -463,6 +501,7 @@ router.post('/oil-changes', async (req, res) => {
       [car_id, oil_change_date, oil_change_kilometers ?? null,
        liters_quantity ?? null, price_per_liter ?? null, total_cost ?? null, observation || null]
     );
+    await auditarCriacao(req, 'troca_oleo', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Troca de óleo registrada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -472,6 +511,7 @@ router.post('/oil-changes', async (req, res) => {
 router.put('/oil-changes/:id', async (req, res) => {
   try {
     const { car_id, oil_change_date, oil_change_kilometers, liters_quantity, price_per_liter, total_cost, observation } = req.body;
+    const antes = await buscar('troca_oleo', req.params.id);
     await pool.execute(
       `UPDATE fleet_oil_changes
        SET car_id = ?, oil_change_date = ?, oil_change_kilometers = ?,
@@ -481,6 +521,7 @@ router.put('/oil-changes/:id', async (req, res) => {
        liters_quantity ?? null, price_per_liter ?? null, total_cost ?? null,
        observation || null, req.params.id]
     );
+    await auditarEdicao(req, 'troca_oleo', antes, req.params.id);
     res.json({ message: 'Troca de óleo atualizada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -489,7 +530,9 @@ router.put('/oil-changes/:id', async (req, res) => {
 
 router.delete('/oil-changes/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'troca_oleo', req.params.id);
     await pool.execute('DELETE FROM fleet_oil_changes WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Troca de óleo excluída' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -528,6 +571,7 @@ router.post('/tire-changes', async (req, res) => {
       'INSERT INTO fleet_tire_changes (car_id, tire_change_date, tire_change_kilometers, observation) VALUES (?, ?, ?, ?)',
       [car_id, tire_change_date, tire_change_kilometers ?? null, observation || null]
     );
+    await auditarCriacao(req, 'troca_pneu', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Troca de pneu registrada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -537,10 +581,12 @@ router.post('/tire-changes', async (req, res) => {
 router.put('/tire-changes/:id', async (req, res) => {
   try {
     const { car_id, tire_change_date, tire_change_kilometers, observation } = req.body;
+    const antes = await buscar('troca_pneu', req.params.id);
     await pool.execute(
       'UPDATE fleet_tire_changes SET car_id = ?, tire_change_date = ?, tire_change_kilometers = ?, observation = ? WHERE id = ?',
       [car_id, tire_change_date, tire_change_kilometers ?? null, observation || null, req.params.id]
     );
+    await auditarEdicao(req, 'troca_pneu', antes, req.params.id);
     res.json({ message: 'Troca de pneu atualizada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -549,7 +595,9 @@ router.put('/tire-changes/:id', async (req, res) => {
 
 router.delete('/tire-changes/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'troca_pneu', req.params.id);
     await pool.execute('DELETE FROM fleet_tire_changes WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Troca de pneu excluída' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -579,6 +627,7 @@ router.post('/maintenance/types', async (req, res) => {
       'INSERT INTO fleet_maintenance_types (name, recurrency, recurrency_date, recurrence_mode, status) VALUES (?, ?, ?, ?, ?)',
       [name, recurrency ?? null, recurrency_date ?? null, recurrence_mode || null, status || 'active']
     );
+    await auditarCriacao(req, 'tipo_manutencao', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Tipo criado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -588,10 +637,12 @@ router.post('/maintenance/types', async (req, res) => {
 router.put('/maintenance/types/:id', async (req, res) => {
   try {
     const { name, recurrency, recurrency_date, recurrence_mode, status } = req.body;
+    const antes = await buscar('tipo_manutencao', req.params.id);
     await pool.execute(
       'UPDATE fleet_maintenance_types SET name = ?, recurrency = ?, recurrency_date = ?, recurrence_mode = ?, status = ? WHERE id = ?',
       [name, recurrency ?? null, recurrency_date ?? null, recurrence_mode || null, status || 'active', req.params.id]
     );
+    await auditarEdicao(req, 'tipo_manutencao', antes, req.params.id);
     res.json({ message: 'Tipo atualizado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -600,7 +651,9 @@ router.put('/maintenance/types/:id', async (req, res) => {
 
 router.delete('/maintenance/types/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'tipo_manutencao', req.params.id);
     await pool.execute('DELETE FROM fleet_maintenance_types WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Tipo excluído' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -659,6 +712,7 @@ router.post('/maintenance/history', async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, total_cost ?? null, observation || null]
     );
+    await auditarCriacao(req, 'manutencao', result.insertId);
     res.status(201).json({ id: result.insertId, message: 'Manutenção registrada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -668,12 +722,14 @@ router.post('/maintenance/history', async (req, res) => {
 router.put('/maintenance/history/:id', async (req, res) => {
   try {
     const { car_id, maintenance_type_id, maintenance_date, maintenance_kilometers, total_cost, observation } = req.body;
+    const antes = await buscar('manutencao', req.params.id);
     await pool.execute(
       `UPDATE fleet_maintenance_history
        SET car_id = ?, maintenance_type_id = ?, maintenance_date = ?, maintenance_kilometers = ?, total_cost = ?, observation = ?
        WHERE id = ?`,
       [car_id, maintenance_type_id || null, maintenance_date, maintenance_kilometers ?? null, total_cost ?? null, observation || null, req.params.id]
     );
+    await auditarEdicao(req, 'manutencao', antes, req.params.id);
     res.json({ message: 'Manutenção atualizada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -682,7 +738,9 @@ router.put('/maintenance/history/:id', async (req, res) => {
 
 router.delete('/maintenance/history/:id', async (req, res) => {
   try {
+    const auditoria = await prepararExclusao(req, 'manutencao', req.params.id);
     await pool.execute('DELETE FROM fleet_maintenance_history WHERE id = ?', [req.params.id]);
+    await auditoria.gravar();
     res.json({ message: 'Manutenção excluída' });
   } catch (err) {
     res.status(500).json({ error: err.message });

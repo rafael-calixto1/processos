@@ -14,6 +14,7 @@ import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const defaultStart = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
@@ -53,7 +54,7 @@ const FleetVehicleStatus = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/fleet/vehicle-status?startDate=${startDate}&endDate=${endDate}`);
+      const res = await fleetFetch(`/api/fleet/vehicle-status?startDate=${startDate}&endDate=${endDate}`);
       const json = await res.json();
       setData(Array.isArray(json) ? json : []);
     } catch (e) {

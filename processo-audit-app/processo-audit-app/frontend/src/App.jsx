@@ -280,16 +280,19 @@ function AppContent() {
         }
       />
 
-      <Route
-        path="/frota"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Fleet />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+      {['/frota', '/frota/:aba'].map(path => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Fleet />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      ))}
 
       <Route
         path="/tickets"

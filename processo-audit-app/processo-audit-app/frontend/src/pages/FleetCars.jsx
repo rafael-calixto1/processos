@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye } from 'lucid
 import styles from './Fleet.module.css';
 import { calcStatus, worstStatus, STATUS_STYLE, nextDueText } from './fleetMaintenanceStatus';
 import { Select } from '../components/Select/Select';
+import { fleetFetch } from './fleetFetch';
 
 /* ─── Car Detail Modal ─── */
 const CarDetailModal = ({ carId, onClose }) => {
@@ -12,7 +13,7 @@ const CarDetailModal = ({ carId, onClose }) => {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/fleet/cars/${carId}/detail`)
+    fleetFetch(`/api/fleet/cars/${carId}/detail`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
@@ -167,7 +168,7 @@ const FleetCars = () => {
         page, limit: LIMIT, sortField, sortOrder,
         ...(statusFilter ? { status: statusFilter } : {}),
       });
-      const res  = await fetch(`/api/fleet/cars?${params}`);
+      const res  = await fleetFetch(`/api/fleet/cars?${params}`);
       const json = await res.json();
       setCars(json.cars || []);
       setTotal(json.totalItems || 0);
@@ -181,7 +182,7 @@ const FleetCars = () => {
   useEffect(() => { fetchCars(); }, [fetchCars]);
 
   const fetchOverview = useCallback(() => {
-    fetch('/api/fleet/cars/maintenance-overview')
+    fleetFetch('/api/fleet/cars/maintenance-overview')
       .then(r => r.json())
       .then(j => setOverview(j.overview || {}))
       .catch(() => {});
@@ -190,7 +191,7 @@ const FleetCars = () => {
   useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
   useEffect(() => {
-    fetch('/api/fleet/drivers?limit=500')
+    fleetFetch('/api/fleet/drivers?limit=500')
       .then(r => r.json())
       .then(j => setDrivers(j.drivers || []))
       .catch(() => {});
@@ -243,13 +244,13 @@ const FleetCars = () => {
         driver_id:          form.driver_id !== '' ? Number(form.driver_id) : null,
       };
       if (editId) {
-        await fetch(`/api/fleet/cars/${editId}`, {
+        await fleetFetch(`/api/fleet/cars/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/fleet/cars', {
+        await fleetFetch('/api/fleet/cars', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -268,7 +269,7 @@ const FleetCars = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/cars/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/cars/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchCars();
       fetchOverview();

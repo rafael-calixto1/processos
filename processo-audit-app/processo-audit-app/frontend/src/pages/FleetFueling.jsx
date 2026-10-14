@@ -5,6 +5,7 @@ import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 const LIMIT = 15;
 const FUEL_TYPES = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
@@ -43,7 +44,7 @@ const FleetFueling = () => {
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
   useEffect(() => {
-    fetch('/api/fleet/cars?limit=500')
+    fleetFetch('/api/fleet/cars?limit=500')
       .then(r => r.json())
       .then(j => setCars(j.cars || []))
       .catch(() => {});
@@ -54,7 +55,7 @@ const FleetFueling = () => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
-      const res  = await fetch(`/api/fleet/fueling?${params}`);
+      const res  = await fleetFetch(`/api/fleet/fueling?${params}`);
       const json = await res.json();
       setRecords(json.fuelingHistory || []);
       setTotal(json.total || 0);
@@ -164,13 +165,13 @@ const FleetFueling = () => {
         total_cost:         form.total_cost !== '' ? Number(form.total_cost) : undefined,
       };
       if (editId) {
-        await fetch(`/api/fleet/fueling/${editId}`, {
+        await fleetFetch(`/api/fleet/fueling/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/fleet/fueling', {
+        await fleetFetch('/api/fleet/fueling', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -188,7 +189,7 @@ const FleetFueling = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/fueling/entry/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/fueling/entry/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchRecords();
     } catch (e) {
@@ -198,7 +199,7 @@ const FleetFueling = () => {
 
   // Shared logic: fetch + parse + fill form. Throws on error.
   const parseAndFill = async (payload) => {
-    const res = await fetch('/api/fleet/fueling/parse-receipt', {
+    const res = await fleetFetch('/api/fleet/fueling/parse-receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

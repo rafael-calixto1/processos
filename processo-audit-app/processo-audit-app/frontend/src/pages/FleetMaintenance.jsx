@@ -5,6 +5,7 @@ import MaintenanceDashboard from './MaintenanceDashboard';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 const LIMIT = 15;
 
 /* ════════════════════════════════════════════════════════
@@ -38,7 +39,7 @@ const MaintenanceHistory = ({ cars, types }) => {
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
       if (search) params.set('search', search);
-      const res  = await fetch(`/api/fleet/maintenance/history?${params}`);
+      const res  = await fleetFetch(`/api/fleet/maintenance/history?${params}`);
       const json = await res.json();
       setRecords(json.maintenanceHistory || []);
       setTotal(json.total || 0);
@@ -85,13 +86,13 @@ const MaintenanceHistory = ({ cars, types }) => {
         total_cost:           form.total_cost !== '' ? Number(form.total_cost) : undefined,
       };
       if (editId) {
-        await fetch(`/api/fleet/maintenance/history/${editId}`, {
+        await fleetFetch(`/api/fleet/maintenance/history/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/fleet/maintenance/history', {
+        await fleetFetch('/api/fleet/maintenance/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -109,7 +110,7 @@ const MaintenanceHistory = ({ cars, types }) => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/maintenance/history/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/maintenance/history/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       fetchRecords();
     } catch (e) {
@@ -450,13 +451,13 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
         recurrency_date: usesDate ? unitToDays(form.recurrency_date_value, form.recurrency_date_unit) : null,
       };
       if (editId) {
-        await fetch(`/api/fleet/maintenance/types/${editId}`, {
+        await fleetFetch(`/api/fleet/maintenance/types/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/fleet/maintenance/types', {
+        await fleetFetch('/api/fleet/maintenance/types', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -474,7 +475,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/fleet/maintenance/types/${deleteTarget.id}`, { method: 'DELETE' });
+      await fleetFetch(`/api/fleet/maintenance/types/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
       onRefresh();
     } catch (e) {
@@ -684,7 +685,7 @@ const FleetMaintenance = () => {
 
   const fetchTypes = useCallback(async () => {
     try {
-      const res  = await fetch('/api/fleet/maintenance/types');
+      const res  = await fleetFetch('/api/fleet/maintenance/types');
       const json = await res.json();
       setTypes(json.maintenanceTypes || []);
     } catch (e) {
@@ -693,7 +694,7 @@ const FleetMaintenance = () => {
   }, []);
 
   useEffect(() => {
-    fetch('/api/fleet/cars?limit=500')
+    fleetFetch('/api/fleet/cars?limit=500')
       .then(r => r.json())
       .then(j => setCars(j.cars || []))
       .catch(() => {});

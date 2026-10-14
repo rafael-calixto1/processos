@@ -51,7 +51,8 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
-  const isActive = (path) => location.pathname === path;
+  // /frota/<aba> (ex.: /frota/auditoria) continua marcando "Frota" no menu
+  const isActive = (path) => location.pathname === path || (path === '/frota' && location.pathname.startsWith('/frota/'));
 
   const isTecnico = user?.role === 'tecnico';
   // Técnico de campo só vê o que é dele (OS, posse, devolução)

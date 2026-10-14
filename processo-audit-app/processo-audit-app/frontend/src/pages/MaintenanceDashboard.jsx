@@ -15,6 +15,7 @@ import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
 import DateInput from '../components/DateInput';
+import { fleetFetch } from './fleetFetch';
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -53,7 +54,7 @@ const MaintenanceDashboard = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/fleet/fueling/statistics/maintenance-by-type?startDate=${startDate}&endDate=${endDate}`);
+      const res = await fleetFetch(`/api/fleet/fueling/statistics/maintenance-by-type?startDate=${startDate}&endDate=${endDate}`);
       const json = await res.json();
       setData(Array.isArray(json) ? json : []);
     } catch (e) {
