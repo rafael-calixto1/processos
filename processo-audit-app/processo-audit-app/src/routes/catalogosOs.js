@@ -3,6 +3,7 @@ import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import { ServiceError } from '../services/estoqueService.js';
+import { auditarOS } from '../services/os/auditoria.js';
 
 /**
  * Administração dos catálogos da finalização de OS pelo app (só admin): motivos de fechamento e itens do checklist.
@@ -12,6 +13,7 @@ import { ServiceError } from '../services/estoqueService.js';
  */
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin']));
+router.use(auditarOS('catalogos'));
 
 const CODIGO_VALIDO = /^[A-Za-z][A-Za-z0-9_]{1,59}$/;
 

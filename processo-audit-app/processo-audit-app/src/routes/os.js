@@ -9,9 +9,11 @@ import { finalizarNaTx, carregarFechamento } from '../services/fechamentoService
 import { executarIdempotente, hashDe } from '../services/idempotencia.js';
 import { REGRAS_FECHAMENTO } from '../config/regrasFechamento.js';
 import { catalogosFechamento } from '../services/mobileService.js';
+import { auditarOS, listarAuditoria } from '../services/os/auditoria.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque', 'tecnico']));
+router.use(auditarOS('os')); // tudo o que for feito nas OS (web e app) fica em os_auditoria
 
 const staff = checkRole(['admin', 'estoque']);
 const actorOf = (req) => ({ id: req.userId, role: req.userRole, tecnicoId: req.tecnicoId });
@@ -26,14 +28,50 @@ const carregarOS = async (req) => {
   return os;
 };
 
-router.get('/', handle(async (req, res) => {
+// Filtros e ordenação da lista (lista branca: nada do usuário entra cru no SQL)
+const DATA = /^\d{4}-\d{2}-\d{2}$/;
+export const ORDENACOES = {
+  numero: 'o.numero', cliente: 'o.cliente', tecnico_nome: 't.nome', prazo: 'o.prazo', concluida_em: 'o.concluida_em',
+  criado_em: 'o.criado_em', status: "FIELD(o.status, 'aberta', 'em_andamento', 'concluida', 'cancelada')",
+  prioridade: "FIELD(o.prioridade, 'baixa', 'normal', 'alta')", tipo_servico: 'o.tipo_servico', bairro: 'o.bairro',
+};
+export const filtrosDaLista = (q = {}) => {
   const where = [];
   const params = [];
+  const lista = (v) => String(v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  const status = lista(q.status).filter((x) => ['aberta', 'em_andamento', 'concluida', 'cancelada'].includes(x));
+  if (status.length) { where.push(`o.status IN (${status.map(() => '?').join(',')})`); params.push(...status); }
+  const prior = lista(q.prioridade).filter((x) => ['baixa', 'normal', 'alta'].includes(x));
+  if (prior.length) { where.push(`o.prioridade IN (${prior.map(() => '?').join(',')})`); params.push(...prior); }
+  if (q.tipo_servico) { where.push('o.tipo_servico = ?'); params.push(String(q.tipo_servico)); }
+  if (q.pop) { where.push('o.pop_nome = ?'); params.push(String(q.pop)); }
+  if (q.q) {
+    const termo = String(q.q).trim().slice(0, 100);
+    const t = `%${termo}%`;
+    const n = termo.replace(/^#/, '');
+    where.push(`(o.cliente LIKE ? OR o.endereco LIKE ? OR o.bairro LIKE ? OR o.cidade LIKE ? OR o.tipo_servico LIKE ? OR o.descricao LIKE ?
+      OR o.rota_id LIKE ? OR o.poste_id LIKE ? OR t.nome LIKE ?${/^\d+$/.test(n) ? ' OR o.numero = ?' : ''})`);
+    params.push(t, t, t, t, t, t, t, t, t, ...(/^\d+$/.test(n) ? [Number(n)] : []));
+  }
+  for (const [chave, coluna, ehData] of [['criado', 'o.criado_em', false], ['prazo', 'o.prazo', true], ['executada', 'o.concluida_em', false]]) {
+    const de = q[`${chave}_de`], ate = q[`${chave}_ate`];
+    if (DATA.test(de ?? '')) { where.push(`${coluna} >= ?`); params.push(ehData ? de : `${de} 00:00:00`); }
+    if (DATA.test(ate ?? '')) { where.push(ehData ? `${coluna} <= ?` : `${coluna} < DATE_ADD(?, INTERVAL 1 DAY)`); params.push(ate); }
+  }
+  if (q.atrasadas === '1') where.push("o.prazo IS NOT NULL AND o.prazo < CURDATE() AND o.status IN ('aberta', 'em_andamento')");
+  const col = ORDENACOES[q.ordenar];
+  const dir = q.direcao === 'asc' ? 'ASC' : 'DESC';
+  // nulos (sem prazo, não executada) vão sempre para o fim
+  const ordem = col ? `${col.startsWith('FIELD') ? '' : `${col} IS NULL, `}${col} ${dir}, o.id DESC` : 'o.id DESC';
+  return { where, params, ordem };
+};
+
+router.get('/', handle(async (req, res) => {
+  const { where, params, ordem } = filtrosDaLista(req.query);
   if (req.userRole === 'tecnico') {
     if (!req.tecnicoId) throw new svc.ServiceError(403, 'Seu usuário não está vinculado a um técnico');
     where.push('o.tecnico_id = ?'); params.push(req.tecnicoId);
   } else if (req.query.tecnico_id) { where.push('o.tecnico_id = ?'); params.push(req.query.tecnico_id); }
-  if (req.query.status) { where.push('o.status = ?'); params.push(req.query.status); }
   if (req.query.atualizado_desde) {
     // (colunas da migração do app só entram na consulta neste modo: a lista usada pelo web não depende da migração)
     // `>=` de propósito: o app reenvia o último instante visto e deduplica por id (a coluna tem precisão de segundos)
@@ -47,9 +85,22 @@ router.get('/', handle(async (req, res) => {
        t.nome AS tecnico_nome,
        EXISTS(SELECT 1 FROM os_rascunhos r WHERE r.os_id = o.id) AS tem_rascunho
      FROM ordens_servico o JOIN tecnicos t ON t.id = o.tecnico_id
-     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY o.id DESC LIMIT 300`, params);
+     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${ordem} LIMIT 300`, params);
   res.json(rows);
 }));
+
+// Auditoria das OS (admin e estoque): quem fez o quê, quando, pelo web ou pelo app, e de qual IP
+router.get('/auditoria', staff, async (req, res) => {
+  try {
+    res.json(await listarAuditoria(req.query));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria ainda não instalada: rode scripts/migrate_os_auditoria.js' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
 
 router.post('/', staff, handle(async (req, res) => {
   res.status(201).json(await svc.criarOS(req.body, req.userId));

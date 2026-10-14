@@ -32,6 +32,7 @@ describe('ApiClient', () => {
     const { fetchImpl, chamadas } = criarFetchFalso([{ status: 200 }]);
     expect(await cliente(fetchImpl, tokens()).request('POST', '/os/1/iniciar', { body: {}, idempotencyKey: 'abc-123' })).toBeNull();
     expect(chamadas[0].headers['Idempotency-Key']).toBe('abc-123');
+    expect(chamadas[0].headers['X-Cliente']).toBe('cw-campo');
   });
 
   it.each([

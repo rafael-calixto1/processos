@@ -55,7 +55,8 @@ export class ApiClient {
   }
 
   private async enviar(method: string, caminho: string, o: OpcoesRequisicao, auth: boolean): Promise<Resposta> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    // X-Cliente: a auditoria das OS no servidor separa o que veio do app do que veio do web
+    const headers: Record<string, string> = { Accept: 'application/json', 'X-Cliente': 'cw-campo' };
     let corpo: string | FormData | undefined;
     if (o.formulario) corpo = await o.formulario(); // sem Content-Type: o fetch acrescenta o boundary
     else if (o.body !== undefined) { headers['Content-Type'] = 'application/json'; corpo = JSON.stringify(o.body); }
