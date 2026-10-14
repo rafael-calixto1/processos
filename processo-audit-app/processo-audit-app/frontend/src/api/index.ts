@@ -791,6 +791,10 @@ export const referralAPI = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+  // "Ver detalhes" de um lead: só avisa o servidor para a auditoria (falha não atrapalha a tela)
+  registrarVisualizacao: async (id: string | number) => {
+    try { await fetch(`${API_URL}/referral/leads/${id}/visualizacao`, { method: 'POST', headers: headers(getToken()) }); } catch { /* sem rede: ignora */ }
+  },
   getAuditoria: async (filtros: Record<string, string | number | undefined>) => {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(filtros)) if (v !== undefined && v !== '') qs.set(k, String(v));

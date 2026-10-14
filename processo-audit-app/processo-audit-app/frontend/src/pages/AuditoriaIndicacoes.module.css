@@ -1,4 +1,6 @@
-.painel {
+/* classe dobrada: vence o .modal (560px) do Referral.module.css qualquer que seja a ordem em que as folhas carregam
+   (em /leads a do Referral entra depois e o painel ficava estreito) */
+.painel.painel {
   max-width: 1180px;
   height: calc(100vh - 40px);
   display: flex;

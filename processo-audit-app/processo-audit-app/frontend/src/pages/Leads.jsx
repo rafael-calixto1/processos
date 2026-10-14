@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MoreVertical, Eye, Send, History, Search, Inbox, X, User,
-  Clock, Hourglass, Forward, CheckCircle2, XCircle, FlaskConical,
+  Clock, Hourglass, Forward, CheckCircle2, XCircle, FlaskConical, ShieldCheck,
 } from 'lucide-react';
 import { referralAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import AuditoriaIndicacoes from './AuditoriaIndicacoes';
 import styles from './Leads.module.css';
 import FiltroPeriodo from '../components/FiltroPeriodo';
 import { noPeriodo } from '../components/periodo';
@@ -186,7 +188,32 @@ const ActionsMenu = ({ lead, onView, onHistory, onSendCRM }) => {
 };
 
 /* ── Main Component ── */
+// Origem de cada registro da auditoria, em palavras de quem usa a tela
+const ORIGEM_LEAD = {
+  painel: 'Painel', portal_publico: 'Portal público de indicação', webhook_hubsoft: 'Webhook do Hubsoft', sincronizacao_hubsoft: 'Sincronização com o Hubsoft',
+};
+
+/*
+ * Linha do tempo do lead: a auditoria completa (quem, de onde, IP) quando a pessoa pode vê-la;
+ * os eventos antigos do histórico só entram para o período anterior à auditoria existir.
+ */
+const montarLinhaDoTempo = (eventos, auditoria) => {
+  if (!auditoria?.itens?.length) return eventos;
+  const doAudit = auditoria.itens.map((a) => ({
+    id: `a${a.id}`, created_at: a.created_at, titulo: auditoria.acoes?.[a.acao] ?? a.acao, descricao: a.resumo,
+    origem: ORIGEM_LEAD[a.origem] ?? a.origem, usuario_nome: a.usuario_nome, usuario: a.usuario_email, ip: a.ip, user_agent: a.user_agent,
+    recusado: a.acao === 'acao_recusada' || a.acao === 'webhook_rejeitado',
+  }));
+  // margem de 2 s: o evento antigo e o registro da auditoria da mesma ação são gravados na mesma requisição
+  const inicio = Math.min(...doAudit.map((a) => new Date(a.created_at).getTime())) - 2000;
+  const antigos = (eventos || []).filter((e) => new Date(e.created_at).getTime() < inicio);
+  return [...antigos, ...doAudit].sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+};
+
 const Leads = () => {
+  const { user } = useAuth();
+  const podeAuditar = ['admin', 'manager'].includes(user?.role);
+  const [showAuditoria, setShowAuditoria] = useState(false);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCrmModal, setShowCrmModal] = useState(false);
@@ -216,10 +243,13 @@ const Leads = () => {
   const handleOpenHistory = async (lead) => {
     setHistoryLead(lead);
     setHistoryEvents(null);
-    try { setHistoryEvents(await referralAPI.getLeadHistory(lead.id)); }
-    catch { setHistoryEvents([]); }
+    const [eventos, auditoria] = await Promise.all([
+      referralAPI.getLeadHistory(lead.id).catch(() => []),
+      podeAuditar ? referralAPI.getAuditoria({ id_indicacao: lead.id, por_pagina: 200 }).catch(() => null) : null,
+    ]);
+    setHistoryEvents(montarLinhaDoTempo(eventos, auditoria));
   };
-  const handleOpenDetail = (lead) => { setDetailLead(lead); setShowDetail(true); };
+  const handleOpenDetail = (lead) => { setDetailLead(lead); setShowDetail(true); referralAPI.registrarVisualizacao(lead.id); };
 
   const handleSendToCRM = async (e) => {
     e.preventDefault();
@@ -279,6 +309,12 @@ const Leads = () => {
         <div>
           <h1 className={styles.title}>Gestão de Leads</h1>
           <p className={styles.subtitle}>Indicações recebidas pelo portal público</p>
+          {podeAuditar && (
+            <button type="button" className={styles.btnAuditoria} onClick={() => setShowAuditoria(true)}>
+              <ShieldCheck size={16} strokeWidth={2} />
+              Auditoria dos leads
+            </button>
+          )}
         </div>
         <div className={styles.stats}>
           <button
@@ -635,12 +671,14 @@ const Leads = () => {
               {historyEvents === null && <li className={styles.timelineItem}>Carregando…</li>}
               {historyEvents?.length === 0 && <li className={styles.timelineItem}>Sem registros.</li>}
               {historyEvents?.map((ev, i) => (
-                <li key={`${ev.id}-${i}`} className={styles.timelineItem}>
+                <li key={`${ev.id}-${i}`} className={`${styles.timelineItem} ${ev.recusado ? styles.timelineRecusado : ''}`}>
                   <span className={styles.timelineDate}>{fmtDateTime(ev.created_at)}</span>
+                  {ev.titulo && <strong className={styles.timelineTitulo}>{ev.titulo}</strong>}
                   <span>{ev.descricao}</span>
+                  {ev.origem && <span className={styles.timelineUser}>Origem: {ev.origem}</span>}
                   {(ev.usuario_nome || ev.usuario) && (
                     <span className={styles.timelineUser}>
-                      Atendente: {ev.usuario_nome || ev.usuario}{ev.usuario_nome && ev.usuario ? ` (${ev.usuario})` : ''}
+                      {ev.origem ? 'Quem' : 'Atendente'}: {ev.usuario_nome || ev.usuario}{ev.usuario_nome && ev.usuario ? ` (${ev.usuario})` : ''}
                     </span>
                   )}
                   {ev.ip && <span className={styles.timelineUser}>IP: {ev.ip}</span>}
@@ -651,6 +689,8 @@ const Leads = () => {
           </div>
         </div>
       )}
+
+      {showAuditoria && <AuditoriaIndicacoes onClose={() => setShowAuditoria(false)} />}
 
       {/* ── CRM Modal ── */}
       {showCrmModal && (

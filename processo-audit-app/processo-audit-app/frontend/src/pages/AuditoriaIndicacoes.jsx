@@ -13,13 +13,15 @@ const GRUPOS = [
   { id: 'exclusoes',  label: 'Exclusões',      acoes: ['excluida', 'etapa_crm_removida'] },
   { id: 'descontos',  label: 'Descontos e pagamentos', acoes: ['desconto_aplicado', 'desconto_manual', 'aguardando_pagamento', 'pagamento_registrado', 'fatura_atualizada'] },
   { id: 'config',     label: 'Configuração',   acoes: ['config_alterada', 'etapa_crm_adicionada', 'etapa_crm_removida'] },
+  { id: 'aberturas',  label: 'Leads abertos',  acoes: ['visualizada'] },
+  { id: 'recusadas',  label: 'Recusadas',      acoes: ['recusada_portal', 'acao_recusada', 'webhook_rejeitado'] },
   { id: 'webhooks',   label: 'Webhooks recusados/erro', acoes: ['webhook_rejeitado', 'webhook_erro'] },
 ];
 
 const TOM = {
   recebida: 'novo', criada: 'novo',
   editada: 'edicao', encaminhada_crm: 'edicao', config_alterada: 'edicao', etapa_crm_adicionada: 'edicao', fatura_atualizada: 'edicao',
-  cancelada: 'alerta', webhook_rejeitado: 'alerta', webhook_erro: 'alerta',
+  cancelada: 'alerta', webhook_rejeitado: 'alerta', webhook_erro: 'alerta', recusada_portal: 'alerta', acao_recusada: 'alerta',
   excluida: 'perigo', etapa_crm_removida: 'perigo',
   desconto_aplicado: 'dinheiro', desconto_manual: 'dinheiro', pagamento_registrado: 'dinheiro', aguardando_pagamento: 'dinheiro',
 };

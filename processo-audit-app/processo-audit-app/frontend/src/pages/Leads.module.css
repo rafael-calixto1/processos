@@ -945,3 +945,31 @@
   font-size: 0.75rem;
   color: var(--text-medium);
 }
+
+/* Auditoria: botão no cabeçalho e linha do tempo completa do lead */
+.btnAuditoria {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-color, #fff);
+  color: var(--accent-color, #274518);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btnAuditoria:hover { border-color: var(--primary-color); }
+.btnAuditoria:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.timelineTitulo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-color, #274518);
+}
+
+.timelineRecusado { border-left-color: #dc2626; }
+.timelineRecusado .timelineTitulo { color: #b91c1c; }
