@@ -1,31 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Search, RefreshCw, ChevronDown, ChevronRight, User, Smartphone, Monitor, ArrowLeft } from 'lucide-react';
+import { Search, RefreshCw, Smartphone, Monitor, ArrowLeft, SlidersHorizontal, User, Globe, Repeat } from 'lucide-react';
 import { osAPI } from '../api/estoque';
-import styles from './Fleet.module.css';
-import a from './AuditoriaIndicacoes.module.css';
-import f from './FleetAuditoria.module.css';
 import s from '../components/estoque/Estoque.module.css';
+import c from './OsAuditoria.module.css';
 import DateInput from '../components/DateInput';
 
 // Códigos de ação vêm de src/services/os/auditoria.js (o rótulo de cada um chega na resposta)
 const GRUPOS = [
-  { id: '', label: 'Todas' },
+  { id: '', label: 'Tudo' },
   { id: 'criada,editada,cancelada', label: 'Cadastro e edição' },
   { id: 'iniciada,lancamento,material_baixado,servico_adicionado,servico_removido,foto_enviada,foto_apagada,rascunho_salvo,finalizada,concluida', label: 'Execução em campo' },
   { id: 'estorno', label: 'Estornos' },
-  { id: 'visualizada', label: 'Aberturas' },
+  { id: 'visualizada', label: 'OS abertas' },
   { id: 'app_sincronizado', label: 'Sincronizações do app' },
   { id: 'tipo_servico_criado,motivo_criado,motivo_editado,checklist_criado,checklist_editado', label: 'Catálogos' },
 ];
 
-const TOM = {
-  criada: 'novo', editada: 'edicao', cancelada: 'perigo', foto_apagada: 'perigo', servico_removido: 'perigo', estorno: 'perigo',
-  iniciada: 'novo', finalizada: 'novo', concluida: 'novo', lancamento: 'edicao', material_baixado: 'edicao', servico_adicionado: 'edicao',
-  foto_enviada: 'edicao', motivo_editado: 'edicao', checklist_editado: 'edicao',
-};
+// Leituras e salvamentos automáticos: nó pequeno na rota, texto mais discreto
+const LEVES = new Set(['visualizada', 'app_sincronizado', 'rascunho_salvo']);
+const PERIGO = new Set(['cancelada', 'foto_apagada', 'servico_removido', 'estorno']);
 
-const PAPEL = { admin: 'Administrador', estoque: 'Estoque', tecnico: 'Técnico' };
+const PAPEL = { admin: 'administrador', estoque: 'estoque', tecnico: 'técnico' };
+const ORIGEM_CURTA = { web: 'Web', app: 'App', outro: 'Outro' };
 const STATUS = { aberta: 'Aberta', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
 const PRIORIDADE = { baixa: 'Baixa', normal: 'Normal', alta: 'Alta' };
 
@@ -33,6 +30,18 @@ const FILTRO_VAZIO = { acao: '', origem: '', resultado: '', usuario_id: '', os: 
 const POR_PAGINA = 50;
 
 const fmtDataHora = (v) => (v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }) : '—');
+const fmtHora = (v) => new Date(v).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const chaveDia = (v) => { const d = new Date(v); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+const tituloDia = (v) => {
+  const d = new Date(v);
+  const hoje = new Date();
+  const ontem = new Date(); ontem.setDate(hoje.getDate() - 1);
+  const data = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(d.getFullYear() !== hoje.getFullYear() && { year: 'numeric' }) });
+  if (chaveDia(d) === chaveDia(hoje)) return ['Hoje', data];
+  if (chaveDia(d) === chaveDia(ontem)) return ['Ontem', data];
+  const semana = d.toLocaleDateString('pt-BR', { weekday: 'long' });
+  return [semana.charAt(0).toUpperCase() + semana.slice(1), data];
+};
 
 function fmtCampo(campo, v, dados) {
   if (v === null || v === undefined || v === '') return '—';
@@ -50,14 +59,17 @@ function fmtCampo(campo, v, dados) {
   return id;
 }
 
-const nomeCampo = (c, dados) => dados?.campos?.[c] ?? c.replace(/_/g, ' ');
+const nomeCampo = (k, dados) => {
+  const n = dados?.campos?.[k] ?? k.replace(/_/g, ' ');
+  return n.charAt(0).toUpperCase() + n.slice(1);
+};
 
 function Materiais({ lista }) {
   if (!lista?.length) return null;
   return (
-    <div className={a.bloco}>
-      <span className={a.blocoTitulo}>Materiais</span>
-      <table className={a.diff}>
+    <div className={c.bloco}>
+      <h4>Materiais</h4>
+      <table className={c.tabela}>
         <thead><tr><th>Item</th><th>Quantidade</th><th>Lote</th></tr></thead>
         <tbody>{lista.map((m) => (
           <tr key={m.id}><td>{m.item}</td><td>{Number(m.quantidade).toLocaleString('pt-BR')} {m.unidade === 'metros' ? 'm' : 'un'}</td><td>{m.lote}</td></tr>
@@ -71,75 +83,119 @@ function TabelaDados({ titulo, valores, dados }) {
   const linhas = Object.entries(valores ?? {}).filter(([k, v]) => k !== 'id' && v !== undefined);
   if (!linhas.length) return null;
   return (
-    <div className={a.bloco}>
-      <span className={a.blocoTitulo}>{titulo}</span>
-      <table className={a.diff}>
+    <div className={c.bloco}>
+      <h4>{titulo}</h4>
+      <table className={c.tabela}>
         <tbody>{linhas.map(([k, v]) => <tr key={k}><td>{nomeCampo(k, dados)}</td><td>{fmtCampo(k, v, dados)}</td></tr>)}</tbody>
       </table>
     </div>
   );
 }
 
-function Detalhes({ item, dados, onFiltrar }) {
+function Detalhe({ item, dados, onFiltrar }) {
   const campos = item.campos_alterados ? item.campos_alterados.split(',') : [];
   const depois = item.dados_depois ?? {};
   const outros = campos.length ? null : Object.fromEntries(Object.entries(depois).filter(([k]) => !['materiais', 'enviado'].includes(k)));
   return (
-    <div className={a.detalhes}>
-      {item.resultado === 'erro' && <div className={a.alerta}>Recusado pelo sistema (HTTP {item.http_status}): {item.erro}</div>}
+    <div className={c.detalhe}>
+      {item.resultado === 'erro' && <div className={c.alerta}>O sistema recusou (HTTP {item.http_status}): {item.erro}</div>}
       {campos.length > 0 && (
-        <table className={a.diff}>
-          <thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead>
-          <tbody>{campos.map((c) => (
-            <tr key={c}>
-              <td>{nomeCampo(c, dados)}</td>
-              <td className={a.antes}>{fmtCampo(c, item.dados_antes?.[c], dados)}</td>
-              <td className={a.depois}>{fmtCampo(c, item.dados_depois?.[c], dados)}</td>
-            </tr>
-          ))}</tbody>
-        </table>
+        <div className={c.bloco}>
+          <h4>O que mudou</h4>
+          <table className={c.tabela}>
+            <thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead>
+            <tbody>{campos.map((k) => (
+              <tr key={k}>
+                <td>{nomeCampo(k, dados)}</td>
+                <td className={c.antes}>{fmtCampo(k, item.dados_antes?.[k], dados)}</td>
+                <td className={c.depois}>{fmtCampo(k, item.dados_depois?.[k], dados)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
       )}
-      {campos.length === 0 && item.dados_antes && <TabelaDados titulo={item.acao.endsWith('removido') || item.acao.endsWith('apagada') ? 'O que foi apagado' : 'Antes'} valores={item.dados_antes} dados={dados} />}
+      {campos.length === 0 && item.dados_antes && (
+        <TabelaDados titulo={PERIGO.has(item.acao) ? 'O que foi desfeito ou apagado' : 'Como estava antes'} valores={item.dados_antes} dados={dados} />
+      )}
       <Materiais lista={depois.materiais} />
       {outros && Object.keys(outros).length > 0 && (
-        <div className={a.bloco}>
-          <span className={a.blocoTitulo}>{item.acao === 'criada' ? 'OS como foi criada' : 'Resultado'}</span>
-          <pre className={a.json}>{JSON.stringify(outros, null, 2)}</pre>
+        <div className={c.bloco}>
+          <h4>{item.acao === 'criada' ? 'OS como foi criada' : 'Resultado'}</h4>
+          <pre className={c.json}>{JSON.stringify(outros, null, 2)}</pre>
         </div>
       )}
       {depois.enviado && (
-        <details className={a.bloco}>
-          <summary className={a.blocoTitulo} style={{ cursor: 'pointer' }}>O que foi enviado</summary>
-          <pre className={a.json}>{JSON.stringify(depois.enviado, null, 2)}</pre>
+        <details className={c.bloco}>
+          <summary>O que foi enviado</summary>
+          <pre className={c.json}>{JSON.stringify(depois.enviado, null, 2)}</pre>
         </details>
       )}
-      <dl className={a.meta}>
-        <dt>Registro</dt><dd>#{item.id} · {fmtDataHora(item.created_at)}{item.repetida ? ' · reenvio (o app repetiu um envio que já tinha chegado; nada foi feito de novo)' : ''}</dd>
-        <dt>Usuário</dt>
+      <dl className={c.ficha}>
+        <dt>Quando</dt><dd>{fmtDataHora(item.created_at)} <span className={c.fraco}>(registro #{item.id})</span></dd>
+        <dt>Quem</dt>
         <dd>
-          {item.usuario_nome || item.usuario_email ? `${item.usuario_nome ?? ''} ${item.usuario_email ? `<${item.usuario_email}>` : ''}` : '—'}
-          {item.usuario_papel && ` · ${PAPEL[item.usuario_papel] ?? item.usuario_papel}`}
-          {item.usuario_id && <> · <button type="button" className={a.link} onClick={() => onFiltrar({ usuario_id: String(item.usuario_id) })}>ver tudo deste usuário</button></>}
+          {item.usuario_nome || item.usuario_email || '—'}
+          {item.usuario_email && item.usuario_nome && <span className={c.fraco}> {item.usuario_email}</span>}
+          {item.usuario_papel && <span className={c.fraco}>, {PAPEL[item.usuario_papel] ?? item.usuario_papel}</span>}
         </dd>
-        <dt>Origem</dt><dd>{dados.origens?.[item.origem] ?? item.origem}</dd>
-        {item.os_id && (
-          <>
-            <dt>OS</dt>
-            <dd>
-              <Link className={a.link} to={`/os/${item.os_id}`}>abrir a OS #{item.os_numero ?? item.os_id}</Link>
-              {item.os_numero && <> · <button type="button" className={a.link} onClick={() => onFiltrar({ os: String(item.os_numero) })}>ver tudo desta OS</button></>}
-            </dd>
-          </>
-        )}
-        <dt>IP</dt>
+        <dt>De onde</dt>
         <dd>
-          {item.ip ? <button type="button" className={a.link} onClick={() => onFiltrar({ ip: item.ip })}>{item.ip}</button> : '—'}
-          {item.ip_cadeia && <span className={a.cadeia}> (cadeia: {item.ip_cadeia})</span>}
+          {dados.origens?.[item.origem] ?? item.origem}{item.ip && <>, IP {item.ip}</>}
+          {item.ip_cadeia && <span className={c.fraco}> (cadeia: {item.ip_cadeia})</span>}
         </dd>
-        <dt>Requisição</dt><dd className={a.ua}>{item.metodo} {item.rota}</dd>
-        <dt>Aparelho / navegador</dt><dd className={a.ua}>{item.user_agent || '—'}</dd>
+        <dt>Aparelho</dt><dd className={c.fraco}>{item.user_agent || '—'}</dd>
+        <dt>Requisição</dt><dd className={c.fraco}>{item.metodo} {item.rota}</dd>
+        <dt>Ver também</dt>
+        <dd className={c.links}>
+          {item.os_id && <Link className={c.link} to={`/os/${item.os_id}`}>Abrir a OS #{item.os_numero ?? item.os_id}</Link>}
+          {item.os_numero && <button type="button" className={c.link} onClick={() => onFiltrar({ os: String(item.os_numero) })}>Tudo desta OS</button>}
+          {item.usuario_id && <button type="button" className={c.link} onClick={() => onFiltrar({ usuario_id: String(item.usuario_id) })}>Tudo desta pessoa</button>}
+          {item.ip && <button type="button" className={c.link} onClick={() => onFiltrar({ ip: item.ip })}>Tudo deste IP</button>}
+        </dd>
       </dl>
     </div>
+  );
+}
+
+// "Recusado (Ação) — OS #3 — Cliente: mensagem" (ou o formato antigo "Tentativa recusada — Ação na OS #3 — Cliente: mensagem") → "OS #3 — Cliente"
+const osDoRecusado = (item) => {
+  let t = item.erro && item.resumo.endsWith(`: ${item.erro}`) ? item.resumo.slice(0, -(item.erro.length + 2)) : item.resumo;
+  t = t.replace(/^Recusado \([^)]*\)( — )?/, '').replace(/^Tentativa recusada — .*? na (?=OS #)/, '');
+  if (/^Tentativa recusada/.test(t) || !t) return item.os_numero ? `OS #${item.os_numero}` : 'Sem OS envolvida';
+  return t;
+};
+
+function Evento({ item, dados, aberto, onAbrir, onFiltrar }) {
+  const leve = LEVES.has(item.acao);
+  const recusado = item.resultado === 'erro';
+  const rotulo = dados.acoes[item.acao] ?? item.acao;
+  const Origem = item.origem === 'app' ? Smartphone : item.origem === 'web' ? Monitor : Globe;
+  const no = [c.no, c[item.origem] ?? c.outro, leve && !recusado && c.leve, recusado && c.recusa].filter(Boolean).join(' ');
+  const tom = recusado ? c.recusada : PERIGO.has(item.acao) ? c.perigo : leve ? c.leve : '';
+  // recusado: a ação vai no rótulo, a OS na linha principal e a mensagem do sistema em vermelho
+  const resumo = recusado ? osDoRecusado(item) : item.resumo;
+  return (
+    <li className={`${c.item} ${leve ? c.leveTexto : ''}`}>
+      <button type="button" className={c.evento} onClick={onAbrir} aria-expanded={aberto}>
+        <span className={c.hora}>{fmtHora(item.created_at)}</span>
+        <span className={no} aria-hidden="true" />
+        <span className={c.corpo}>
+          <span className={c.cabeca}>
+            <span className={`${c.acao} ${tom}`}>{recusado ? `${rotulo}: recusado` : rotulo}</span>
+            <span className={c.horaInline}>{fmtHora(item.created_at)}</span>
+          </span>
+          <span className={c.resumo}>{resumo}</span>
+          {recusado && item.erro && <span className={c.erro}>{item.erro}</span>}
+          <span className={c.meta}>
+            <span><User size={13} aria-hidden="true" />{item.usuario_nome || item.usuario_email || 'Sem usuário'}{item.usuario_papel ? `, ${PAPEL[item.usuario_papel] ?? item.usuario_papel}` : ''}</span>
+            <span><Origem size={13} aria-hidden="true" />{ORIGEM_CURTA[item.origem] ?? item.origem}</span>
+            {item.ip && <span className={c.num}>IP {item.ip}</span>}
+            {item.repetida && <span className={c.reenvio}><Repeat size={13} aria-hidden="true" />Reenvio do app, nada foi feito de novo</span>}
+          </span>
+        </span>
+      </button>
+      {aberto && <Detalhe item={item} dados={dados} onFiltrar={onFiltrar} />}
+    </li>
   );
 }
 
@@ -152,6 +208,7 @@ export default function OsAuditoria() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [aberto, setAberto] = useState(null);
+  const [mais, setMais] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -159,7 +216,7 @@ export default function OsAuditoria() {
     try {
       setDados(await osAPI.auditoria({ ...filtro, pagina, por_pagina: POR_PAGINA }));
     } catch (e) {
-      if (e.status === 404 || e.status === 503) setError('A auditoria das OS ainda não está instalada no servidor (falta aplicar a migração e reiniciar o backend).');
+      if (e.status === 404 || e.status === 503) setError('A auditoria das OS ainda não está instalada no servidor. Aplique a migração e reinicie o backend.');
       else setError(e.message);
     } finally {
       setLoading(false);
@@ -176,140 +233,160 @@ export default function OsAuditoria() {
   useEffect(() => { setPagina(1); }, [filtro]);
 
   const muda = (campo) => (e) => setFiltro((x) => ({ ...x, [campo]: e.target.value }));
-  const filtrar = (m) => setFiltro((x) => ({ ...x, ...m }));
+  const filtrar = (m) => { setFiltro((x) => ({ ...x, ...m })); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const temFiltro = Object.values(filtro).some((v) => v !== '');
   const total = dados?.total ?? 0;
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const acaoSolta = filtro.acao && !GRUPOS.some((g) => g.id === filtro.acao);
+
+  // a rota é cortada por dia (na ordem em que chega: mais recente primeiro)
+  const dias = useMemo(() => {
+    const r = [];
+    for (const item of dados?.itens ?? []) {
+      const k = chaveDia(item.created_at);
+      if (r.at(-1)?.chave !== k) r.push({ chave: k, titulo: tituloDia(item.created_at), itens: [] });
+      r.at(-1).itens.push(item);
+    }
+    return r;
+  }, [dados]);
+
+  const Segmento = ({ campo, valor, children }) => (
+    <button type="button" className={`${c.segmento} ${filtro[campo] === valor ? c.segmentoAtivo : ''}`} aria-pressed={filtro[campo] === valor}
+      onClick={() => setFiltro((x) => ({ ...x, [campo]: valor }))}>{children}</button>
+  );
 
   return (
     <div className={s.page}>
       <div className={s.head}>
         <div>
           <h1 className={s.title}>Auditoria das OS</h1>
-          <p className={s.sub}>Tudo o que foi feito nas ordens de serviço, pelo web e pelo app dos técnicos: quem, quando, de onde e o que mudou</p>
+          <p className={s.sub}>Quem fez o quê em cada ordem de serviço, pelo web ou pelo app dos técnicos</p>
         </div>
         <button className={s.btn} onClick={() => nav('/os')}><ArrowLeft size={18} />Ordens de Serviço</button>
       </div>
 
-      <div className={f.card}>
-        <div className={a.filtros}>
-          <div className={f.grupos} role="group" aria-label="Tipo de ação">
+      <section className={c.painel} aria-label="Registro de ações nas OS">
+        <div className={c.filtros}>
+          <div className={c.tipos} role="group" aria-label="Tipo de ação">
             {GRUPOS.map((g) => (
-              <button key={g.label} type="button" className={`${f.chip} ${filtro.acao === g.id ? f.chipAtivo : ''}`} aria-pressed={filtro.acao === g.id}
+              <button key={g.label} type="button" className={`${c.tipo} ${filtro.acao === g.id ? c.tipoAtivo : ''}`} aria-pressed={filtro.acao === g.id}
                 onClick={() => setFiltro((x) => ({ ...x, acao: g.id }))}>{g.label}</button>
             ))}
           </div>
 
-          <div className={a.linha}>
-            <label className={a.campo}>
-              <span>Ação</span>
-              <select className={styles.select} value={GRUPOS.some((g) => g.id === filtro.acao) ? '' : filtro.acao} onChange={muda('acao')}>
-                <option value="">{GRUPOS.find((g) => g.id === filtro.acao)?.label ?? 'Todas'}</option>
-                {Object.entries(dados?.acoes ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+          <div className={c.linhaFiltros}>
+            <label className={`${c.campo} ${c.busca}`}>
+              <span>Buscar</span>
+              <Search size={15} aria-hidden="true" />
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Cliente, item, lote, motivo, erro…" />
             </label>
-            <label className={a.campo}>
-              <span>Origem</span>
-              <select className={styles.select} value={filtro.origem} onChange={muda('origem')}>
-                <option value="">Web e app</option>
-                {Object.entries(dados?.origens ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </label>
-            <label className={a.campo}>
+            <label className={c.campo}>
               <span>Quem fez</span>
-              <select className={styles.select} value={filtro.usuario_id} onChange={muda('usuario_id')}>
-                <option value="">Todos os usuários</option>
+              <select value={filtro.usuario_id} onChange={muda('usuario_id')}>
+                <option value="">Todas as pessoas</option>
                 {(dados?.usuarios ?? []).map((u) => <option key={u.id} value={u.id}>{u.nome || u.email}{u.papel ? ` (${PAPEL[u.papel] ?? u.papel})` : ''}</option>)}
               </select>
             </label>
-            <label className={a.campo}>
-              <span>Resultado</span>
-              <select className={styles.select} value={filtro.resultado} onChange={muda('resultado')}>
-                <option value="">Todos</option><option value="ok">Deu certo</option><option value="erro">Recusado</option>
-              </select>
-            </label>
-            <label className={a.campo}>
+            <label className={c.campo}>
               <span>Nº da OS</span>
-              <input className={styles.input} value={filtro.os} onChange={muda('os')} inputMode="numeric" placeholder="ex.: 31" />
+              <input value={filtro.os} onChange={muda('os')} inputMode="numeric" placeholder="Ex.: 22" />
             </label>
-            <label className={a.campo}>
+            <label className={c.campo}>
               <span>De</span>
-              <DateInput className={styles.input} value={filtro.de} onChange={muda('de')} max={filtro.ate || undefined} />
+              <DateInput value={filtro.de} onChange={muda('de')} max={filtro.ate || undefined} />
             </label>
-            <label className={a.campo}>
+            <label className={c.campo}>
               <span>Até</span>
-              <DateInput className={styles.input} value={filtro.ate} onChange={muda('ate')} min={filtro.de || undefined} />
-            </label>
-            <label className={a.campo}>
-              <span>IP</span>
-              <input className={styles.input} value={filtro.ip} onChange={muda('ip')} placeholder="ex.: 10.100" />
+              <DateInput value={filtro.ate} onChange={muda('ate')} min={filtro.de || undefined} />
             </label>
           </div>
 
-          <div className={a.linha}>
-            <div className={f.busca}>
-              <Search size={15} />
-              <input className={styles.input} placeholder="Buscar no resumo, usuário, erro ou dados (cliente, item, lote, motivo...)"
-                value={busca} onChange={(e) => setBusca(e.target.value)} />
+          {mais && (
+            <div className={c.maisFiltros}>
+              <label className={c.campo}>
+                <span>Ação específica</span>
+                <select value={acaoSolta ? filtro.acao : ''} onChange={muda('acao')}>
+                  <option value="">{GRUPOS.find((g) => g.id === filtro.acao)?.label ?? 'Qualquer ação'}</option>
+                  {Object.entries(dados?.acoes ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+              <label className={c.campo}>
+                <span>IP</span>
+                <input value={filtro.ip} onChange={muda('ip')} placeholder="Ex.: 10.100" />
+              </label>
             </div>
-            {temFiltro && (
-              <button type="button" className={styles.btnSecondary} onClick={() => { setFiltro(FILTRO_VAZIO); setBusca(''); }}>Limpar filtros</button>
-            )}
-            <button type="button" className={styles.btnSecondary} onClick={carregar} title="Atualizar" aria-label="Atualizar">
-              <RefreshCw size={15} />
-            </button>
+          )}
+
+          <div className={c.barra}>
+            <div className={c.segmentos} role="group" aria-label="Origem">
+              <Segmento campo="origem" valor="">Web e app</Segmento>
+              <Segmento campo="origem" valor="web"><span className={`${c.noLegenda} ${c.noWeb}`} aria-hidden="true" />Web</Segmento>
+              <Segmento campo="origem" valor="app"><span className={`${c.noLegenda} ${c.noApp}`} aria-hidden="true" />App</Segmento>
+            </div>
+            <div className={c.segmentos} role="group" aria-label="Resultado">
+              <Segmento campo="resultado" valor="">Todas</Segmento>
+              <Segmento campo="resultado" valor="erro"><span className={`${c.noLegenda} ${c.noRecusa}`} aria-hidden="true" />Só recusadas</Segmento>
+            </div>
+            <div className={c.acoesBarra}>
+              <button type="button" className={c.botao} onClick={() => setMais((m) => !m)} aria-expanded={mais}>
+                <SlidersHorizontal size={15} aria-hidden="true" />{mais ? 'Menos filtros' : 'Mais filtros'}
+              </button>
+              {temFiltro && (
+                <button type="button" className={c.botao} onClick={() => { setFiltro(FILTRO_VAZIO); setBusca(''); }}>Limpar filtros</button>
+              )}
+              <button type="button" className={c.botao} onClick={carregar} aria-label="Atualizar"><RefreshCw size={15} aria-hidden="true" /></button>
+            </div>
           </div>
         </div>
 
         {loading && !dados ? (
-          <div className={styles.loadingState}><div className="spinner" /><span>Carregando...</span></div>
+          <div className={c.estado}><div className="spinner" /><p>Carregando o registro…</p></div>
         ) : error ? (
-          <div className={`${styles.errorState} ${f.erro}`}>{error}</div>
+          <div className={`${c.estado} ${c.estadoErro}`}>
+            <strong>Não deu para carregar a auditoria</strong>
+            <p>{error}</p>
+            <button type="button" className={c.botao} onClick={carregar}><RefreshCw size={15} aria-hidden="true" />Tentar de novo</button>
+          </div>
         ) : dados.itens.length === 0 ? (
-          <div className={f.vazio}>
-            <ShieldCheck size={36} strokeWidth={1.2} />
-            <p>Nenhum registro {temFiltro ? 'com esses filtros' : 'ainda'}</p>
-            <span>As ações nas OS passam a ser registradas a partir da instalação da auditoria</span>
+          <div className={c.estado}>
+            <strong>{temFiltro ? 'Nada com esses filtros' : 'Nenhuma ação registrada ainda'}</strong>
+            <p>{temFiltro
+              ? 'Tente outro período ou limpe os filtros.'
+              : 'Cada ação feita numa OS, no web ou no app, aparece aqui a partir de agora.'}</p>
+            {temFiltro && <button type="button" className={c.botao} onClick={() => { setFiltro(FILTRO_VAZIO); setBusca(''); }}>Limpar filtros</button>}
           </div>
         ) : (
-          <ul className={a.itens} style={{ opacity: loading ? 0.6 : 1 }}>
-            {dados.itens.map((item) => {
-              const expandido = aberto === item.id;
-              const rotulo = dados.acoes[item.acao] ?? item.acao;
-              const Origem = item.origem === 'app' ? Smartphone : Monitor;
-              return (
-                <li key={item.id} className={a.item}>
-                  <button type="button" className={a.resumoLinha} onClick={() => setAberto(expandido ? null : item.id)} aria-expanded={expandido}>
-                    {expandido ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                    <span className={a.quando}>{fmtDataHora(item.created_at)}</span>
-                    <span className={`${a.acao} ${a[item.resultado === 'erro' ? 'perigo' : TOM[item.acao] ?? 'neutro']}`} title={rotulo}>
-                      {item.resultado === 'erro' ? `Recusado · ${rotulo}` : rotulo}
-                    </span>
-                    <span className={a.texto}>{item.resumo}</span>
-                    <span className={a.quem}>
-                      <Origem size={13} aria-label={dados.origens?.[item.origem] ?? item.origem} />
-                      <User size={13} />
-                      {item.usuario_nome || item.usuario_email || '—'}
-                      {item.ip && <span className={a.ip}>{item.ip}</span>}
-                    </span>
-                  </button>
-                  {expandido && <Detalhes item={item} dados={dados} onFiltrar={filtrar} />}
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <div className={c.contagem}>
+              <span><b>{total.toLocaleString('pt-BR')}</b> {total === 1 ? 'registro' : 'registros'}{temFiltro ? ' com esses filtros' : ''}</span>
+              <span className={c.dica}>Clique numa ação para ver os detalhes</span>
+            </div>
+            <div className={c.dias} style={{ opacity: loading ? 0.6 : 1 }}>
+              {dias.map((d) => (
+                <section key={d.chave} className={c.dia} aria-label={`${d.titulo[0]}, ${d.titulo[1]}`}>
+                  <h3 className={c.diaTitulo}>{d.titulo[0]}<small>{d.titulo[1]}</small></h3>
+                  <ul className={c.trecho}>
+                    {d.itens.map((item) => (
+                      <Evento key={item.id} item={item} dados={dados} aberto={aberto === item.id}
+                        onAbrir={() => setAberto(aberto === item.id ? null : item.id)} onFiltrar={filtrar} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </>
         )}
 
-        {dados && total > 0 && (
-          <div className={f.rodape}>
-            <span>{(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, total)} de {total} registros</span>
+        {dados && total > POR_PAGINA && (
+          <div className={c.rodape}>
+            <span>{(pagina - 1) * POR_PAGINA + 1} a {Math.min(pagina * POR_PAGINA, total)} de {total.toLocaleString('pt-BR')}</span>
             <div>
-              <button className={styles.paginationBtn} disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
-              <button className={styles.paginationBtn} disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)}>Próxima</button>
+              <button className={c.botao} disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>Mais recentes</button>
+              <button className={c.botao} disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)}>Mais antigos</button>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
