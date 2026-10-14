@@ -2,10 +2,11 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
-import { verifyToken } from '../middlewares/auth.js';
+import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { criarLimitador } from '../middlewares/limitador.js';
 import { ServiceError } from '../services/estoqueService.js';
-import { abrirSessao, renovarSessao, encerrarSessao, revogarTodas } from '../services/sessao.js';
+import { abrirSessao, renovarSessao, encerrarSessao, revogarTodas, revogarFamilia } from '../services/sessao.js';
+import * as acessos from '../services/acessos.js';
 
 const router = express.Router();
 
@@ -68,13 +69,16 @@ router.post('/login', async (req, res) => {
 
     const chaveEmail = String(email).trim().toLowerCase();
     const espera = Math.max(limiteEmail.segundosRestantes(chaveEmail), limiteIp.segundosRestantes(req.ip));
+    const origem = req.body.dispositivo !== undefined ? 'app' : 'web';
     if (espera) {
+      await acessos.registrarEvento({ req, evento: 'login_bloqueado', motivo: 'muitas_tentativas', origem, email: chaveEmail });
       res.set('Retry-After', String(espera));
       return res.status(429).json({ error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.' });
     }
-    const recusar = () => {
+    const recusar = async (motivo, usuario = null) => {
       limiteEmail.falha(chaveEmail);
       limiteIp.falha(req.ip);
+      await acessos.registrarEvento({ req, evento: 'login_falhou', motivo, origem, usuario, email: chaveEmail });
       return res.status(401).json({ error: 'Email ou senha inválidos' });
     };
 
@@ -84,42 +88,49 @@ router.post('/login', async (req, res) => {
     );
 
     if (users.length === 0) {
-      return recusar();
+      return recusar('usuario_inexistente');
     }
 
     const user = users[0];
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
-      return recusar();
+      return recusar('senha_incorreta', user);
     }
     limiteEmail.sucesso(chaveEmail);
 
     // Só depois de validar a senha, para não revelar quais contas existem ou estão inativas
     if (user.status !== 'active') {
+      await acessos.registrarEvento({ req, evento: 'login_negado', motivo: 'usuario_inativo', origem, usuario: user });
       return res.status(403).json({ error: 'Usuário inativo. Fale com o administrador.' });
     }
 
     // App mobile (informa `dispositivo`): token de acesso curto + refresh token. O web segue com o token de 24h.
     if (req.body.dispositivo !== undefined) {
       try {
-        return res.json(await abrirSessao(user, req.body.dispositivo));
+        return res.json(await abrirSessao(user, req.body.dispositivo, req));
       } catch (e) {
-        if (e instanceof ServiceError) return res.status(e.status).json({ error: e.message });
+        if (e instanceof ServiceError) {
+          await acessos.registrarEvento({ req, evento: 'login_negado', motivo: 'sem_acesso_app', origem, usuario: user, detalhe: e.message });
+          return res.status(e.status).json({ error: e.message });
+        }
         throw e;
       }
     }
 
+    const sid = acessos.novoSid();
     const token = jwt.sign(
       {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        sid
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: `${acessos.WEB_HORAS}h` }
     );
+    await acessos.abrirSessao({ req, sid, origem: 'web', usuario: user, expiraEm: new Date(Date.now() + acessos.WEB_HORAS * 60 * 60 * 1000) });
 
     res.json({
       token,
@@ -145,7 +156,7 @@ router.post('/refresh', async (req, res) => {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
     }
     try {
-      res.json(await renovarSessao(req.body?.refresh_token, req.body?.dispositivo));
+      res.json(await renovarSessao(req.body?.refresh_token, req.body?.dispositivo, req));
     } catch (e) {
       if (!(e instanceof ServiceError)) throw e;
       if (e.status === 401) limiteRefresh.falha(req.ip);
@@ -157,10 +168,21 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// Encerra a sessão do app (revoga a família do refresh token). Sempre responde ok.
+// Encerra a sessão: app manda o refresh token (revoga a família); web manda o próprio token (Authorization).
+// Sempre responde ok. Token do web já vencido conta como "expirou", na hora em que venceu.
 router.post('/logout', async (req, res) => {
   try {
-    await encerrarSessao(req.body?.refresh_token);
+    await encerrarSessao(req.body?.refresh_token, req);
+    const bearer = req.headers['authorization']?.split(' ')[1];
+    if (bearer) {
+      let t = null;
+      try { t = jwt.verify(bearer, process.env.JWT_SECRET, { ignoreExpiration: true }); } catch { /* token falso: ignora */ }
+      if (t?.sid) {
+        req.userId = t.id; req.userEmail = t.email;
+        const vencido = t.exp && t.exp * 1000 < Date.now();
+        await acessos.encerrarSessao(t.sid, vencido ? 'expirada' : 'logout', { req, quando: vencido ? new Date(t.exp * 1000) : null });
+      }
+    }
     res.json({ message: 'Sessão encerrada' });
   } catch (error) {
     console.error('auth:', error);
@@ -213,7 +235,8 @@ router.put('/change-password', verifyToken, async (req, res) => {
       'UPDATE users SET password = ? WHERE id = ?',
       [hashedNewPassword, req.userId]
     );
-    await revogarTodas(req.userId);
+    // as outras sessões caem; a de quem trocou a senha continua
+    await revogarTodas(req.userId, 'senha_alterada', { req, por: req.userId, exceto: req.sessaoId });
 
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (error) {
@@ -361,7 +384,7 @@ router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     }
 
     await connection.commit();
-    if (password) await revogarTodas(userId);
+    if (password) await revogarTodas(userId, 'senha_alterada', { req, por: req.userId });
     res.json({ message: 'Usuário atualizado com sucesso' });
   } catch (error) {
     await connection.rollback();
@@ -385,13 +408,46 @@ router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     }
 
     await pool.execute("UPDATE users SET status = 'inactive' WHERE id = ?", [req.params.id]);
-    await revogarTodas(req.params.id);
+    await revogarTodas(req.params.id, 'usuario_inativado', { req, por: req.userId });
 
     res.json({ message: 'Usuário inativado com sucesso' });
   } catch (error) {
     console.error('auth:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
+});
+
+// ======== AUDITORIA DE ACESSOS (só admin) ========
+const somenteAdmin = [verifyToken, checkRole(['admin'])];
+const semTabela = (res, err) => {
+  if (err.code === 'ER_NO_SUCH_TABLE') {
+    return res.status(503).json({ error: 'Auditoria de acessos ainda não instalada: rode scripts/migrate_acessos_auditoria.js' });
+  }
+  console.error('auth:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+};
+
+router.get('/acessos/sessoes', somenteAdmin, async (req, res) => {
+  try { res.json(await acessos.listarSessoes(req.query)); } catch (err) { semTabela(res, err); }
+});
+
+router.get('/acessos/eventos', somenteAdmin, async (req, res) => {
+  try { res.json(await acessos.listarEventos(req.query)); } catch (err) { semTabela(res, err); }
+});
+
+// Admin derruba uma sessão (web ou app): o token dela para de valer em até 1 minuto
+router.post('/acessos/sessoes/:sid/encerrar', somenteAdmin, async (req, res) => {
+  try {
+    const sid = String(req.params.sid);
+    if (!/^[0-9a-f-]{36}$/i.test(sid)) return res.status(400).json({ error: 'Sessão inválida' });
+    if (sid === req.sessaoId) return res.status(400).json({ error: 'Para encerrar a sua própria sessão, use "Sair"' });
+    const [[s]] = await pool.execute('SELECT origem, encerrada_em FROM acessos_sessoes WHERE sid = ?', [sid]);
+    if (!s) return res.status(404).json({ error: 'Sessão não encontrada' });
+    if (s.encerrada_em) return res.status(409).json({ error: 'Esta sessão já foi encerrada' });
+    if (s.origem === 'app') await revogarFamilia(sid);
+    await acessos.encerrarSessao(sid, 'encerrada_pelo_admin', { req, por: req.userId });
+    res.json({ message: 'Sessão encerrada' });
+  } catch (err) { semTabela(res, err); }
 });
 
 export default router;

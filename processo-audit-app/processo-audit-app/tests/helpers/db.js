@@ -6,6 +6,7 @@ import path from 'node:path';
 import pool from '../../src/config/database.js';
 import { up as migrarEstoque } from '../../scripts/migrate_estoque.js';
 import { up as migrarMobile } from '../../scripts/migrate_os_mobile.js';
+import { up as migrarAcessos } from '../../scripts/migrate_acessos_auditoria.js';
 
 export { pool };
 
@@ -61,6 +62,7 @@ export const prepararBanco = async () => {
       });
     }
     await migrarMobile(c);
+    await migrarAcessos(c);
   } catch (err) {
     await c.query('SELECT RELEASE_LOCK(?)', [LOCK]).catch(() => {});
     c.release();
