@@ -3,14 +3,15 @@ import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import { ServiceError } from '../services/estoqueService.js';
+import { auditarEstoque } from '../services/estoque/auditoria.js';
 
 /* Cadastros do almoxarifado: técnicos, fornecedores e equipamentos (todos admin/estoque). */
 export const tecnicosRouter = express.Router();
 export const fornecedoresRouter = express.Router();
 export const equipamentosRouter = express.Router();
 
-for (const r of [tecnicosRouter, fornecedoresRouter, equipamentosRouter]) {
-  r.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque']));
+for (const [r, grupo] of [[tecnicosRouter, 'tecnicos'], [fornecedoresRouter, 'fornecedores'], [equipamentosRouter, 'equipamentos']]) {
+  r.use(verifyToken, loadTecnico, checkRole(['admin', 'estoque']), auditarEstoque(grupo)); // tudo fica em estoque_auditoria
 }
 
 const obrigatorio = (v, msg) => { if (!v || !String(v).trim()) throw new ServiceError(400, msg); };

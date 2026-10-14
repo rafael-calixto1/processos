@@ -4,11 +4,26 @@ import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { loadTecnico, handle } from '../middlewares/estoqueAccess.js';
 import * as svc from '../services/estoqueService.js';
 import { executarIdempotente } from '../services/idempotencia.js';
+import { auditarEstoque, listarAuditoria } from '../services/estoque/auditoria.js';
 
 const router = express.Router();
 router.use(verifyToken, loadTecnico);
+router.use(auditarEstoque('estoque')); // tudo o que for feito nas abas do estoque (web e app) fica em estoque_auditoria
 
 const staff = checkRole(['admin', 'estoque']);
+
+// Auditoria do Estoque (admin e estoque): quem fez o quê, quando, pelo web ou pelo app, e de qual IP
+router.get('/auditoria', staff, async (req, res) => {
+  try {
+    res.json(await listarAuditoria(req.query));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria do estoque ainda não instalada: rode scripts/migrate_estoque_auditoria.js' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
 const SALDO_SQL = `COALESCE((SELECT SUM(l.saldo_atual) FROM estoque_lotes l WHERE l.item_id = i.id),0)`;
 
 /* ───── Itens ───── */
