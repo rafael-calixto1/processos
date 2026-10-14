@@ -283,7 +283,7 @@ router.get('/leads/:id/historico', verifyToken, async (req, res) => {
       eventos.unshift({ id: 0, tipo: 'recebido', descricao: 'Indicação recebida', usuario: null, created_at: lead.created_at });
     }
     if (lead.status === 'encaminhado' && !eventos.some(e => e.tipo === 'enviado_crm')) {
-      eventos.push({ id: 0, tipo: 'enviado_crm', descricao: `Atendente informou envio ao CRM — funil #${lead.id_crm_destino}`, usuario: null, created_at: lead.updated_at });
+      eventos.push({ id: 0, tipo: 'enviado_crm', descricao: lead.id_crm_destino ? `Atendente informou envio ao CRM — funil #${lead.id_crm_destino}` : 'Atendente informou envio ao CRM', usuario: null, created_at: lead.updated_at });
     }
     res.json(eventos);
   } catch (err) {
@@ -358,23 +358,23 @@ router.delete('/crm/:id_crm/etapas/:id', verifyToken, async (req, res) => {
 // Registra que o atendente enviou o lead ao CRM (a API do Hubsoft não permite criar cartões)
 router.post('/leads/send-to-crm', verifyToken, async (req, res) => {
   try {
-    const { id_indicacao, id_crm, nome_crm } = req.body;
+    const { id_indicacao } = req.body;
 
-    if (!id_indicacao || !id_crm) {
-      return res.status(400).json({ error: 'id_indicacao e id_crm são obrigatórios' });
+    if (!id_indicacao) {
+      return res.status(400).json({ error: 'id_indicacao é obrigatório' });
     }
 
     const [upd] = await pool.execute(
-      "UPDATE indicacoes SET status = 'encaminhado', id_crm_destino = ?, updated_at = NOW() WHERE id = ? AND status = 'pendente'",
-      [id_crm, id_indicacao]
+      "UPDATE indicacoes SET status = 'encaminhado', updated_at = NOW() WHERE id = ? AND status = 'pendente'",
+      [id_indicacao]
     );
 
     if (upd.affectedRows > 0) {
-      await registrarEvento(req, id_indicacao, 'enviado_crm', `Atendente informou envio ao CRM — funil ${nome_crm || `#${id_crm}`}`);
+      await registrarEvento(req, id_indicacao, 'enviado_crm', 'Atendente informou envio ao CRM');
       await registrarAuditoria({
         req, acao: 'encaminhada_crm', origem: 'painel', idIndicacao: id_indicacao,
-        resumo: `Indicação #${id_indicacao} enviada ao CRM — funil ${nome_crm || `#${id_crm}`}`,
-        antes: { status: 'pendente' }, depois: { status: 'encaminhado', id_crm_destino: id_crm }, campos: ['status', 'id_crm_destino'],
+        resumo: `Indicação #${id_indicacao} enviada ao CRM`,
+        antes: { status: 'pendente' }, depois: { status: 'encaminhado' }, campos: ['status'],
       });
     }
 

@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { referralAPI } from '../api';
 import styles from './Leads.module.css';
-import { Select } from '../components/Select/Select';
 import FiltroPeriodo from '../components/FiltroPeriodo';
 import { noPeriodo } from '../components/periodo';
 
@@ -190,10 +189,8 @@ const ActionsMenu = ({ lead, onView, onHistory, onSendCRM }) => {
 const Leads = () => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [crms, setCrms] = useState([]);
   const [showCrmModal, setShowCrmModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [crmForm, setCrmForm] = useState({ id_crm: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
@@ -204,7 +201,7 @@ const Leads = () => {
   const [periodo, setPeriodo] = useState({ de: '', ate: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => { fetchLeads(); fetchCRMs(); }, []);
+  useEffect(() => { fetchLeads(); }, []);
 
   // Volta para a primeira página sempre que a busca ou o filtro mudam
   useEffect(() => { setCurrentPage(1); }, [activeFilter, searchIndicadorId, periodo]);
@@ -215,14 +212,7 @@ const Leads = () => {
     finally { setLoading(false); }
   };
 
-  const fetchCRMs = async () => {
-    try {
-      const data = await referralAPI.getHubsoftCRMs();
-      setCrms(Array.isArray(data) ? data : []);
-    } catch { setCrms([]); }
-  };
-
-  const handleOpenCRM = (lead) => { setSelectedLead(lead); setCrmForm({ id_crm: '' }); setShowCrmModal(true); };
+  const handleOpenCRM = (lead) => { setSelectedLead(lead); setShowCrmModal(true); };
   const handleOpenHistory = async (lead) => {
     setHistoryLead(lead);
     setHistoryEvents(null);
@@ -235,7 +225,7 @@ const Leads = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await referralAPI.sendLeadToCRM({ id_indicacao: selectedLead.id, id_crm: crmForm.id_crm, nome_crm: crms.find(c => String(c.id_crm) === String(crmForm.id_crm))?.nome });
+      await referralAPI.sendLeadToCRM({ id_indicacao: selectedLead.id });
       setShowCrmModal(false);
       fetchLeads();
     } catch (err) { alert('Erro: ' + err.message); }
@@ -682,14 +672,6 @@ const Leads = () => {
               <p className={styles.optLabel}>
                 Confirme que você já cadastrou os dados deste lead no CRM do Hubsoft. Nenhum cartão é criado automaticamente.
               </p>
-              <div className={styles.formGroup}>
-                <label>Funil CRM</label>
-                <Select value={crmForm.id_crm} onChange={(e) => setCrmForm({...crmForm, id_crm: e.target.value})} required>
-                  <option value="">Selecione o funil…</option>
-                  {crms.map(crm => <option key={crm.id_crm} value={crm.id_crm}>{crm.nome}</option>)}
-                </Select>
-              </div>
-
               <div className={styles.crmModalFooter}>
                 <button type="button" onClick={() => setShowCrmModal(false)} className={styles.btnCancel}>
                   Cancelar
