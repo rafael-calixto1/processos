@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import AcessosAuditoria from './AcessosAuditoria';
 import { authAPI, departmentAPI } from '../api/index';
 import DepartmentSelector from '../components/DepartmentSelector';
 import styles from './Users.module.css';
@@ -6,6 +8,8 @@ import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUserPlus, FiLock } from 'rea
 import { Select } from '../components/Select/Select';
 
 const Users = () => {
+  const [params, setParams] = useSearchParams();
+  const aba = params.get('aba') === 'acessos' ? 'acessos' : 'usuarios';
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,15 +133,28 @@ const Users = () => {
       <header className={styles.header}>
         <div>
           <h1>Gerenciamento de Usuários</h1>
-          <p>Adicione e gerencie os membros da equipe e seus níveis de acesso.</p>
+          <p>{aba === 'acessos'
+            ? 'Quem entrou, de qual IP, por quanto tempo a sessão ficou ativa, quando e por que ela terminou.'
+            : 'Adicione e gerencie os membros da equipe e seus níveis de acesso.'}</p>
         </div>
-        <button 
-          className="btn btn-primary"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          {showAddForm ? <><FiX /> Cancelar</> : <><FiUserPlus /> Novo Usuário</>}
-        </button>
+        {aba === 'usuarios' && (
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAddForm(!showAddForm)}
+          >
+            {showAddForm ? <><FiX /> Cancelar</> : <><FiUserPlus /> Novo Usuário</>}
+          </button>
+        )}
       </header>
+
+      <nav className={styles.abas} role="tablist" aria-label="Seções de usuários">
+        <button type="button" role="tab" aria-selected={aba === 'usuarios'} className={`${styles.aba} ${aba === 'usuarios' ? styles.abaAtiva : ''}`}
+          onClick={() => setParams({})}>Usuários</button>
+        <button type="button" role="tab" aria-selected={aba === 'acessos'} className={`${styles.aba} ${aba === 'acessos' ? styles.abaAtiva : ''}`}
+          onClick={() => setParams({ aba: 'acessos' })}>Acessos (logins e sessões)</button>
+      </nav>
+
+      {aba === 'acessos' ? <AcessosAuditoria /> : (<>
 
       {error && <div className={styles.error}>{error}</div>}
       {success && <div className={styles.success}>{success}</div>}
@@ -379,6 +396,7 @@ const Users = () => {
           </button>
         </div>
       )}
+      </>)}
     </div>
   );
 };

@@ -521,3 +521,35 @@
     text-align: center;
   }
 }
+
+.abas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+}
+
+.aba {
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.aba:hover { color: var(--text-dark); }
+
+.abaAtiva,
+.abaAtiva:hover {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}

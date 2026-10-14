@@ -86,6 +86,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    const atual = localStorage.getItem('token');
+    if (atual) {
+      // registra o logout na auditoria de acessos (sem esperar: sair nunca depende do servidor)
+      fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${atual}` }, keepalive: true }).catch(() => {});
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');

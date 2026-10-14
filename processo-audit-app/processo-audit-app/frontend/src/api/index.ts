@@ -82,6 +82,23 @@ export const authAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+
+  // Auditoria de acessos (só admin). Erro vem com a mensagem do servidor (ex.: 503 "ainda não instalada").
+  acessos: async (aba: 'sessoes' | 'eventos', params: Record<string, string | number> = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== '' && v !== undefined && v !== null) q.append(k, String(v)); });
+    const res = await fetch(`${API_URL}/auth/acessos/${aba}?${q}`, { headers: headers(getToken()) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Não foi possível carregar a auditoria de acessos');
+    return data;
+  },
+
+  encerrarSessao: async (sid: string) => {
+    const res = await fetch(`${API_URL}/auth/acessos/sessoes/${sid}/encerrar`, { method: 'POST', headers: headers(getToken()) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Não foi possível encerrar a sessão');
+    return data;
   }
 };
 
