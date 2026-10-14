@@ -137,12 +137,13 @@ const OrdensServico = () => {
       <AsyncState loading={loading} error={semVinculo ? null : error} onRetry={reload} empty={semVinculo || lista.length === 0} emptyTitle={isTecnico ? 'Você não tem nenhuma OS atribuída no momento' : 'Nenhuma OS encontrada'}
         emptyAction={!isTecnico && <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setNova(true)}><Plus size={16} />Criar OS</button>}>
         <div className={s.tableWrap}><table className={s.table}>
-          <thead><tr><th>Nº</th><th>Nome da OS</th>{!isTecnico && <th>Responsável</th>}<th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>
+          <thead><tr><th>Nº</th><th>Nome da OS</th>{!isTecnico && <th>Responsável</th>}<th>Prazo</th><th>Executada em</th><th>Prioridade</th><th>Status</th></tr></thead>
           <tbody>{lista.map((o) => (
             <tr key={o.id} className={s.clickRow} onClick={() => nav(`/os/${o.id}`)}>
               <td data-label="Nº"><b>#{o.numero}</b></td><td data-label="Nome da OS">{o.cliente}</td>
               {!isTecnico && <td data-label="Responsável">{o.tecnico_nome}</td>}
               <td data-label="Prazo">{fmtData(o.prazo)}{atrasada(o) && <b style={{ color: '#991b1b' }}> · atrasada</b>}</td>
+              <td data-label="Executada em">{o.status === 'concluida' ? fmtData(o.concluida_em) : '—'}</td>
               <td data-label="Prioridade"><PrioridadeBadge p={o.prioridade} /></td><td data-label="Status"><OsStatusBadge status={o.status} /></td>
             </tr>))}</tbody></table></div>
       </AsyncState>

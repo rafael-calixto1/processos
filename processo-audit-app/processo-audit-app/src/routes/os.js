@@ -42,7 +42,7 @@ router.get('/', handle(async (req, res) => {
     where.push('o.atualizado_em >= ?'); params.push(desde);
   }
   const [rows] = await pool.query(
-    `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em,${req.query.atualizado_desde ? ' o.atualizado_em, o.iniciado_em,' : ''}
+    `SELECT o.id, o.numero, o.cliente, o.endereco, o.tipo_execucao, o.prazo, o.prioridade, o.status, o.criado_em, o.concluida_em,${req.query.atualizado_desde ? ' o.atualizado_em, o.iniciado_em,' : ''}
        o.tipo_servico, o.bairro, o.cidade, o.latitude, o.longitude, o.pop_nome, o.rota_id, o.poste_id,
        t.nome AS tecnico_nome,
        EXISTS(SELECT 1 FROM os_rascunhos r WHERE r.os_id = o.id) AS tem_rascunho
