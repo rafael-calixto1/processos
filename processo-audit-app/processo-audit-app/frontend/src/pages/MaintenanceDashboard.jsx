@@ -10,7 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { Coins, Wrench, RotateCcw } from 'lucide-react';
+import { Coins, Wrench, RotateCcw, Plus } from 'lucide-react';
 import { barDataset, makeBarOptions, brl } from './fleetCharts';
 import styles from './Fleet.module.css';
 
@@ -38,7 +38,7 @@ const defaultLayouts = {
   ],
 };
 
-const MaintenanceDashboard = () => {
+const MaintenanceDashboard = ({ onAdd }) => {
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate,   setEndDate]   = useState(defaultEnd);
   const [data,      setData]      = useState([]);
@@ -119,9 +119,16 @@ const MaintenanceDashboard = () => {
             onChange={e => setEndDate(e.target.value)}
           />
         </div>
-        <button className={styles.btnSecondary} onClick={resetLayout}>
-          <RotateCcw size={15} strokeWidth={2} /> Resetar Layout
-        </button>
+        <div className={styles.toolbarGroup}>
+          <button className={styles.btnSecondary} onClick={resetLayout}>
+            <RotateCcw size={15} strokeWidth={2} /> Resetar Layout
+          </button>
+          {onAdd && (
+            <button className={styles.btnPrimary} onClick={onAdd}>
+              <Plus size={16} /> Nova Manutenção
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className={styles.errorState}>{error}</div>}

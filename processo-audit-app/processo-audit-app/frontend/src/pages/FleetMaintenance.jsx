@@ -16,7 +16,7 @@ const emptyHistoryForm = {
   maintenance_kilometers: '', total_cost: '', observation: '',
 };
 
-const MaintenanceHistory = ({ cars, types }) => {
+const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) => {
   const [records,      setRecords]      = useState([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
@@ -72,6 +72,13 @@ const MaintenanceHistory = ({ cars, types }) => {
     setShowForm(true);
   };
   const closeForm = () => { setShowForm(false); setEditId(null); setForm(emptyHistoryForm); };
+
+  // Botão "Nova Manutenção" do Dashboard: chega aqui já com o formulário aberto
+  useEffect(() => {
+    if (!openNewSignal) return;
+    openAdd();
+    onOpenNewHandled();
+  }, [openNewSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async e => {
     e.preventDefault();
@@ -149,7 +156,7 @@ const MaintenanceHistory = ({ cars, types }) => {
           />
         </div>
         <button className={styles.btnPrimary} onClick={openAdd}>
-          <Plus size={16} /> Novo Registro
+          <Plus size={16} /> Nova Manutenção
         </button>
       </div>
 
@@ -682,6 +689,12 @@ const FleetMaintenance = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cars,  setCars]  = useState([]);
   const [types, setTypes] = useState([]);
+  const [openNewSignal, setOpenNewSignal] = useState(0);
+
+  const openNewMaintenance = () => {
+    setActiveTab('history');
+    setOpenNewSignal(1);
+  };
 
   const fetchTypes = useCallback(async () => {
     try {
@@ -725,10 +738,10 @@ const FleetMaintenance = () => {
       </div>
 
       {activeTab === 'dashboard' && (
-        <MaintenanceDashboard />
+        <MaintenanceDashboard onAdd={openNewMaintenance} />
       )}
       {activeTab === 'history' && (
-        <MaintenanceHistory cars={cars} types={types} />
+        <MaintenanceHistory cars={cars} types={types} openNewSignal={openNewSignal} onOpenNewHandled={() => setOpenNewSignal(0)} />
       )}
       {activeTab === 'types' && (
         <MaintenanceTypes types={types} onRefresh={fetchTypes} />
