@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, Users } from 'lucide-react';
+import { Plus, Pencil, X, Users } from 'lucide-react';
 import styles from './Fleet.module.css';
 import { fleetFetch } from './fleetFetch';
+import { StatusFilter, StatusButton, StatusModal, InactiveBadge, isInactive } from './fleetStatus';
 
 const LIMIT = 15;
 const emptyForm = { name: '', license_number: '' };
@@ -18,7 +19,8 @@ const FleetDrivers = () => {
   const [form,         setForm]         = useState(emptyForm);
   const [saving,       setSaving]       = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusTarget, setStatusTarget] = useState(null);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
@@ -27,6 +29,7 @@ const FleetDrivers = () => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
+      if (statusFilter) params.set('status', statusFilter);
       const res  = await fleetFetch(`/api/fleet/drivers?${params}`);
       const json = await res.json();
       setDrivers(json.drivers || []);
@@ -36,7 +39,7 @@ const FleetDrivers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
 
@@ -71,23 +74,13 @@ const FleetDrivers = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fleetFetch(`/api/fleet/drivers/${deleteTarget.id}`, { method: 'DELETE' });
-      setDeleteTarget(null);
-      fetchDrivers();
-    } catch (e) {
-      setError('Erro ao excluir: ' + e.message);
-    }
-  };
-
   return (
     <div>
       {error && <div className={styles.errorState}>{error}</div>}
 
       {/* Toolbar */}
       <div className={styles.filterRow}>
+        <StatusFilter value={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }} />
         <div style={{ flex: 1 }} />
         <button className={styles.btnPrimary} onClick={openAdd}>
           <Plus size={16} /> Novo Motorista
@@ -141,8 +134,14 @@ const FleetDrivers = () => {
       ) : drivers.length === 0 ? (
         <div className={styles.emptyState}>
           <Users size={40} color="var(--border-color)" style={{ marginBottom: '0.75rem' }} />
-          <p>Nenhum motorista cadastrado.</p>
-          <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Motorista</button>
+          {statusFilter === 'inactive' ? (
+            <p>Nenhum motorista inativo.</p>
+          ) : (
+            <>
+              <p>Nenhum motorista cadastrado.</p>
+              <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Motorista</button>
+            </>
+          )}
         </div>
       ) : (
         <div className={styles.tableContainer}>
@@ -157,18 +156,16 @@ const FleetDrivers = () => {
             </thead>
             <tbody>
               {drivers.map((d, i) => (
-                <tr key={d.id}>
+                <tr key={d.id} className={isInactive(d) ? styles.rowInactive : undefined}>
                   <td style={{ color: 'var(--text-light)', width: '48px' }}>{(page - 1) * LIMIT + i + 1}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{d.name}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{d.name} <InactiveBadge item={d} /></td>
                   <td>{d.license_number || '—'}</td>
                   <td>
                     <div className={styles.actionBtns}>
                       <button className="primary" onClick={() => openEdit(d)} title="Editar">
                         <Pencil size={15} />
                       </button>
-                      <button className="danger" onClick={() => setDeleteTarget(d)} title="Excluir">
-                        <Trash2 size={15} />
-                      </button>
+                      <StatusButton item={d} onClick={setStatusTarget} />
                     </div>
                   </td>
                 </tr>
@@ -195,22 +192,15 @@ const FleetDrivers = () => {
         </div>
       )}
 
-      {/* Delete Modal */}
-      {deleteTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Confirmar exclusão</h3>
-            <p style={{ color: 'var(--text-medium)', marginBottom: 0 }}>
-              Deseja excluir o motorista <strong>{deleteTarget.name}</strong>?
-              Esta ação não pode ser desfeita.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={handleDelete}>Excluir</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusModal
+        key={statusTarget?.id}
+        target={statusTarget}
+        endpoint="/api/fleet/drivers"
+        kind="cadastro"
+        label={<>o motorista <strong>{statusTarget?.name}</strong></>}
+        onClose={() => setStatusTarget(null)}
+        onDone={() => { setStatusTarget(null); fetchDrivers(); }}
+      />
     </div>
   );
 };

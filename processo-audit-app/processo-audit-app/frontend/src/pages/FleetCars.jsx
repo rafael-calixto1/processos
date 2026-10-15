@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Car, Eye } from 'lucide-react';
+import { Plus, Pencil, ChevronUp, ChevronDown, X, Car, Eye } from 'lucide-react';
 import styles from './Fleet.module.css';
 import { calcStatus, worstStatus, STATUS_STYLE, nextDueText } from './fleetMaintenanceStatus';
 import { Select } from '../components/Select/Select';
 import { fleetFetch } from './fleetFetch';
+import { StatusFilter, StatusButton, StatusModal, activeOrSelected, isInactive } from './fleetStatus';
 
 /* ─── Car Detail Modal ─── */
 const CarDetailModal = ({ carId, onClose }) => {
@@ -145,7 +146,7 @@ const FleetCars = () => {
   const [page,        setPage]        = useState(1);
   const [sortField,   setSortField]   = useState('make');
   const [sortOrder,   setSortOrder]   = useState('asc');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
 
@@ -154,7 +155,7 @@ const FleetCars = () => {
   const [form,        setForm]        = useState(emptyForm);
   const [saving,      setSaving]      = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
   const [viewId,       setViewId]       = useState(null);
   const [overview,     setOverview]     = useState({});
 
@@ -266,18 +267,6 @@ const FleetCars = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fleetFetch(`/api/fleet/cars/${deleteTarget.id}`, { method: 'DELETE' });
-      setDeleteTarget(null);
-      fetchCars();
-      fetchOverview();
-    } catch (e) {
-      setError('Erro ao excluir: ' + e.message);
-    }
-  };
-
   const getDriverName = id => {
     const d = drivers.find(x => String(x.id) === String(id));
     return d ? d.name : '—';
@@ -289,17 +278,7 @@ const FleetCars = () => {
 
       {/* Toolbar */}
       <div className={styles.filterRow}>
-        <label>Status</label>
-        <Select
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className={styles.select}
-          style={{ width: 'auto' }}
-        >
-          <option value="">Todos</option>
-          <option value="active">Ativo</option>
-          <option value="inactive">Inativo</option>
-        </Select>
+        <StatusFilter value={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }} />
         <div style={{ flex: 1 }} />
         <button className={styles.btnPrimary} onClick={openAdd}>
           <Plus size={16} /> Novo Veículo
@@ -337,7 +316,9 @@ const FleetCars = () => {
                 <label className={styles.label}>Motorista</label>
                 <Select className={styles.select} value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })}>
                   <option value="">— Nenhum —</option>
-                  {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {activeOrSelected(drivers, form.driver_id).map(d => (
+                    <option key={d.id} value={d.id}>{d.name}{isInactive(d) ? ' (inativo)' : ''}</option>
+                  ))}
                 </Select>
               </div>
               <div className={styles.formGroup}>
@@ -391,7 +372,7 @@ const FleetCars = () => {
             </thead>
             <tbody>
               {cars.map(car => (
-                <tr key={car.id}>
+                <tr key={car.id} className={isInactive(car) ? styles.rowInactive : undefined}>
                   <td>
                     <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{car.make} {car.model}</span>
                   </td>
@@ -423,7 +404,7 @@ const FleetCars = () => {
                     <div className={styles.actionBtns}>
                       <button onClick={() => setViewId(car.id)} title="Visualizar"><Eye size={15} /></button>
                       <button className="primary" onClick={() => openEdit(car)} title="Editar"><Pencil size={15} /></button>
-                      <button className="danger" onClick={() => setDeleteTarget(car)} title="Excluir"><Trash2 size={15} /></button>
+                      <StatusButton item={car} onClick={setStatusTarget} />
                     </div>
                   </td>
                 </tr>
@@ -456,22 +437,15 @@ const FleetCars = () => {
       {/* Car Detail Modal */}
       {viewId && <CarDetailModal carId={viewId} onClose={() => setViewId(null)} />}
 
-      {/* Delete Modal */}
-      {deleteTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Confirmar exclusão</h3>
-            <p style={{ color: 'var(--text-medium)', marginBottom: 0 }}>
-              Deseja excluir o veículo <strong>{deleteTarget.make} {deleteTarget.model}</strong> ({deleteTarget.license_plate})?
-              Esta ação não pode ser desfeita.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={handleDelete}>Excluir</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusModal
+        key={statusTarget?.id}
+        target={statusTarget}
+        endpoint="/api/fleet/cars"
+        kind="cadastro"
+        label={<>o veículo <strong>{statusTarget?.make} {statusTarget?.model}</strong> ({statusTarget?.license_plate})</>}
+        onClose={() => setStatusTarget(null)}
+        onDone={() => { setStatusTarget(null); fetchCars(); fetchOverview(); }}
+      />
     </div>
   );
 };

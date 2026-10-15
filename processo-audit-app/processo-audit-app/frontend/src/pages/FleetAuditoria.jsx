@@ -9,11 +9,13 @@ import { fleetFetch } from './fleetFetch';
 const GRUPOS = [
   { id: 'criado',     label: 'Cadastros' },
   { id: 'editado',    label: 'Edições' },
-  { id: 'excluido',   label: 'Exclusões' },
+  { id: 'inativado',  label: 'Inativações' },
+  { id: 'reativado',  label: 'Reativações' },
+  { id: 'excluido',   label: 'Exclusões (antigas)' },
   { id: 'cupom_lido', label: 'Cupons lidos' },
 ];
 
-const TOM = { criado: 'novo', editado: 'edicao', excluido: 'perigo', cupom_lido: 'neutro' };
+const TOM = { criado: 'novo', editado: 'edicao', inativado: 'alerta', reativado: 'dinheiro', excluido: 'perigo', cupom_lido: 'neutro' };
 
 const CAMPOS = {
   make: 'Marca', model: 'Modelo', license_plate: 'Placa', current_kilometers: 'Km atual',

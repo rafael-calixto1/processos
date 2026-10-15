@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Pencil, Trash2, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
+import { Plus, Pencil, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
 import { fleetFetch } from './fleetFetch';
+import { StatusFilter, StatusButton, StatusModal, InactiveBadge, activeOrSelected, isInactive } from './fleetStatus';
 const LIMIT = 15;
 const FUEL_TYPES = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
@@ -28,7 +29,8 @@ const FleetFueling = () => {
   const [form,         setForm]         = useState(emptyForm);
   const [saving,       setSaving]       = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusTarget, setStatusTarget] = useState(null);
 
   /* QR Code Import States */
   const [showImport,   setShowImport]   = useState(false);
@@ -55,6 +57,7 @@ const FleetFueling = () => {
     setError('');
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
+      if (statusFilter) params.set('status', statusFilter);
       const res  = await fleetFetch(`/api/fleet/fueling?${params}`);
       const json = await res.json();
       setRecords(json.fuelingHistory || []);
@@ -64,7 +67,7 @@ const FleetFueling = () => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -186,17 +189,6 @@ const FleetFueling = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fleetFetch(`/api/fleet/fueling/entry/${deleteTarget.id}`, { method: 'DELETE' });
-      setDeleteTarget(null);
-      fetchRecords();
-    } catch (e) {
-      setError('Erro ao excluir: ' + e.message);
-    }
-  };
-
   // Shared logic: fetch + parse + fill form. Throws on error.
   const parseAndFill = async (payload) => {
     const res = await fleetFetch('/api/fleet/fueling/parse-receipt', {
@@ -304,6 +296,7 @@ const FleetFueling = () => {
       {error && <div className={styles.errorState}>{error}</div>}
 
       <div className={styles.filterRow}>
+        <StatusFilter value={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }} />
         <div className={styles.fuelingSpacer} />
         <div className={styles.fuelingActionsRow}>
           <button className={styles.btnSecondary} onClick={() => { setCameraError(''); setScanStatus('scanning'); setShowImport(true); setImportMode('camera'); }}>
@@ -464,7 +457,9 @@ const FleetFueling = () => {
                 <label className={styles.label}>Veículo *</label>
                 <Select className={styles.select} value={form.car_id} onChange={e => handleFormChange('car_id', e.target.value)} required>
                   <option value="">— Selecione —</option>
-                  {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
+                  {activeOrSelected(cars, form.car_id).map(c => (
+                    <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate}){isInactive(c) ? ' (inativo)' : ''}</option>
+                  ))}
                 </Select>
               </div>
               <div className={styles.formGroup}>
@@ -518,8 +513,14 @@ const FleetFueling = () => {
       ) : records.length === 0 ? (
         <div className={styles.emptyState}>
           <Fuel size={40} color="var(--border-color)" style={{ marginBottom: '0.75rem' }} />
-          <p>Nenhum abastecimento registrado.</p>
-          <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Abastecimento</button>
+          {statusFilter === 'inactive' ? (
+            <p>Nenhum abastecimento inativo.</p>
+          ) : (
+            <>
+              <p>Nenhum abastecimento registrado.</p>
+              <button className={styles.btnPrimary} onClick={openAdd}><Plus size={16} /> Adicionar Abastecimento</button>
+            </>
+          )}
         </div>
       ) : (
         <div className={styles.tableContainer}>
@@ -539,11 +540,12 @@ const FleetFueling = () => {
               </thead>
               <tbody>
                 {records.map(r => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={isInactive(r) ? styles.rowInactive : undefined}>
                     <td>
                       <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
                         {getCarLabel(r.car_id)}
-                      </span>
+                      </span>{' '}
+                      <InactiveBadge item={r} />
                     </td>
                     <td>
                       <span className={styles.statusBadge} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
@@ -560,7 +562,7 @@ const FleetFueling = () => {
                     <td>
                       <div className={styles.actionBtns}>
                         <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                        <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                        <StatusButton item={r} onClick={setStatusTarget} />
                       </div>
                     </td>
                   </tr>
@@ -572,12 +574,12 @@ const FleetFueling = () => {
           {/* Mobile card list — shows every field per abastecimento without horizontal scrolling */}
           <div className={styles.fuelingCardList}>
             {records.map(r => (
-              <div key={r.id} className={styles.fuelingCard}>
+              <div key={r.id} className={`${styles.fuelingCard} ${isInactive(r) ? styles.cardInactive : ''}`}>
                 <div className={styles.fuelingCardHeader}>
-                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)}</div>
+                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)} <InactiveBadge item={r} /></div>
                   <div className={styles.actionBtns}>
                     <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                    <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                    <StatusButton item={r} onClick={setStatusTarget} />
                   </div>
                 </div>
 
@@ -637,21 +639,14 @@ const FleetFueling = () => {
         </div>
       )}
 
-      {/* Delete Modal */}
-      {deleteTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Confirmar exclusão</h3>
-            <p style={{ color: 'var(--text-medium)', marginBottom: 0 }}>
-              Deseja excluir este registro de abastecimento? Esta ação não pode ser desfeita.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={handleDelete}>Excluir</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusModal
+        key={statusTarget?.id}
+        target={statusTarget}
+        endpoint="/api/fleet/fueling"
+        label={<>o abastecimento de <strong>{statusTarget && fmtDate(statusTarget.fuel_date)}</strong> ({statusTarget && getCarLabel(statusTarget.car_id)})</>}
+        onClose={() => setStatusTarget(null)}
+        onDone={() => { setStatusTarget(null); fetchRecords(); }}
+      />
     </div>
   );
 };

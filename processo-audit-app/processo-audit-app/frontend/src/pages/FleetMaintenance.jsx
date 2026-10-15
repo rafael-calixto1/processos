@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
+import { Plus, Pencil, X, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
 import styles from './Fleet.module.css';
 import MaintenanceDashboard from './MaintenanceDashboard';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
 import { fleetFetch } from './fleetFetch';
+import { StatusFilter, StatusButton, StatusModal, InactiveBadge, activeOrSelected, isInactive } from './fleetStatus';
 const LIMIT = 15;
 
 /* ════════════════════════════════════════════════════════
@@ -29,7 +30,8 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
   const [editId,       setEditId]       = useState(null);
   const [form,         setForm]         = useState(emptyHistoryForm);
   const [saving,       setSaving]       = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusTarget, setStatusTarget] = useState(null);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
 
@@ -39,6 +41,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
       if (search) params.set('search', search);
+      if (statusFilter) params.set('status', statusFilter);
       const res  = await fleetFetch(`/api/fleet/maintenance/history?${params}`);
       const json = await res.json();
       setRecords(json.maintenanceHistory || []);
@@ -48,7 +51,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, statusFilter]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -114,17 +117,6 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fleetFetch(`/api/fleet/maintenance/history/${deleteTarget.id}`, { method: 'DELETE' });
-      setDeleteTarget(null);
-      fetchRecords();
-    } catch (e) {
-      setError('Erro ao excluir: ' + e.message);
-    }
-  };
-
   const getCarLabel = id => {
     const c = cars.find(x => String(x.id) === String(id));
     return c ? `${c.make} ${c.model} (${c.license_plate})` : String(id || '—');
@@ -155,6 +147,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
             onChange={e => setSearchInput(e.target.value)}
           />
         </div>
+        <StatusFilter value={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }} />
         <button className={styles.btnPrimary} onClick={openAdd}>
           <Plus size={16} /> Nova Manutenção
         </button>
@@ -174,14 +167,18 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
                 <label className={styles.label}>Veículo *</label>
                 <Select className={styles.select} value={form.car_id} onChange={e => setForm({ ...form, car_id: e.target.value })} required>
                   <option value="">— Selecione —</option>
-                  {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate})</option>)}
+                  {activeOrSelected(cars, form.car_id).map(c => (
+                    <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate}){isInactive(c) ? ' (inativo)' : ''}</option>
+                  ))}
                 </Select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Tipo de Manutenção *</label>
                 <Select className={styles.select} value={form.maintenance_type_id} onChange={e => setForm({ ...form, maintenance_type_id: e.target.value })} required>
                   <option value="">— Selecione —</option>
-                  {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {activeOrSelected(types, form.maintenance_type_id).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}{isInactive(t) ? ' (inativo)' : ''}</option>
+                  ))}
                 </Select>
               </div>
               <div className={styles.formGroup}>
@@ -221,6 +218,8 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
               <p>Nenhum registro para “{search}”.</p>
               <button className={styles.btnSecondary} onClick={() => setSearchInput('')}>Limpar busca</button>
             </>
+          ) : statusFilter === 'inactive' ? (
+            <p>Nenhuma manutenção inativa.</p>
           ) : (
             <>
               <p>Nenhum registro de manutenção.</p>
@@ -245,8 +244,8 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
               </thead>
               <tbody>
                 {records.map(r => (
-                  <tr key={r.id}>
-                    <td className={styles.vehicleName}>{getCarLabel(r.car_id)}</td>
+                  <tr key={r.id} className={isInactive(r) ? styles.rowInactive : undefined}>
+                    <td className={styles.vehicleName}>{getCarLabel(r.car_id)} <InactiveBadge item={r} /></td>
                     <td>
                       <span className={styles.typeBadge}>{getTypeName(r.maintenance_type_id)}</span>
                     </td>
@@ -259,7 +258,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
                     <td className={styles.actionsCol}>
                       <div className={styles.actionBtns}>
                         <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                        <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                        <StatusButton item={r} onClick={setStatusTarget} />
                       </div>
                     </td>
                   </tr>
@@ -271,12 +270,12 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
           {/* Mobile card list — shows every field per registro without horizontal scrolling */}
           <div className={styles.historyCardList}>
             {records.map(r => (
-              <div key={r.id} className={styles.fuelingCard}>
+              <div key={r.id} className={`${styles.fuelingCard} ${isInactive(r) ? styles.cardInactive : ''}`}>
                 <div className={styles.fuelingCardHeader}>
-                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)}</div>
+                  <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)} <InactiveBadge item={r} /></div>
                   <div className={styles.actionBtns}>
                     <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
-                    <button className="danger" onClick={() => setDeleteTarget(r)} title="Excluir"><Trash2 size={15} /></button>
+                    <StatusButton item={r} onClick={setStatusTarget} />
                   </div>
                 </div>
 
@@ -329,20 +328,14 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
         </div>
       )}
 
-      {deleteTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Confirmar exclusão</h3>
-            <p style={{ color: 'var(--text-medium)', marginBottom: 0 }}>
-              Deseja excluir este registro de manutenção? Esta ação não pode ser desfeita.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={handleDelete}>Excluir</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusModal
+        key={statusTarget?.id}
+        target={statusTarget}
+        endpoint="/api/fleet/maintenance/history"
+        label={<>a manutenção <strong>{statusTarget && getTypeName(statusTarget.maintenance_type_id)}</strong> de {statusTarget && fmtDate(statusTarget.maintenance_date)} ({statusTarget && getCarLabel(statusTarget.car_id)})</>}
+        onClose={() => setStatusTarget(null)}
+        onDone={() => { setStatusTarget(null); fetchRecords(); }}
+      />
     </div>
   );
 };
@@ -416,7 +409,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
   const [form,         setForm]         = useState(emptyTypeForm);
   const [saving,       setSaving]       = useState(false);
   const [error,        setError]        = useState('');
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
 
   const openAdd  = () => { setEditId(null); setForm(emptyTypeForm); setShowForm(true); };
   const openEdit = t => {
@@ -476,17 +469,6 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
       setError('Erro ao salvar: ' + e.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fleetFetch(`/api/fleet/maintenance/types/${deleteTarget.id}`, { method: 'DELETE' });
-      setDeleteTarget(null);
-      onRefresh();
-    } catch (e) {
-      setError('Erro ao excluir: ' + e.message);
     }
   };
 
@@ -621,7 +603,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
               </thead>
               <tbody>
                 {types.map(t => (
-                  <tr key={t.id}>
+                  <tr key={t.id} className={isInactive(t) ? styles.rowInactive : undefined}>
                     <td className={styles.vehicleName}>{t.name}</td>
                     <td><RecurrencePills type={t} /></td>
                     <td>
@@ -632,7 +614,7 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
                     <td>
                       <div className={styles.actionBtns}>
                         <button className="primary" onClick={() => openEdit(t)} title="Editar"><Pencil size={15} /></button>
-                        <button className="danger" onClick={() => setDeleteTarget(t)} title="Excluir"><Trash2 size={15} /></button>
+                        <StatusButton item={t} onClick={setStatusTarget} />
                       </div>
                     </td>
                   </tr>
@@ -644,12 +626,12 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
           {/* Mobile card list */}
           <div className={styles.typesCardList}>
             {types.map(t => (
-              <div key={t.id} className={styles.fuelingCard}>
+              <div key={t.id} className={`${styles.fuelingCard} ${isInactive(t) ? styles.cardInactive : ''}`}>
                 <div className={styles.fuelingCardHeader}>
                   <div className={styles.fuelingCardVehicle}>{t.name}</div>
                   <div className={styles.actionBtns}>
                     <button className="primary" onClick={() => openEdit(t)} title="Editar"><Pencil size={15} /></button>
-                    <button className="danger" onClick={() => setDeleteTarget(t)} title="Excluir"><Trash2 size={15} /></button>
+                    <StatusButton item={t} onClick={setStatusTarget} />
                   </div>
                 </div>
                 <div className={styles.fuelingCardTop}>
@@ -664,20 +646,15 @@ const MaintenanceTypes = ({ types, onRefresh }) => {
         </div>
       )}
 
-      {deleteTarget && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Confirmar exclusão</h3>
-            <p style={{ color: 'var(--text-medium)', marginBottom: 0 }}>
-              Deseja excluir o tipo <strong>{deleteTarget.name}</strong>? Esta ação não pode ser desfeita.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={handleDelete}>Excluir</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatusModal
+        key={statusTarget?.id}
+        target={statusTarget}
+        endpoint="/api/fleet/maintenance/types"
+        kind="cadastro"
+        label={<>o tipo <strong>{statusTarget?.name}</strong></>}
+        onClose={() => setStatusTarget(null)}
+        onDone={() => { setStatusTarget(null); onRefresh(); }}
+      />
     </div>
   );
 };

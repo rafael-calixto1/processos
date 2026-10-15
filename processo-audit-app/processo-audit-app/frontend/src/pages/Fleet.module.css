@@ -1285,3 +1285,9 @@
     flex: 1 1 100%;
   }
 }
+
+/* Registro inativado (na Frota nada é apagado): esmaecido, mas as ações continuam nítidas */
+.rowInactive > td:not(:last-child),
+.cardInactive > :not(:first-child) {
+  opacity: 0.55;
+}
