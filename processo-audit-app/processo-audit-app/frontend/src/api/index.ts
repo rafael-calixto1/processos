@@ -94,6 +94,16 @@ export const authAPI = {
     return data;
   },
 
+  // Auditoria do cadastro de usuários (só admin)
+  usuariosAuditoria: async (params: Record<string, string | number> = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== '' && v !== undefined && v !== null) q.append(k, String(v)); });
+    const res = await fetch(`${API_URL}/auth/usuarios/auditoria?${q}`, { headers: headers(getToken()) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Não foi possível carregar a auditoria de usuários');
+    return data;
+  },
+
   encerrarSessao: async (sid: string) => {
     const res = await fetch(`${API_URL}/auth/acessos/sessoes/${sid}/encerrar`, { method: 'POST', headers: headers(getToken()) });
     const data = await res.json().catch(() => ({}));

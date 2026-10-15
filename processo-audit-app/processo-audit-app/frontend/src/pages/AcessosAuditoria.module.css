@@ -197,6 +197,32 @@
 
 .mudo { color: var(--text-light); }
 
+/* Auditoria do cadastro de usuários: lista "campo: antes → depois" */
+.mudancas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+.mudancas li + li { margin-top: 2px; }
+.mudancas span {
+  color: var(--text-light);
+  font-weight: 600;
+}
+.mudancas span::after { content: ':'; }
+
+.nomeLink {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-align: left;
+  cursor: pointer;
+}
+.nomeLink:hover { color: var(--primary-color); text-decoration: underline; }
+
 .origem {
   display: inline-flex;
   align-items: center;
