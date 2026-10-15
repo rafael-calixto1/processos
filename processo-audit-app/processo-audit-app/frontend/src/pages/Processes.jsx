@@ -4,7 +4,7 @@ import { processAPI, departmentAPI } from '../api/index';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus, Pencil, Trash2, Eye, Camera, FileDown, Search, Building2, Layers, X,
-  CheckCircle2, FileText, Archive,
+  CheckCircle2, FileText, Archive, History,
 } from 'lucide-react';
 import styles from './Processes.module.css';
 import { exportProcessListPdf } from '../utils/pdfBrand';
@@ -89,6 +89,7 @@ const Processes = () => {
       }
       if (filterStatus) filtros.push(['Status', filterStatus]);
       await exportProcessListPdf({ processes: response.processes, filtros });
+      processAPI.registrarPdf({ quantidade: response.processes.length, filtros });
     } catch (err) {
       setError('Erro ao exportar PDF: ' + err.message);
     } finally {
@@ -188,6 +189,9 @@ const Processes = () => {
         <div className={styles.headerActions}>
           {(user?.role === 'admin' || user?.role === 'manager') && (
             <>
+              <Link to="/processos/auditoria" className="btn btn-secondary" style={{ marginRight: '10px' }}>
+                <History size={16} /> Auditoria
+              </Link>
               <button
                 className={`btn btn-secondary`}
                 onClick={handleExportPDF}

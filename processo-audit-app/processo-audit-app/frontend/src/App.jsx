@@ -36,6 +36,7 @@ const EstoqueDevolucoesRevisao = lazy(() => import('./pages/EstoqueDevolucoesRev
 const EstoquePosse = lazy(() => import('./pages/EstoquePosse'));
 const EstoqueCadastros = lazy(() => import('./pages/EstoqueCadastros'));
 const EstoqueAuditoria = lazy(() => import('./pages/EstoqueAuditoria'));
+const ProcessosAuditoria = lazy(() => import('./pages/ProcessosAuditoria'));
 const OsCatalogos = lazy(() => import('./pages/OsCatalogos'));
 const EstoqueEquipamentos = lazy(() => import('./pages/EstoqueEquipamentos'));
 const EstoqueHub = lazy(() => import('./pages/EstoqueHub'));
@@ -116,6 +117,7 @@ const stockRoutes = [
   ['/estoque/auditoria', EstoqueAuditoria, STAFF],
   ['/estoque/catalogos-os', OsCatalogos, ['admin']],
   ['/os/*', OsRoutes, WITH_TECNICO],
+  ['/processos/auditoria', ProcessosAuditoria, ['admin', 'manager']],
 ];
 
 function AppContent() {

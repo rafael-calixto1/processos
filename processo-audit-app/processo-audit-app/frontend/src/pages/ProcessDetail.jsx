@@ -45,6 +45,7 @@ const ProcessDetail = () => {
     try {
       setLoading(true);
       await exportProcessPdf(process, getFullUrl);
+      processAPI.registrarPdf({ processo_id: process.id });
     } catch (err) {
       setError('Erro ao exportar PDF: ' + err.message);
     } finally {
@@ -439,6 +440,11 @@ const ProcessDetail = () => {
 
         {activeTab === 'audit' && (
           <div className={styles.auditSection}>
+            <p>
+              <Link to={`/processos/auditoria?processo_id=${process.id}`}>
+                Ver a auditoria completa deste processo (aberturas, PDFs, execuções e tentativas recusadas)
+              </Link>
+            </p>
             {auditLogs.length > 0 ? (
               <div className={styles.auditLog}>
                 {auditLogs.map((log, idx) => (

@@ -159,6 +159,21 @@ export const processAPI = {
     return res.json();
   },
 
+  // Auditoria de /processos (admin e gerente); `status` no erro deixa a tela explicar "ainda não instalada"
+  auditoria: async (filtros: Record<string, string | number | undefined>) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(filtros)) if (v !== undefined && v !== '') qs.set(k, String(v));
+    const res = await fetch(`${API_URL}/processes/auditoria?${qs}`, { headers: headers(getToken()) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Erro ao carregar a auditoria'), { status: res.status });
+    return data;
+  },
+
+  // O PDF é gerado no navegador: só avisa o servidor para a auditoria (falha não atrapalha a exportação)
+  registrarPdf: async (dados: { processo_id?: number | string; quantidade?: number; filtros?: string[][] }) => {
+    try { await fetch(`${API_URL}/processes/auditoria/pdf`, { method: 'POST', headers: headers(getToken()), body: JSON.stringify(dados) }); } catch { /* sem rede: ignora */ }
+  },
+
   getAudit: async (id: string | number) => {
     const res = await fetch(`${API_URL}/processes/${id}/audit`, {
       headers: headers(getToken())
