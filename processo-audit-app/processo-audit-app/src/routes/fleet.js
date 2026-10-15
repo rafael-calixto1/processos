@@ -3,13 +3,39 @@ import pool from '../config/database.js';
 import { parseFuelReceipt } from '../services/receiptService.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import {
-  auditarCriacao, auditarEdicao, prepararExclusao, auditarCupom, buscar, listarAuditoria,
+  auditarCriacao, auditarEdicao, auditarStatus, auditarCupom, buscar, listarAuditoria,
 } from '../services/fleet/auditoria.js';
 
 const router = express.Router();
 
 // Toda a Frota exige login: é o que permite a auditoria saber quem fez cada ação
 router.use(verifyToken);
+
+// Na Frota nada é apagado (apagar um veículo levava junto todo o histórico dele): o registro é inativado
+router.use((req, res, next) => (req.method === 'DELETE'
+  ? res.status(405).json({ error: 'Na Frota não é permitido excluir: inative o registro.' })
+  : next()));
+
+const STATUS = ['active', 'inactive'];
+
+/** PATCH /<recurso>/:id/status { status: 'active' | 'inactive' } — inativa ou reativa. */
+const rotaStatus = (entidade, tabela) => async (req, res) => {
+  const { status } = req.body ?? {};
+  if (!STATUS.includes(status)) return res.status(400).json({ error: "status deve ser 'active' ou 'inactive'" });
+  try {
+    const antes = await buscar(entidade, req.params.id);
+    if (!antes) return res.status(404).json({ error: 'Registro não encontrado' });
+    await pool.execute(`UPDATE ${tabela} SET status = ? WHERE id = ?`, [status, req.params.id]);
+    await auditarStatus(req, entidade, antes, req.params.id);
+    res.json({ message: status === 'inactive' ? 'Registro inativado' : 'Registro reativado', status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/** ?status=active|inactive das listas (sem o parâmetro: todos). */
+const filtroStatus = (req, coluna = 'status') =>
+  (STATUS.includes(req.query.status) ? { sql: `WHERE ${coluna} = ?`, params: [req.query.status] } : { sql: '', params: [] });
 
 /* ──────────────────────────────────────────
    AUDITORIA (só admin e gerente)
@@ -67,10 +93,12 @@ router.get('/drivers', async (req, res) => {
     const page   = parseInt(req.query.page)   || 1;
     const offset = (page - 1) * limit;
 
-    const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM fleet_drivers');
+    const f = filtroStatus(req);
+
+    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM fleet_drivers ${f.sql}`, f.params);
     const [drivers] = await pool.execute(
-      'SELECT * FROM fleet_drivers ORDER BY name LIMIT ? OFFSET ?',
-      [limit, offset]
+      `SELECT * FROM fleet_drivers ${f.sql} ORDER BY name LIMIT ? OFFSET ?`,
+      [...f.params, limit, offset]
     );
 
     res.json({ drivers, total, page, pages: Math.ceil(total / limit) });
@@ -109,16 +137,7 @@ router.put('/drivers/:id', async (req, res) => {
   }
 });
 
-router.delete('/drivers/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'motorista', req.params.id);
-    await pool.execute('DELETE FROM fleet_drivers WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Motorista excluído' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/drivers/:id/status', rotaStatus('motorista', 'fleet_drivers'));
 
 /* ──────────────────────────────────────────
    CARS
@@ -177,7 +196,7 @@ router.get('/cars/maintenance-overview', async (req, res) => {
        CROSS JOIN fleet_maintenance_types mt
        LEFT JOIN fleet_maintenance_history lm ON lm.id = (
          SELECT id FROM fleet_maintenance_history
-         WHERE maintenance_type_id = mt.id AND car_id = c.id
+         WHERE maintenance_type_id = mt.id AND car_id = c.id AND status = 'active'
          ORDER BY maintenance_date DESC, id DESC LIMIT 1
        )
        WHERE mt.status = 'active'
@@ -223,7 +242,7 @@ router.get('/cars/:id/detail', async (req, res) => {
        FROM fleet_maintenance_types mt
        LEFT JOIN fleet_maintenance_history lm ON lm.id = (
          SELECT id FROM fleet_maintenance_history
-         WHERE maintenance_type_id = mt.id AND car_id = ?
+         WHERE maintenance_type_id = mt.id AND car_id = ? AND status = 'active'
          ORDER BY maintenance_date DESC, id DESC LIMIT 1
        )
        WHERE mt.status = 'active'
@@ -236,7 +255,7 @@ router.get('/cars/:id/detail', async (req, res) => {
       `SELECT mh.*, mt.name AS type_name
        FROM fleet_maintenance_history mh
        LEFT JOIN fleet_maintenance_types mt ON mt.id = mh.maintenance_type_id
-       WHERE mh.car_id = ?
+       WHERE mh.car_id = ? AND mh.status = 'active'
        ORDER BY mh.maintenance_date DESC, mh.id DESC
        LIMIT 30`,
       [req.params.id]
@@ -286,16 +305,7 @@ router.put('/cars/:id', async (req, res) => {
   }
 });
 
-router.delete('/cars/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'veiculo', req.params.id);
-    await pool.execute('DELETE FROM fleet_cars WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Veículo excluído' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/cars/:id/status', rotaStatus('veiculo', 'fleet_cars'));
 
 /* ──────────────────────────────────────────
    FUELING — statistics (before /:id routes)
@@ -312,7 +322,7 @@ router.get('/fueling/statistics', async (req, res) => {
          COALESCE(SUM(f.total_cost), 0) AS custo_total
        FROM fleet_cars c
        JOIN fleet_fueling f ON f.car_id = c.id
-       WHERE f.fuel_date BETWEEN ? AND ?
+       WHERE f.fuel_date BETWEEN ? AND ? AND f.status = 'active'
        GROUP BY c.id, c.make, c.model, c.license_plate
        ORDER BY custo_total DESC`,
       [startDate, endDate]
@@ -329,7 +339,7 @@ router.get('/fueling/statistics/fuel-by-type', async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT fuel_type AS tipo_combustivel, COALESCE(SUM(liters_quantity), 0) AS total_litros
        FROM fleet_fueling
-       WHERE fuel_date BETWEEN ? AND ?
+       WHERE fuel_date BETWEEN ? AND ? AND status = 'active'
        GROUP BY fuel_type
        ORDER BY total_litros DESC`,
       [startDate, endDate]
@@ -346,7 +356,7 @@ router.get('/fueling/statistics/fuel-cost-by-type', async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT fuel_type AS tipo_combustivel, COALESCE(SUM(total_cost), 0) AS custo_total
        FROM fleet_fueling
-       WHERE fuel_date BETWEEN ? AND ?
+       WHERE fuel_date BETWEEN ? AND ? AND status = 'active'
        GROUP BY fuel_type
        ORDER BY custo_total DESC`,
       [startDate, endDate]
@@ -364,7 +374,7 @@ router.get('/fueling/statistics/maintenance-by-type', async (req, res) => {
       `SELECT mt.name AS tipo_manutencao, COUNT(mh.id) AS total_manutencoes, COALESCE(SUM(mh.total_cost), 0) AS custo_total
        FROM fleet_maintenance_history mh
        JOIN fleet_maintenance_types mt ON mt.id = mh.maintenance_type_id
-       WHERE mh.maintenance_date BETWEEN ? AND ?
+       WHERE mh.maintenance_date BETWEEN ? AND ? AND mh.status = 'active'
        GROUP BY mt.id, mt.name
        ORDER BY total_manutencoes DESC`,
       [startDate, endDate]
@@ -389,7 +399,7 @@ router.get('/fueling/statistics/fueling-by-date', async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT DATE_FORMAT(fuel_date, ?) AS ${label}, COUNT(*) AS total_abastecimentos
        FROM fleet_fueling
-       WHERE fuel_date BETWEEN ? AND ?
+       WHERE fuel_date BETWEEN ? AND ? AND status = 'active'
        GROUP BY ${label}
        ORDER BY ${label}`,
       [format, startDate, endDate]
@@ -410,10 +420,12 @@ router.get('/fueling', async (req, res) => {
     const page   = parseInt(req.query.page)  || 1;
     const offset = (page - 1) * limit;
 
-    const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM fleet_fueling');
+    const f = filtroStatus(req);
+
+    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM fleet_fueling ${f.sql}`, f.params);
     const [fuelingHistory] = await pool.execute(
-      'SELECT * FROM fleet_fueling ORDER BY fuel_date DESC, id DESC LIMIT ? OFFSET ?',
-      [limit, offset]
+      `SELECT * FROM fleet_fueling ${f.sql} ORDER BY fuel_date DESC, id DESC LIMIT ? OFFSET ?`,
+      [...f.params, limit, offset]
     );
     res.json({ fuelingHistory, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -459,16 +471,7 @@ router.put('/fueling/:id', async (req, res) => {
   }
 });
 
-router.delete('/fueling/entry/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'abastecimento', req.params.id);
-    await pool.execute('DELETE FROM fleet_fueling WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Abastecimento excluído' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/fueling/:id/status', rotaStatus('abastecimento', 'fleet_fueling'));
 
 /* ──────────────────────────────────────────
    OIL CHANGES
@@ -480,10 +483,12 @@ router.get('/oil-changes', async (req, res) => {
     const page   = parseInt(req.query.page)  || 1;
     const offset = (page - 1) * limit;
 
-    const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM fleet_oil_changes');
+    const f = filtroStatus(req);
+
+    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM fleet_oil_changes ${f.sql}`, f.params);
     const [oilChangeHistory] = await pool.execute(
-      'SELECT * FROM fleet_oil_changes ORDER BY oil_change_date DESC, id DESC LIMIT ? OFFSET ?',
-      [limit, offset]
+      `SELECT * FROM fleet_oil_changes ${f.sql} ORDER BY oil_change_date DESC, id DESC LIMIT ? OFFSET ?`,
+      [...f.params, limit, offset]
     );
     res.json({ oilChangeHistory, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -528,16 +533,7 @@ router.put('/oil-changes/:id', async (req, res) => {
   }
 });
 
-router.delete('/oil-changes/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'troca_oleo', req.params.id);
-    await pool.execute('DELETE FROM fleet_oil_changes WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Troca de óleo excluída' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/oil-changes/:id/status', rotaStatus('troca_oleo', 'fleet_oil_changes'));
 
 /* ──────────────────────────────────────────
    TIRE CHANGES
@@ -552,10 +548,12 @@ router.get('/tire-changes', async (req, res) => {
       ? req.query.sort_field : 'tire_change_date';
     const sortOrder  = req.query.sort_order === 'asc' ? 'ASC' : 'DESC';
 
-    const [[{ total }]] = await pool.execute('SELECT COUNT(*) AS total FROM fleet_tire_changes');
+    const f = filtroStatus(req);
+
+    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM fleet_tire_changes ${f.sql}`, f.params);
     const [tireChangeHistory] = await pool.execute(
-      `SELECT * FROM fleet_tire_changes ORDER BY ${sortField} ${sortOrder}, id DESC LIMIT ? OFFSET ?`,
-      [limit, offset]
+      `SELECT * FROM fleet_tire_changes ${f.sql} ORDER BY ${sortField} ${sortOrder}, id DESC LIMIT ? OFFSET ?`,
+      [...f.params, limit, offset]
     );
     res.json({ tireChangeHistory, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -593,16 +591,7 @@ router.put('/tire-changes/:id', async (req, res) => {
   }
 });
 
-router.delete('/tire-changes/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'troca_pneu', req.params.id);
-    await pool.execute('DELETE FROM fleet_tire_changes WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Troca de pneu excluída' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/tire-changes/:id/status', rotaStatus('troca_pneu', 'fleet_tire_changes'));
 
 /* ──────────────────────────────────────────
    MAINTENANCE TYPES
@@ -649,16 +638,7 @@ router.put('/maintenance/types/:id', async (req, res) => {
   }
 });
 
-router.delete('/maintenance/types/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'tipo_manutencao', req.params.id);
-    await pool.execute('DELETE FROM fleet_maintenance_types WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Tipo excluído' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/maintenance/types/:id/status', rotaStatus('tipo_manutencao', 'fleet_maintenance_types'));
 
 /* ──────────────────────────────────────────
    MAINTENANCE HISTORY
@@ -672,14 +652,16 @@ router.get('/maintenance/history', async (req, res) => {
     const search = (req.query.search || '').trim();
 
     // Busca por placa, marca ou modelo do veículo — precisa do JOIN com fleet_cars
-    let where = '';
+    const conds = [];
     const params = [];
     if (search) {
-      where = `WHERE c.license_plate LIKE ? OR c.make LIKE ? OR c.model LIKE ?
-               OR CONCAT(c.make, ' ', c.model) LIKE ?`;
+      conds.push(`(c.license_plate LIKE ? OR c.make LIKE ? OR c.model LIKE ?
+               OR CONCAT(c.make, ' ', c.model) LIKE ?)`);
       const like = `%${search}%`;
       params.push(like, like, like, like);
     }
+    if (STATUS.includes(req.query.status)) { conds.push('h.status = ?'); params.push(req.query.status); }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
     const [[{ total }]] = await pool.execute(
       `SELECT COUNT(*) AS total
@@ -736,16 +718,7 @@ router.put('/maintenance/history/:id', async (req, res) => {
   }
 });
 
-router.delete('/maintenance/history/:id', async (req, res) => {
-  try {
-    const auditoria = await prepararExclusao(req, 'manutencao', req.params.id);
-    await pool.execute('DELETE FROM fleet_maintenance_history WHERE id = ?', [req.params.id]);
-    await auditoria.gravar();
-    res.json({ message: 'Manutenção excluída' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.patch('/maintenance/history/:id/status', rotaStatus('manutencao', 'fleet_maintenance_history'));
 
 /* ──────────────────────────────────────────
    VEHICLE STATUS (consolidated dashboard)
@@ -768,25 +741,25 @@ router.get('/vehicle-status', async (req, res) => {
          d.name                     AS nome_motorista,
 
          (SELECT COALESCE(SUM(f.liters_quantity), 0)
-          FROM fleet_fueling f WHERE f.car_id = c.id AND f.fuel_date BETWEEN ? AND ?)  AS total_combustivel,
+          FROM fleet_fueling f WHERE f.car_id = c.id AND f.status = 'active' AND f.fuel_date BETWEEN ? AND ?)  AS total_combustivel,
 
          (SELECT COALESCE(SUM(f.total_cost), 0)
-          FROM fleet_fueling f WHERE f.car_id = c.id AND f.fuel_date BETWEEN ? AND ?)  AS custo_total_combustivel,
+          FROM fleet_fueling f WHERE f.car_id = c.id AND f.status = 'active' AND f.fuel_date BETWEEN ? AND ?)  AS custo_total_combustivel,
 
          (SELECT IF(MAX(f.fueling_kilometers) > MIN(f.fueling_kilometers) AND SUM(f.liters_quantity) > 0,
                     ROUND((MAX(f.fueling_kilometers) - MIN(f.fueling_kilometers)) / SUM(f.liters_quantity), 2),
                     NULL)
-          FROM fleet_fueling f WHERE f.car_id = c.id AND f.fuel_date BETWEEN ? AND ?)  AS media_consumo_km_por_litro,
+          FROM fleet_fueling f WHERE f.car_id = c.id AND f.status = 'active' AND f.fuel_date BETWEEN ? AND ?)  AS media_consumo_km_por_litro,
 
-         (SELECT COUNT(*) FROM fleet_oil_changes o WHERE o.car_id = c.id AND o.oil_change_date BETWEEN ? AND ?)  AS total_trocas_oleo,
-         (SELECT MAX(o.oil_change_date) FROM fleet_oil_changes o WHERE o.car_id = c.id)                          AS ultima_troca_oleo_data,
+         (SELECT COUNT(*) FROM fleet_oil_changes o WHERE o.car_id = c.id AND o.status = 'active' AND o.oil_change_date BETWEEN ? AND ?)  AS total_trocas_oleo,
+         (SELECT MAX(o.oil_change_date) FROM fleet_oil_changes o WHERE o.car_id = c.id AND o.status = 'active')                          AS ultima_troca_oleo_data,
 
-         (SELECT COUNT(*) FROM fleet_tire_changes t WHERE t.car_id = c.id AND t.tire_change_date BETWEEN ? AND ?)  AS total_trocas_pneu,
-         (SELECT MAX(t.tire_change_date) FROM fleet_tire_changes t WHERE t.car_id = c.id)                          AS ultima_troca_pneu_data,
+         (SELECT COUNT(*) FROM fleet_tire_changes t WHERE t.car_id = c.id AND t.status = 'active' AND t.tire_change_date BETWEEN ? AND ?)  AS total_trocas_pneu,
+         (SELECT MAX(t.tire_change_date) FROM fleet_tire_changes t WHERE t.car_id = c.id AND t.status = 'active')                          AS ultima_troca_pneu_data,
 
-         (SELECT COUNT(*) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?)  AS total_manutencoes,
-         (SELECT COALESCE(SUM(m.total_cost), 0) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?) AS custo_total_manutencao,
-         (SELECT MAX(m.maintenance_date) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.maintenance_date BETWEEN ? AND ?)  AS ultima_manutencao_data
+         (SELECT COUNT(*) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.status = 'active' AND m.maintenance_date BETWEEN ? AND ?)  AS total_manutencoes,
+         (SELECT COALESCE(SUM(m.total_cost), 0) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.status = 'active' AND m.maintenance_date BETWEEN ? AND ?) AS custo_total_manutencao,
+         (SELECT MAX(m.maintenance_date) FROM fleet_maintenance_history m WHERE m.car_id = c.id AND m.status = 'active' AND m.maintenance_date BETWEEN ? AND ?)  AS ultima_manutencao_data
 
        FROM fleet_cars c
        LEFT JOIN fleet_drivers d ON d.id = c.driver_id

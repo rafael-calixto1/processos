@@ -1,4 +1,5 @@
-// Auditoria da Frota: quem cadastrou, editou ou apagou o quê, quando e de qual IP.
+// Auditoria da Frota: quem cadastrou, editou, inativou ou reativou o quê, quando e de qual IP.
+// Na Frota nada é mais apagado: "excluido" só aparece em registros antigos, de antes da inativação.
 // Tabela criada por scripts/migrate_frota_auditoria.js. Falha ao registrar nunca impede a ação principal.
 import pool from '../../config/database.js';
 import { dadosRequisicao, diferencas } from '../referral/auditoria.js';
@@ -6,6 +7,8 @@ import { dadosRequisicao, diferencas } from '../referral/auditoria.js';
 export const ACOES = {
   criado: 'Cadastro',
   editado: 'Edição',
+  inativado: 'Inativação',
+  reativado: 'Reativação',
   excluido: 'Exclusão',
   cupom_lido: 'Cupom fiscal lido',
 };
@@ -184,64 +187,21 @@ export async function auditarEdicao(req, entidade, antes, id) {
   }
 }
 
-/**
- * O que mais o banco apaga/solta junto (FKs em cascata). Precisa rodar ANTES do DELETE.
- * Devolve { dados, texto } para guardar e mostrar no resumo.
- */
-export async function efeitosDaExclusao(entidade, id) {
+/** Depois de trocar o status (ativo/inativo): guarda o registro como estava e o status novo. */
+export async function auditarStatus(req, entidade, antes, id) {
   try {
-    if (entidade === 'veiculo') {
-      const [[r]] = await pool.execute(
-        `SELECT
-           (SELECT COUNT(*) FROM fleet_fueling WHERE car_id = ?)             AS abastecimentos,
-           (SELECT COUNT(*) FROM fleet_maintenance_history WHERE car_id = ?) AS manutencoes,
-           (SELECT COUNT(*) FROM fleet_oil_changes WHERE car_id = ?)         AS trocas_oleo,
-           (SELECT COUNT(*) FROM fleet_tire_changes WHERE car_id = ?)        AS trocas_pneu`,
-        [id, id, id, id]
-      );
-      const dados = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Number(v)]));
-      const nomes = { abastecimentos: 'abastecimento(s)', manutencoes: 'manutenção(ões)', trocas_oleo: 'troca(s) de óleo', trocas_pneu: 'troca(s) de pneu' };
-      const partes = Object.entries(dados).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${nomes[k]}`);
-      return { dados: { apagados_junto: dados }, texto: partes.length ? ` — apagou junto ${partes.join(', ')}` : '' };
-    }
-    if (entidade === 'motorista') {
-      const [cars] = await pool.execute('SELECT id, make, model, license_plate FROM fleet_cars WHERE driver_id = ?', [id]);
-      if (!cars.length) return { dados: null, texto: '' };
-      const lista = cars.map(nomeVeiculo);
-      return { dados: { veiculos_ficaram_sem_motorista: lista }, texto: ` — ${lista.length} veículo(s) ficaram sem motorista` };
-    }
-    if (entidade === 'tipo_manutencao') {
-      const [[{ n }]] = await pool.execute('SELECT COUNT(*) AS n FROM fleet_maintenance_history WHERE maintenance_type_id = ?', [id]);
-      return Number(n) > 0
-        ? { dados: { manutencoes_ficaram_sem_tipo: Number(n) }, texto: ` — ${n} manutenção(ões) ficaram sem tipo` }
-        : { dados: null, texto: '' };
-    }
+    const depois = await buscar(entidade, id);
+    if (!antes || !depois || antes.status === depois.status) return; // nada mudou
+    const inativou = depois.status === 'inactive';
+    const desc = await descrever(entidade, depois);
+    await registrar({
+      req, acao: inativou ? 'inativado' : 'reativado', entidade, entidadeId: id, veiculoId: veiculoDe(entidade, depois),
+      resumo: `${ENTIDADES[entidade].nome} ${inativou ? genero(entidade, 'inativado', 'inativada') : genero(entidade, 'reativado', 'reativada')}${desc ? `: ${desc}` : ''}`,
+      antes, depois: { status: depois.status }, campos: ['status'],
+    });
   } catch (err) {
-    console.error('[Frota] Erro ao calcular efeitos da exclusão:', err.message);
+    console.error('[Frota] Erro ao auditar troca de status:', err.message);
   }
-  return { dados: null, texto: '' };
-}
-
-/** Antes de um DELETE: monta o registro (a descrição depende de dados que o DELETE apaga). Depois chame `.gravar()`. */
-export async function prepararExclusao(req, entidade, id) {
-  const antes = await buscar(entidade, id);
-  let desc = '';
-  let efeitos = { dados: null, texto: '' };
-  try {
-    desc = await descrever(entidade, antes);
-    efeitos = await efeitosDaExclusao(entidade, id);
-  } catch (err) {
-    console.error('[Frota] Erro ao preparar auditoria da exclusão:', err.message);
-  }
-  return {
-    gravar: () => (antes
-      ? registrar({
-          req, acao: 'excluido', entidade, entidadeId: id, veiculoId: veiculoDe(entidade, antes),
-          resumo: `${ENTIDADES[entidade].nome} ${genero(entidade, 'apagado', 'apagada')}${desc ? `: ${desc}` : ''}${efeitos.texto}`,
-          antes: efeitos.dados ? { ...antes, ...efeitos.dados } : antes,
-        })
-      : Promise.resolve()),
-  };
 }
 
 /** Leitura de cupom (QR Code da NFC-e) para preencher um abastecimento. */

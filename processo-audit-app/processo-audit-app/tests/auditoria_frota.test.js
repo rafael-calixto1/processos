@@ -41,5 +41,5 @@ test('montarFiltro: período inclui o dia final inteiro e a busca procura també
 
 test('todas as entidades com tabela apontam para tabelas fleet_*', () => {
   for (const [k, v] of Object.entries(ENTIDADES)) if (v.tabela) assert.match(v.tabela, /^fleet_[a-z_]+$/, k);
-  assert.deepEqual(Object.keys(ACOES), ['criado', 'editado', 'excluido', 'cupom_lido']);
+  assert.deepEqual(Object.keys(ACOES), ['criado', 'editado', 'inativado', 'reativado', 'excluido', 'cupom_lido']);
 });
