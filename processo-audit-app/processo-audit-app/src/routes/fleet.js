@@ -117,6 +117,19 @@ router.get('/drivers', async (req, res) => {
       [...f.params, limit, offset]
     );
 
+    // Active vehicles assigned to each driver on this page
+    const veiculos = {};
+    if (drivers.length) {
+      const ids = drivers.map(d => d.id);
+      const [cars] = await pool.query(
+        `SELECT id, make, model, license_plate, driver_id FROM fleet_cars
+         WHERE status = 'active' AND driver_id IN (?) ORDER BY make, model`,
+        [ids]
+      );
+      for (const c of cars) (veiculos[c.driver_id] ||= []).push({ id: c.id, make: c.make, model: c.model, license_plate: c.license_plate });
+    }
+    for (const d of drivers) d.vehicles = veiculos[d.id] || [];
+
     res.json({ drivers, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -154,6 +167,25 @@ router.put('/drivers/:id', async (req, res) => {
 });
 
 router.patch('/drivers/:id/status', rotaStatus('motorista', 'fleet_drivers'));
+
+router.get('/drivers/:id/detail', async (req, res) => {
+  try {
+    const [[driver]] = await pool.execute('SELECT * FROM fleet_drivers WHERE id = ?', [req.params.id]);
+    if (!driver) return res.status(404).json({ error: 'Motorista não encontrado' });
+
+    const [cars] = await pool.execute(
+      `SELECT id, make, model, license_plate, current_kilometers, status
+       FROM fleet_cars
+       WHERE driver_id = ? AND status = 'active'
+       ORDER BY make, model`,
+      [req.params.id]
+    );
+
+    res.json({ driver, cars });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /* ──────────────────────────────────────────
    CARS
