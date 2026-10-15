@@ -21,6 +21,7 @@ import geoRoutes from './src/routes/geo.js';
 import painelRoutes from './src/routes/painel.js';
 import { tecnicosRouter, fornecedoresRouter, equipamentosRouter } from './src/routes/cadastros.js';
 import { auditMiddleware } from './src/middlewares/audit.js';
+import { auditarProcessos } from './src/services/processos/auditoria.js';
 import { requestLogger } from './src/middlewares/requestLogger.js';
 import { criarOpcoesCors, origensPermitidas } from './src/config/cors.js';
 import { opcaoTrustProxy } from './src/config/proxy.js';
@@ -50,6 +51,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Rotas
 app.use('/api/auth', authRoutes);
+app.use('/api', auditarProcessos); // tudo o que é feito em /processos e nas execuções fica em processos_auditoria
 app.use('/api', processRoutes);
 app.use('/api', departmentRoutes);
 app.use('/api', brandingRoutes);

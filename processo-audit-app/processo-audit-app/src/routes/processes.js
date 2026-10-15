@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import { logAudit } from '../middlewares/audit.js';
+import { listarAuditoria, limiteDoUsuario } from '../services/processos/auditoria.js';
 import multer from 'multer-v2';
 import path from 'path';
 
@@ -31,6 +32,24 @@ const upload = multer({
     cb(new Error('Apenas imagens (jpeg, jpg, png, webp) são permitidas!'));
   },
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+// Auditoria dos Processos (admin vê tudo; gerente, os departamentos dele e as próprias ações sem departamento)
+router.get('/processes/auditoria', verifyToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    res.json(await listarAuditoria(req.query, await limiteDoUsuario(req.userId, req.userRole)));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria dos processos ainda não instalada: rode scripts/migrate_processos_auditoria.js' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// O PDF é gerado no navegador: a tela só avisa o servidor para a auditoria registrar quem exportou o quê
+router.post('/processes/auditoria/pdf', verifyToken, checkRole(['admin', 'manager']), (req, res) => {
+  res.json({ ok: true });
 });
 
 // Endpoint para upload de foto do passo (instrução)
