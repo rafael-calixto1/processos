@@ -7,6 +7,7 @@ import { criarLimitador } from '../middlewares/limitador.js';
 import { ServiceError } from '../services/estoqueService.js';
 import { abrirSessao, renovarSessao, encerrarSessao, revogarTodas, revogarFamilia } from '../services/sessao.js';
 import * as acessos from '../services/acessos.js';
+import * as usuariosAuditoria from '../services/usuariosAuditoria.js';
 
 const router = express.Router();
 
@@ -43,10 +44,11 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await pool.execute(
+    const [novo] = await pool.execute(
       'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
       [email, hashedPassword, name, 'viewer']
     );
+    await usuariosAuditoria.auditarCriacao(req, novo.insertId, { publico: true });
 
     res.status(201).json({ message: 'Usuário registrado com sucesso' });
   } catch (error) {
@@ -238,6 +240,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
     );
     // as outras sessões caem; a de quem trocou a senha continua
     await revogarTodas(req.userId, 'senha_alterada', { req, por: req.userId, exceto: req.sessaoId });
+    await usuariosAuditoria.auditarSenhaPropria(req, req.userId);
 
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (error) {
@@ -331,6 +334,7 @@ router.post(['/users', '/user'], verifyToken, async (req, res) => {
     }
 
     await connection.commit();
+    await usuariosAuditoria.auditarCriacao(req, userId);
     res.status(201).json({ message: 'Usuário criado com sucesso' });
   } catch (error) {
     await connection.rollback();
@@ -354,6 +358,7 @@ router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
 
     const { name, role, password, department_ids } = req.body;
     const userId = req.params.id;
+    const antes = await usuariosAuditoria.retrato(userId);
 
     await connection.beginTransaction();
 
@@ -385,6 +390,7 @@ router.put(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
     }
 
     await connection.commit();
+    await usuariosAuditoria.auditarEdicao(req, antes, userId, { senhaTrocada: Boolean(password) });
     if (password) await revogarTodas(userId, 'senha_alterada', { req, por: req.userId });
     res.json({ message: 'Usuário atualizado com sucesso' });
   } catch (error) {
@@ -408,7 +414,9 @@ router.delete(['/users/:id', '/user/:id'], verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Você não pode inativar seu próprio usuário' });
     }
 
+    const antes = await usuariosAuditoria.retrato(req.params.id);
     await pool.execute("UPDATE users SET status = 'inactive' WHERE id = ?", [req.params.id]);
+    await usuariosAuditoria.auditarInativacao(req, antes, req.params.id);
     await revogarTodas(req.params.id, 'usuario_inativado', { req, por: req.userId });
 
     res.json({ message: 'Usuário inativado com sucesso' });
@@ -434,6 +442,19 @@ router.get('/acessos/sessoes', somenteAdmin, async (req, res) => {
 
 router.get('/acessos/eventos', somenteAdmin, async (req, res) => {
   try { res.json(await acessos.listarEventos(req.query)); } catch (err) { semTabela(res, err); }
+});
+
+// ======== AUDITORIA DO CADASTRO DE USUÁRIOS (só admin) ========
+router.get('/usuarios/auditoria', somenteAdmin, async (req, res) => {
+  try {
+    res.json(await usuariosAuditoria.listar(req.query));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria de usuários ainda não instalada: rode scripts/migrate_usuarios_auditoria.js' });
+    }
+    console.error('auth:', err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Admin derruba uma sessão (web ou app): o token dela para de valer em até 1 minuto
