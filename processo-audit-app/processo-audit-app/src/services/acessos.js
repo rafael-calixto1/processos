@@ -248,6 +248,8 @@ export async function sessaoRenovada({ req, sid, usuario, dispositivo = null, ex
 const lista = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 const ORIGENS = ['web', 'app'];
+/** Sessão aberta com atividade nos últimos 2 minutos conta como "em uso agora" (a atividade é anotada no máximo 1x/min). */
+export const EM_USO_S = 120;
 
 /** WHERE dos filtros da aba Sessões (exportado para teste). */
 export const filtroSessoes = (f = {}) => {
@@ -256,7 +258,9 @@ export const filtroSessoes = (f = {}) => {
   if (f.usuario_id && /^\d+$/.test(String(f.usuario_id))) { where.push('usuario_id = ?'); params.push(Number(f.usuario_id)); }
   const origens = lista(f.origem).filter((o) => ORIGENS.includes(o));
   if (origens.length) { where.push(`origem IN (${origens.map(() => '?').join(',')})`); params.push(...origens); }
-  if (f.situacao === 'ativa') where.push('encerrada_em IS NULL');
+  if (['ativa', 'em_uso', 'sem_atividade'].includes(f.situacao)) where.push('encerrada_em IS NULL');
+  if (f.situacao === 'em_uso') where.push(`(ultima_atividade IS NULL OR ultima_atividade >= CURRENT_TIMESTAMP(3) - INTERVAL ${EM_USO_S} SECOND)`);
+  if (f.situacao === 'sem_atividade') where.push(`ultima_atividade < CURRENT_TIMESTAMP(3) - INTERVAL ${EM_USO_S} SECOND`);
   if (f.situacao === 'encerrada') where.push('encerrada_em IS NOT NULL');
   const motivos = lista(f.motivo).filter((m) => MOTIVOS[m]);
   if (motivos.length) { where.push(`motivo_encerramento IN (${motivos.map(() => '?').join(',')})`); params.push(...motivos); }
@@ -305,7 +309,7 @@ const usuariosConhecidos = async () => {
   return rows;
 };
 
-const rotulos = () => ({ motivos: MOTIVOS, eventos: EVENTOS, motivos_recusa: MOTIVOS_RECUSA });
+const rotulos = () => ({ motivos: MOTIVOS, eventos: EVENTOS, motivos_recusa: MOTIVOS_RECUSA, em_uso_s: EM_USO_S });
 
 export async function listarSessoes(f = {}) {
   await fecharExpiradas();

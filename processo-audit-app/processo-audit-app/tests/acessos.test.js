@@ -224,3 +224,23 @@ test('filtros: só aceitam valores conhecidos', () => {
   const e = acessos.filtroEventos({ evento: 'login_falhou', sid: "x' OR 1=1" });
   assert.deepEqual(e.params, ['login_falhou']);
 });
+
+test('filtro de situação separa sessões ativas em uso agora das sem atividade', async () => {
+  const adm = await mkUsuario({ role: 'admin' });
+  const u = await mkUsuario();
+  const ta = (await entrarWeb(adm.email)).body.token;
+  const usando = jwt.decode((await entrarWeb(u.email)).body.token).sid;
+  const parada = jwt.decode((await entrarWeb(u.email)).body.token).sid;
+  const saiu = (await entrarWeb(u.email)).body.token;
+  await pool.query('UPDATE acessos_sessoes SET ultima_atividade = CURRENT_TIMESTAMP(3) - INTERVAL 30 SECOND WHERE sid = ?', [usando]);
+  await pool.query('UPDATE acessos_sessoes SET ultima_atividade = CURRENT_TIMESTAMP(3) - INTERVAL 20 MINUTE WHERE sid = ?', [parada]);
+  await api('POST', '/auth/logout', { token: saiu });
+
+  const sids = async (situacao) =>
+    (await api('GET', `/auth/acessos/sessoes?usuario_id=${u.id}&situacao=${situacao}`, { token: ta })).body.itens.map((i) => i.sid).sort();
+  assert.deepEqual(await sids('em_uso'), [usando]);
+  assert.deepEqual(await sids('sem_atividade'), [parada]);
+  assert.deepEqual(await sids('ativa'), [usando, parada].sort());
+  assert.deepEqual(await sids('encerrada'), [jwt.decode(saiu).sid]);
+  assert.equal((await api('GET', '/auth/acessos/sessoes', { token: ta })).body.em_uso_s, acessos.EM_USO_S);
+});

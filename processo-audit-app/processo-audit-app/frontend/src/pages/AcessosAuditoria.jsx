@@ -62,7 +62,7 @@ function Situacao({ item, dados }) {
   const ociosa = item.ociosa_s ?? 0;
   return (
     <span className={`${s.selo} ${ociosa < 15 * 60 ? s.ok : s.ocioso}`}>
-      Ativa · {ociosa < 120 ? 'em uso agora' : `sem atividade há ${fmtDuracao(ociosa)}`}
+      Ativa · {ociosa < (dados.em_uso_s ?? 120) ? 'em uso agora' : `sem atividade há ${fmtDuracao(ociosa)}`}
     </span>
   );
 }
@@ -160,6 +160,8 @@ export default function AcessosAuditoria() {
                 <select value={filtroS.situacao} onChange={muda('situacao')}>
                   <option value="">Todas</option>
                   <option value="ativa">Ativas</option>
+                  <option value="em_uso">Em uso agora</option>
+                  <option value="sem_atividade">Sem atividade</option>
                   <option value="encerrada">Encerradas</option>
                 </select>
               </Campo>
