@@ -20,36 +20,32 @@ const worse = (a, b) => (RANK[a] >= RANK[b] ? a : b);
 
 /**
  * Evaluate a single maintenance type against the vehicle.
+ * A rule with no previous maintenance on record has no baseline to
+ * count from, so it raises no alert ('none') instead of guessing.
  * @returns 'red' | 'yellow' | 'green' | 'none'
  */
 export const calcStatus = (item, currentKm) => {
   if (!item.recurrence_mode) return 'none';
   const now = today();
-  let worst = 'green';
+  let worst = 'none';
 
   if (item.recurrence_mode === 'km' || item.recurrence_mode === 'both') {
-    if (item.recurrency) {
-      if (item.last_km == null) {
-        worst = worse(worst, 'yellow');
-      } else {
-        const rem = (Number(item.last_km) + Number(item.recurrency)) - Number(currentKm || 0);
-        if (rem <= 0)                       worst = worse(worst, 'red');
-        else if (rem <= KM_WARN_THRESHOLD)  worst = worse(worst, 'yellow');
-      }
+    if (item.recurrency && item.last_km != null) {
+      const rem = (Number(item.last_km) + Number(item.recurrency)) - Number(currentKm || 0);
+      if (rem <= 0)                       worst = worse(worst, 'red');
+      else if (rem <= KM_WARN_THRESHOLD)  worst = worse(worst, 'yellow');
+      else                                worst = worse(worst, 'green');
     }
   }
 
   if (item.recurrence_mode === 'date' || item.recurrence_mode === 'both') {
-    if (item.recurrency_date) {
-      if (!item.last_date) {
-        worst = worse(worst, 'yellow');
-      } else {
-        const next = new Date(item.last_date);
-        next.setDate(next.getDate() + Number(item.recurrency_date));
-        const days = Math.floor((next - now) / 86400000);
-        if (days <= 0)                        worst = worse(worst, 'red');
-        else if (days <= DAYS_WARN_THRESHOLD) worst = worse(worst, 'yellow');
-      }
+    if (item.recurrency_date && item.last_date) {
+      const next = new Date(item.last_date);
+      next.setDate(next.getDate() + Number(item.recurrency_date));
+      const days = Math.floor((next - now) / 86400000);
+      if (days <= 0)                        worst = worse(worst, 'red');
+      else if (days <= DAYS_WARN_THRESHOLD) worst = worse(worst, 'yellow');
+      else                                  worst = worse(worst, 'green');
     }
   }
 
@@ -84,12 +80,15 @@ export const fmtDays = days => {
 export const nextDueText = (item, currentKm) => {
   const lines = [];
   if ((item.recurrence_mode === 'km' || item.recurrence_mode === 'both') && item.recurrency) {
-    const base = item.last_km != null ? Number(item.last_km) : 0;
-    const next = base + Number(item.recurrency);
-    const rem  = next - Number(currentKm || 0);
-    lines.push(rem > 0
-      ? `Km: faltam ${Number(rem).toLocaleString('pt-BR')} km (próx. aos ${Number(next).toLocaleString('pt-BR')} km)`
-      : `Km: vencido há ${Math.abs(rem).toLocaleString('pt-BR')} km`);
+    if (item.last_km == null) {
+      lines.push(`Km: nunca realizado (a cada ${Number(item.recurrency).toLocaleString('pt-BR')} km)`);
+    } else {
+      const next = Number(item.last_km) + Number(item.recurrency);
+      const rem  = next - Number(currentKm || 0);
+      lines.push(rem > 0
+        ? `Km: faltam ${Number(rem).toLocaleString('pt-BR')} km (próx. aos ${Number(next).toLocaleString('pt-BR')} km)`
+        : `Km: vencido há ${Math.abs(rem).toLocaleString('pt-BR')} km`);
+    }
   }
   if ((item.recurrence_mode === 'date' || item.recurrence_mode === 'both') && item.recurrency_date) {
     if (!item.last_date) {
