@@ -7,7 +7,7 @@ import { fleetFetch } from './fleetFetch';
 import { StatusFilter, StatusButton, StatusModal, activeOrSelected, isInactive } from './fleetStatus';
 
 /* ─── Car Detail Modal ─── */
-const CarDetailModal = ({ carId, onClose }) => {
+export const CarDetailModal = ({ carId, onClose }) => {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
