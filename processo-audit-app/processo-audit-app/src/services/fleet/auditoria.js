@@ -242,6 +242,53 @@ export const montarFiltro = (f = {}) => {
   return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
 };
 
+const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return s; } };
+
+/** Nomes que a tela usa para trocar car_id / driver_id / maintenance_type_id pelo nome. */
+async function nomesParaTela() {
+  // Veículos: os que existem hoje + os já apagados que aparecem na auditoria
+  const [atuais] = await pool.query('SELECT id, make, model, license_plate FROM fleet_cars ORDER BY make, model');
+  const veiculos = atuais.map(c => ({ id: c.id, nome: nomeVeiculo(c) }));
+  const conhecidos = new Set(veiculos.map(v => v.id));
+  const [apagados] = await pool.query(
+    `SELECT entidade_id AS id, dados_antes FROM frota_auditoria
+      WHERE entidade = 'veiculo' AND acao = 'excluido' AND entidade_id IS NOT NULL ORDER BY id DESC`
+  );
+  for (const a of apagados) {
+    if (conhecidos.has(a.id)) continue;
+    conhecidos.add(a.id);
+    veiculos.push({ id: a.id, nome: `${nomeVeiculo(parse(a.dados_antes)) ?? `Veículo #${a.id}`} — apagado` });
+  }
+  const [motoristas] = await pool.query('SELECT id, name FROM fleet_drivers');
+  const [tipos] = await pool.query('SELECT id, name FROM fleet_maintenance_types');
+  return {
+    veiculos,
+    nomes: {
+      motoristas: Object.fromEntries(motoristas.map(m => [m.id, m.name])),
+      tipos: Object.fromEntries(tipos.map(t => [t.id, t.name])),
+    },
+  };
+}
+
+/**
+ * Botão "Histórico" de um registro: os dados atuais e, para quem pode ver a auditoria,
+ * tudo o que aconteceu com ele (do mais antigo ao mais novo). null se a entidade ou o registro não existe.
+ */
+export async function historicoDoRegistro(entidade, id, { comAuditoria }) {
+  if (!ENTIDADES[entidade]?.tabela || !/^\d+$/.test(String(id))) return null;
+  const registro = await buscar(entidade, id);
+  if (!registro) return null;
+  let historico = null;
+  if (comAuditoria) {
+    const [itens] = await pool.query(
+      'SELECT * FROM frota_auditoria WHERE entidade = ? AND entidade_id = ? ORDER BY created_at, id',
+      [entidade, Number(id)]
+    );
+    historico = itens.map(i => ({ ...i, dados_antes: parse(i.dados_antes), dados_depois: parse(i.dados_depois) }));
+  }
+  return { entidade, registro, historico, ...(await nomesParaTela()), acoes: ACOES };
+}
+
 export async function listarAuditoria(f = {}) {
   const porPagina = Math.min(200, Math.max(1, parseInt(f.por_pagina, 10) || 50));
   const pagina = Math.max(1, parseInt(f.pagina, 10) || 1);
@@ -257,24 +304,7 @@ export async function listarAuditoria(f = {}) {
        FROM frota_auditoria WHERE usuario_id IS NOT NULL GROUP BY usuario_id ORDER BY nome`
   );
 
-  // Veículos para o filtro: os que existem hoje + os já apagados que aparecem na auditoria
-  const [atuais] = await pool.query('SELECT id, make, model, license_plate FROM fleet_cars ORDER BY make, model');
-  const veiculos = atuais.map(c => ({ id: c.id, nome: nomeVeiculo(c) }));
-  const conhecidos = new Set(veiculos.map(v => v.id));
-  const [apagados] = await pool.query(
-    `SELECT entidade_id AS id, dados_antes FROM frota_auditoria
-      WHERE entidade = 'veiculo' AND acao = 'excluido' AND entidade_id IS NOT NULL ORDER BY id DESC`
-  );
-  const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return s; } };
-  for (const a of apagados) {
-    if (conhecidos.has(a.id)) continue;
-    conhecidos.add(a.id);
-    veiculos.push({ id: a.id, nome: `${nomeVeiculo(parse(a.dados_antes)) ?? `Veículo #${a.id}`} — apagado` });
-  }
-
-  // Para a tela trocar driver_id / maintenance_type_id pelo nome na tabela de alterações
-  const [motoristas] = await pool.query('SELECT id, name FROM fleet_drivers');
-  const [tipos] = await pool.query('SELECT id, name FROM fleet_maintenance_types');
+  const { veiculos, nomes } = await nomesParaTela();
 
   return {
     itens: itens.map(i => ({ ...i, dados_antes: parse(i.dados_antes), dados_depois: parse(i.dados_depois) })),
@@ -283,10 +313,7 @@ export async function listarAuditoria(f = {}) {
     por_pagina: porPagina,
     usuarios,
     veiculos,
-    nomes: {
-      motoristas: Object.fromEntries(motoristas.map(m => [m.id, m.name])),
-      tipos: Object.fromEntries(tipos.map(t => [t.id, t.name])),
-    },
+    nomes,
     acoes: ACOES,
     entidades: Object.fromEntries(Object.entries(ENTIDADES).map(([k, v]) => [k, v.nome])),
   };

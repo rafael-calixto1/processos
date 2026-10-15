@@ -216,3 +216,43 @@ test('histórico de manutenção filtra por veículo, tipo, período e placa, e 
   // valores inválidos são ignorados
   assert.equal((await ids('car_id=1 OR 1=1&de=01/07/2026&maintenance_type_id=x')).total, 4);
 });
+
+test('histórico de um registro: dados para todos, linha do tempo da auditoria só para admin e gerente', async () => {
+  const car = (await api('POST', '/cars', { make: 'Fiat', model: 'Uno', license_plate: 'HIS1T00' })).body.id;
+  const id = (await api('POST', '/fueling', { car_id: car, fuel_date: '2026-10-01', total_cost: 100, observation: 'primeiro' })).body.id;
+  await api('PUT', `/fueling/${id}`, { car_id: car, fuel_date: '2026-10-01', total_cost: 150, fuel_type: 'Gasolina', observation: 'corrigido' });
+  await api('PATCH', `/fueling/${id}/status`, { status: 'inactive' });
+
+  const r = await api('GET', `/historico/abastecimento/${id}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.registro.observation, 'corrigido');
+  assert.equal(r.body.registro.status, 'inactive');
+  assert.deepEqual(r.body.historico.map(h => h.acao), ['criado', 'editado', 'inativado']);
+  const edicao = r.body.historico[1];
+  assert.deepEqual(edicao.campos_alterados.split(',').sort(), ['observation', 'total_cost']);
+  assert.equal(edicao.dados_antes.observation, 'primeiro');
+  assert.equal(edicao.dados_depois.observation, 'corrigido');
+  assert.equal(r.body.historico[0].usuario_nome, 'Gestor Frota');
+  assert.ok(r.body.veiculos.some(v => v.id === car && /HIS1T00/.test(v.nome)));
+  assert.ok(r.body.acoes.inativado);
+
+  // visualizador vê os dados, mas não quem fez o quê
+  const [v] = await pool.query("INSERT INTO users (email,password,name,role) VALUES ('ver@t.local','x','Viewer','viewer')");
+  const tokenAdmin = token;
+  token = jwt.sign({ id: v.insertId, role: 'viewer', email: 'ver@t.local' }, process.env.JWT_SECRET);
+  try {
+    const rv = await api('GET', `/historico/abastecimento/${id}`);
+    assert.equal(rv.status, 200);
+    assert.equal(rv.body.registro.id, id);
+    assert.equal(rv.body.historico, null);
+  } finally { token = tokenAdmin; }
+
+  assert.equal((await api('GET', '/historico/abastecimento/999999')).status, 404);
+  assert.equal((await api('GET', '/historico/cupom/1')).status, 404);       // entidade sem tabela
+  assert.equal((await api('GET', '/historico/users/1')).status, 404);       // não é da Frota
+  assert.equal((await api('GET', `/historico/manutencao/${id}abc`)).status, 404);
+  // a aba Auditoria continua montando os nomes
+  const aud = (await api('GET', '/auditoria')).body;
+  assert.ok(aud.veiculos.length > 0);
+  assert.ok(aud.nomes.tipos && aud.nomes.motoristas);
+});

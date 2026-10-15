@@ -3,7 +3,7 @@ import pool from '../config/database.js';
 import { parseFuelReceipt } from '../services/receiptService.js';
 import { verifyToken, checkRole } from '../middlewares/auth.js';
 import {
-  auditarCriacao, auditarEdicao, auditarStatus, auditarCupom, buscar, listarAuditoria,
+  auditarCriacao, auditarEdicao, auditarStatus, auditarCupom, buscar, listarAuditoria, historicoDoRegistro,
 } from '../services/fleet/auditoria.js';
 
 const router = express.Router();
@@ -44,6 +44,22 @@ const filtroStatus = (req, coluna = 'status') =>
 router.get('/auditoria', checkRole(['admin', 'manager']), async (req, res) => {
   try {
     res.json(await listarAuditoria(req.query));
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Auditoria ainda não instalada: rode scripts/migrate_frota_auditoria.js' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Botão "Histórico" de um registro: dados para todos; a linha do tempo da auditoria só para admin e gerente
+router.get('/historico/:entidade/:id', async (req, res) => {
+  try {
+    const r = await historicoDoRegistro(req.params.entidade, req.params.id, {
+      comAuditoria: ['admin', 'manager'].includes(req.userRole),
+    });
+    if (!r) return res.status(404).json({ error: 'Registro não encontrado' });
+    res.json(r);
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE') {
       return res.status(503).json({ error: 'Auditoria ainda não instalada: rode scripts/migrate_frota_auditoria.js' });
