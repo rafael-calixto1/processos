@@ -32,8 +32,20 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
   const [saving,       setSaving]       = useState(false);
   const [statusFilter, setStatusFilter] = useState('active');
   const [statusTarget, setStatusTarget] = useState(null);
+  const [carFilter,    setCarFilter]    = useState('');
+  const [typeFilter,   setTypeFilter]   = useState('');
+  const [de,           setDe]           = useState('');
+  const [ate,          setAte]          = useState('');
+  const [custoTotal,   setCustoTotal]   = useState(0);
 
   const totalPages = Math.ceil(total / LIMIT) || 1;
+  const filtrando  = !!(search || carFilter || typeFilter || de || ate);
+
+  // Qualquer filtro novo volta para a primeira página
+  const filtro = setter => v => { setter(v); setPage(1); };
+  const limparFiltros = () => {
+    setSearchInput(''); setSearch(''); setCarFilter(''); setTypeFilter(''); setDe(''); setAte(''); setPage(1);
+  };
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -42,16 +54,21 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
       const params = new URLSearchParams({ page, limit: LIMIT });
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
+      if (carFilter)    params.set('car_id', carFilter);
+      if (typeFilter)   params.set('maintenance_type_id', typeFilter);
+      if (de)           params.set('de', de);
+      if (ate)          params.set('ate', ate);
       const res  = await fleetFetch(`/api/fleet/maintenance/history?${params}`);
       const json = await res.json();
       setRecords(json.maintenanceHistory || []);
       setTotal(json.total || 0);
+      setCustoTotal(Number(json.custo_total) || 0);
     } catch (e) {
       setError('Erro ao carregar histórico: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, carFilter, typeFilter, de, ate]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -153,6 +170,43 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
         </button>
       </div>
 
+      {/* Filtros: veículo, tipo e período (a placa vai na busca acima) */}
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarGroup}>
+          <label>Veículo</label>
+          <Select className={styles.select} style={{ width: 240 }} value={carFilter} onChange={e => filtro(setCarFilter)(e.target.value)}>
+            <option value="">Todos os veículos</option>
+            {cars.map(c => (
+              <option key={c.id} value={c.id}>{c.make} {c.model} ({c.license_plate}){isInactive(c) ? ' (inativo)' : ''}</option>
+            ))}
+          </Select>
+        </div>
+        <div className={styles.toolbarGroup}>
+          <label>Tipo</label>
+          <Select className={styles.select} style={{ width: 200 }} value={typeFilter} onChange={e => filtro(setTypeFilter)(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {types.map(t => <option key={t.id} value={t.id}>{t.name}{isInactive(t) ? ' (inativo)' : ''}</option>)}
+          </Select>
+        </div>
+        <div className={styles.toolbarGroup}>
+          <label htmlFor="mh-de">De</label>
+          <DateInput id="mh-de" className={styles.dateInput} value={de} max={ate || undefined} onChange={e => filtro(setDe)(e.target.value)} />
+        </div>
+        <div className={styles.toolbarGroup}>
+          <label htmlFor="mh-ate">Até</label>
+          <DateInput id="mh-ate" className={styles.dateInput} value={ate} min={de || undefined} onChange={e => filtro(setAte)(e.target.value)} />
+        </div>
+        {filtrando && (
+          <button className={styles.btnSecondary} onClick={limparFiltros}>
+            <X size={15} /> Limpar filtros
+          </button>
+        )}
+        <span className={styles.filterSummary}>
+          {total.toLocaleString('pt-BR')} {total === 1 ? 'manutenção' : 'manutenções'}
+          {' · '}R$ {custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+      </div>
+
       {showForm && (
         <div className={styles.formCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -213,10 +267,10 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
       ) : records.length === 0 ? (
         <div className={styles.emptyState}>
           <ClipboardList size={40} color="var(--border-color)" style={{ marginBottom: '0.75rem' }} />
-          {search ? (
+          {filtrando ? (
             <>
-              <p>Nenhum registro para “{search}”.</p>
-              <button className={styles.btnSecondary} onClick={() => setSearchInput('')}>Limpar busca</button>
+              <p>Nenhuma manutenção com esses filtros.</p>
+              <button className={styles.btnSecondary} onClick={limparFiltros}>Limpar filtros</button>
             </>
           ) : statusFilter === 'inactive' ? (
             <p>Nenhuma manutenção inativa.</p>

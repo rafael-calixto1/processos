@@ -1291,3 +1291,11 @@
 .cardInactive > :not(:first-child) {
   opacity: 0.55;
 }
+
+/* Resumo do que o filtro pegou (quantidade e custo), à direita da barra de filtros */
+.filterSummary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
