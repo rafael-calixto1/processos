@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Pencil, X, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
+import { Plus, Pencil, X, History, Fuel, QrCode, ClipboardPaste, CheckCircle2, AlertCircle, Camera, Upload } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import styles from './Fleet.module.css';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
 import { fleetFetch } from './fleetFetch';
+import FleetRecordHistory from './FleetRecordHistory';
 import { StatusFilter, StatusButton, StatusModal, InactiveBadge, activeOrSelected, isInactive } from './fleetStatus';
 const LIMIT = 15;
 const FUEL_TYPES = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
@@ -31,6 +32,7 @@ const FleetFueling = () => {
 
   const [statusFilter, setStatusFilter] = useState('active');
   const [statusTarget, setStatusTarget] = useState(null);
+  const [historyTarget, setHistoryTarget] = useState(null);
 
   /* QR Code Import States */
   const [showImport,   setShowImport]   = useState(false);
@@ -561,6 +563,7 @@ const FleetFueling = () => {
                     <td>{fmtDate(r.fuel_date)}</td>
                     <td>
                       <div className={styles.actionBtns}>
+                        <button onClick={() => setHistoryTarget(r)} title="Histórico"><History size={15} /></button>
                         <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
                         <StatusButton item={r} onClick={setStatusTarget} />
                       </div>
@@ -578,7 +581,8 @@ const FleetFueling = () => {
                 <div className={styles.fuelingCardHeader}>
                   <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)} <InactiveBadge item={r} /></div>
                   <div className={styles.actionBtns}>
-                    <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                    <button onClick={() => setHistoryTarget(r)} title="Histórico"><History size={15} /></button>
+                        <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
                     <StatusButton item={r} onClick={setStatusTarget} />
                   </div>
                 </div>
@@ -639,6 +643,14 @@ const FleetFueling = () => {
         </div>
       )}
 
+      {historyTarget && (
+        <FleetRecordHistory
+          entidade="abastecimento"
+          id={historyTarget.id}
+          titulo={`Abastecimento de ${fmtDate(historyTarget.fuel_date)} · ${getCarLabel(historyTarget.car_id)}`}
+          onClose={() => setHistoryTarget(null)}
+        />
+      )}
       <StatusModal
         key={statusTarget?.id}
         target={statusTarget}

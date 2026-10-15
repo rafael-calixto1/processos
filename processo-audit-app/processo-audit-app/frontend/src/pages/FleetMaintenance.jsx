@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, X, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
+import { Plus, Pencil, X, History, ClipboardList, LayoutDashboard, Search, Gauge, CalendarClock } from 'lucide-react';
 import styles from './Fleet.module.css';
 import MaintenanceDashboard from './MaintenanceDashboard';
 import { Select } from '../components/Select/Select';
 
 import DateInput from '../components/DateInput';
 import { fleetFetch } from './fleetFetch';
+import FleetRecordHistory from './FleetRecordHistory';
 import { StatusFilter, StatusButton, StatusModal, InactiveBadge, activeOrSelected, isInactive } from './fleetStatus';
 const LIMIT = 15;
 
@@ -32,6 +33,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
   const [saving,       setSaving]       = useState(false);
   const [statusFilter, setStatusFilter] = useState('active');
   const [statusTarget, setStatusTarget] = useState(null);
+  const [historyTarget, setHistoryTarget] = useState(null);
   const [carFilter,    setCarFilter]    = useState('');
   const [typeFilter,   setTypeFilter]   = useState('');
   const [de,           setDe]           = useState('');
@@ -311,6 +313,7 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
                     </td>
                     <td className={styles.actionsCol}>
                       <div className={styles.actionBtns}>
+                        <button onClick={() => setHistoryTarget(r)} title="Histórico"><History size={15} /></button>
                         <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
                         <StatusButton item={r} onClick={setStatusTarget} />
                       </div>
@@ -328,7 +331,8 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
                 <div className={styles.fuelingCardHeader}>
                   <div className={styles.fuelingCardVehicle}>{getCarLabel(r.car_id)} <InactiveBadge item={r} /></div>
                   <div className={styles.actionBtns}>
-                    <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
+                    <button onClick={() => setHistoryTarget(r)} title="Histórico"><History size={15} /></button>
+                        <button className="primary" onClick={() => openEdit(r)} title="Editar"><Pencil size={15} /></button>
                     <StatusButton item={r} onClick={setStatusTarget} />
                   </div>
                 </div>
@@ -382,6 +386,14 @@ const MaintenanceHistory = ({ cars, types, openNewSignal, onOpenNewHandled }) =>
         </div>
       )}
 
+      {historyTarget && (
+        <FleetRecordHistory
+          entidade="manutencao"
+          id={historyTarget.id}
+          titulo={`${getTypeName(historyTarget.maintenance_type_id)} de ${fmtDate(historyTarget.maintenance_date)} · ${getCarLabel(historyTarget.car_id)}`}
+          onClose={() => setHistoryTarget(null)}
+        />
+      )}
       <StatusModal
         key={statusTarget?.id}
         target={statusTarget}

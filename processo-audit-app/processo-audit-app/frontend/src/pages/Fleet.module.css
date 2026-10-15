@@ -1299,3 +1299,44 @@
   color: var(--text-dark);
   white-space: nowrap;
 }
+
+/* Botão "Histórico" de um lançamento: linha do tempo da auditoria */
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.historyEvent {
+  border-left: 3px solid var(--border-color);
+  padding: 0.25rem 0 0.25rem 0.875rem;
+}
+
+.historyEventHead {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.historyEventWhen {
+  font-size: 0.82rem;
+  color: var(--text-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.historyEventWho,
+.historyNote {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.historyDetails summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--primary-color);
+}
