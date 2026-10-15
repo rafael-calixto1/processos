@@ -183,3 +183,36 @@ test('listas filtram por ?status e registro inativo sai dos painéis e da manute
   assert.equal((await api('GET', '/tire-changes?status=active')).body.tireChangeHistory.every(t => t.status === 'active'), true);
   assert.equal((await api('GET', '/drivers?status=xx')).status, 200); // filtro inválido = sem filtro
 });
+
+test('histórico de manutenção filtra por veículo, tipo, período e placa, e soma o custo de tudo o que o filtro pegou', async () => {
+  const a = (await api('POST', '/cars', { make: 'Fiat', model: 'Palio', license_plate: 'FLT1A11' })).body.id;
+  const b = (await api('POST', '/cars', { make: 'Ford', model: 'Ka', license_plate: 'FLT2B22' })).body.id;
+  const t1 = (await api('POST', '/maintenance/types', { name: 'Freio' })).body.id;
+  const t2 = (await api('POST', '/maintenance/types', { name: 'Suspensão' })).body.id;
+  const mk = async (car_id, maintenance_type_id, maintenance_date, total_cost) =>
+    (await api('POST', '/maintenance/history', { car_id, maintenance_type_id, maintenance_date, total_cost })).body.id;
+  const m1 = await mk(a, t1, '2026-07-01', 100);
+  const m2 = await mk(a, t2, '2026-07-15', 200);
+  const m3 = await mk(b, t1, '2026-07-31', 300);
+  await mk(b, t2, '2026-08-01', 400);
+  const ids = async (qs) => {
+    const r = (await api('GET', `/maintenance/history?limit=100&search=FLT&${qs}`)).body;
+    return { ids: r.maintenanceHistory.map(h => h.id).sort((x, y) => x - y), total: r.total, custo: r.custo_total };
+  };
+
+  assert.deepEqual(await ids(`car_id=${a}`), { ids: [m1, m2], total: 2, custo: 300 });
+  assert.deepEqual((await ids(`maintenance_type_id=${t1}`)).ids, [m1, m3]);
+  // período inclui os dois extremos
+  assert.deepEqual((await ids('de=2026-07-15&ate=2026-07-31')).ids, [m2, m3]);
+  assert.deepEqual((await ids(`de=2026-07-01&ate=2026-07-31&maintenance_type_id=${t1}&car_id=${b}`)).ids, [m3]);
+  const placa = (await api('GET', '/maintenance/history?limit=100&search=FLT1A11')).body;
+  assert.deepEqual(placa.maintenanceHistory.map(h => h.id).sort((x, y) => x - y), [m1, m2]);
+  assert.equal((await api('GET', '/maintenance/history?search=FLT1A11&search=x')).status, 200); // ?search repetido não derruba
+  // custo soma tudo o que o filtro pegou, não só a página
+  const pag = (await api('GET', '/maintenance/history?limit=1&search=FLT')).body;
+  assert.equal(pag.maintenanceHistory.length, 1);
+  assert.equal(pag.total, 4);
+  assert.equal(pag.custo_total, 1000);
+  // valores inválidos são ignorados
+  assert.equal((await ids('car_id=1 OR 1=1&de=01/07/2026&maintenance_type_id=x')).total, 4);
+});

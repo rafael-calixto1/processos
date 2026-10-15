@@ -649,7 +649,7 @@ router.get('/maintenance/history', async (req, res) => {
     const limit  = parseInt(req.query.limit) || 15;
     const page   = parseInt(req.query.page)  || 1;
     const offset = (page - 1) * limit;
-    const search = (req.query.search || '').trim();
+    const search = String([].concat(req.query.search ?? '')[0]).trim(); // ?search repetido vira array
 
     // Busca por placa, marca ou modelo do veículo — precisa do JOIN com fleet_cars
     const conds = [];
@@ -661,10 +661,17 @@ router.get('/maintenance/history', async (req, res) => {
       params.push(like, like, like, like);
     }
     if (STATUS.includes(req.query.status)) { conds.push('h.status = ?'); params.push(req.query.status); }
+    const id = (v) => (/^\d+$/.test(String(v ?? '')) ? Number(v) : null);
+    if (id(req.query.car_id))              { conds.push('h.car_id = ?');              params.push(id(req.query.car_id)); }
+    if (id(req.query.maintenance_type_id)) { conds.push('h.maintenance_type_id = ?'); params.push(id(req.query.maintenance_type_id)); }
+    const DATA = /^\d{4}-\d{2}-\d{2}$/;
+    if (DATA.test(req.query.de ?? ''))  { conds.push('h.maintenance_date >= ?'); params.push(req.query.de); }
+    if (DATA.test(req.query.ate ?? '')) { conds.push('h.maintenance_date <= ?'); params.push(req.query.ate); }
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
-    const [[{ total }]] = await pool.execute(
-      `SELECT COUNT(*) AS total
+    // Total e custo de tudo o que o filtro pegou (não só da página)
+    const [[{ total, custo_total }]] = await pool.execute(
+      `SELECT COUNT(*) AS total, COALESCE(SUM(h.total_cost), 0) AS custo_total
          FROM fleet_maintenance_history h
          LEFT JOIN fleet_cars c ON c.id = h.car_id
          ${where}`,
@@ -679,7 +686,7 @@ router.get('/maintenance/history', async (req, res) => {
         LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
-    res.json({ maintenanceHistory, total, page, pages: Math.ceil(total / limit) });
+    res.json({ maintenanceHistory, total, custo_total: Number(custo_total), page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
